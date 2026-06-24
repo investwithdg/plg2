@@ -184,12 +184,12 @@ export default function RetroGenerator() {
                   ⚠ Backend not connected
                 </div>
                 <p className="text-muted-foreground mb-1">
-                  Copy <code>.env.example</code> to <code>.env</code> and paste your
-                  Supabase project URL + publishable key, then restart the dev server.
+                  Add <code>VITE_SUPABASE_URL</code> and{" "}
+                  <code>VITE_SUPABASE_PUBLISHABLE_KEY</code> to{" "}
+                  <code>.env</code>, then restart the dev server.
                 </p>
                 <p className="text-win95-11 text-muted-foreground">
-                  Needed: <code>VITE_SUPABASE_URL</code>,{" "}
-                  <code>VITE_SUPABASE_PUBLISHABLE_KEY</code>
+                  Values from Supabase Dashboard → Project Settings → API.
                 </p>
               </div>
             )}

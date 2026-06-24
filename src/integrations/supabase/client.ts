@@ -12,7 +12,7 @@ export const isSupabaseConfigured = Boolean(
 
 function makeUnconfiguredClient(): SupabaseClient {
   const message =
-    "Supabase is not configured. Copy .env.example to .env and set VITE_SUPABASE_URL and VITE_SUPABASE_PUBLISHABLE_KEY.";
+    "Supabase is not configured. Set VITE_SUPABASE_URL and VITE_SUPABASE_PUBLISHABLE_KEY in .env.";
   const handler: ProxyHandler<object> = {
     get() {
       throw new Error(message);
