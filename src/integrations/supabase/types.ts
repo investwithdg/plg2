@@ -14,7 +14,175 @@ export type Database = {
   }
   public: {
     Tables: {
-      [_ in never]: never
+      copy_generations: {
+        Row: {
+          batch_id: string | null
+          content: string
+          copy_type: string
+          created_at: string
+          fha_compliance_check: boolean
+          generation_latency_ms: number | null
+          generation_number: number | null
+          id: string
+          model_used: string | null
+          property_id: string
+          user_id: string | null
+        }
+        Insert: {
+          batch_id?: string | null
+          content: string
+          copy_type: string
+          created_at?: string
+          fha_compliance_check?: boolean
+          generation_latency_ms?: number | null
+          generation_number?: number | null
+          id?: string
+          model_used?: string | null
+          property_id: string
+          user_id?: string | null
+        }
+        Update: {
+          batch_id?: string | null
+          content?: string
+          copy_type?: string
+          created_at?: string
+          fha_compliance_check?: boolean
+          generation_latency_ms?: number | null
+          generation_number?: number | null
+          id?: string
+          model_used?: string | null
+          property_id?: string
+          user_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "copy_generations_property_id_fkey"
+            columns: ["property_id"]
+            isOneToOne: false
+            referencedRelation: "properties"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      enrichments: {
+        Row: {
+          created_at: string
+          enrichment_latency_ms: number | null
+          enrichment_model_version: string | null
+          id: string
+          market_overview: string | null
+          median_home_value: number | null
+          nearby_amenities: Json | null
+          perplexity_raw_response: Json | null
+          property_id: string
+          schools: Json | null
+          transit_options: Json | null
+          walkability_score: number | null
+        }
+        Insert: {
+          created_at?: string
+          enrichment_latency_ms?: number | null
+          enrichment_model_version?: string | null
+          id?: string
+          market_overview?: string | null
+          median_home_value?: number | null
+          nearby_amenities?: Json | null
+          perplexity_raw_response?: Json | null
+          property_id: string
+          schools?: Json | null
+          transit_options?: Json | null
+          walkability_score?: number | null
+        }
+        Update: {
+          created_at?: string
+          enrichment_latency_ms?: number | null
+          enrichment_model_version?: string | null
+          id?: string
+          market_overview?: string | null
+          median_home_value?: number | null
+          nearby_amenities?: Json | null
+          perplexity_raw_response?: Json | null
+          property_id?: string
+          schools?: Json | null
+          transit_options?: Json | null
+          walkability_score?: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "enrichments_property_id_fkey"
+            columns: ["property_id"]
+            isOneToOne: false
+            referencedRelation: "properties"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      properties: {
+        Row: {
+          address: string
+          baths: number | null
+          beds: number | null
+          created_at: string
+          dedupe_key: string | null
+          enrichment_step: string | null
+          extraction_latency_ms: number | null
+          extraction_model_version: string | null
+          extraction_status: string | null
+          failed_step: string | null
+          id: string
+          ip_hash: string | null
+          price: number | null
+          property_type: string | null
+          source: string | null
+          source_url: string | null
+          sqft: number | null
+          status: string
+          user_id: string | null
+        }
+        Insert: {
+          address: string
+          baths?: number | null
+          beds?: number | null
+          created_at?: string
+          dedupe_key?: string | null
+          enrichment_step?: string | null
+          extraction_latency_ms?: number | null
+          extraction_model_version?: string | null
+          extraction_status?: string | null
+          failed_step?: string | null
+          id?: string
+          ip_hash?: string | null
+          price?: number | null
+          property_type?: string | null
+          source?: string | null
+          source_url?: string | null
+          sqft?: number | null
+          status?: string
+          user_id?: string | null
+        }
+        Update: {
+          address?: string
+          baths?: number | null
+          beds?: number | null
+          created_at?: string
+          dedupe_key?: string | null
+          enrichment_step?: string | null
+          extraction_latency_ms?: number | null
+          extraction_model_version?: string | null
+          extraction_status?: string | null
+          failed_step?: string | null
+          id?: string
+          ip_hash?: string | null
+          price?: number | null
+          property_type?: string | null
+          source?: string | null
+          source_url?: string | null
+          sqft?: number | null
+          status?: string
+          user_id?: string | null
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never
