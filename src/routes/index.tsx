@@ -1,29 +1,26 @@
 import { createFileRoute } from "@tanstack/react-router";
+import RetroGenerator from "@/components/RetroGenerator";
 
 export const Route = createFileRoute("/")({
   head: () => ({
     meta: [
-      { title: "Your App" },
-      { name: "description", content: "Replace this with a one-sentence description of your app." },
-      { property: "og:title", content: "Your App" },
-      { property: "og:description", content: "Replace this with a one-sentence description of your app." },
+      { title: "PropertyListingGenerator.com — Listings in seconds" },
+      {
+        name: "description",
+        content:
+          "Paste a Zillow link or address. Get MLS, social, and email copy — FHA Fair Housing compliant — in 15 seconds.",
+      },
+      { property: "og:title", content: "PropertyListingGenerator.com" },
+      {
+        property: "og:description",
+        content:
+          "Listings for real estate agents who value their time. MLS, social, email — in 15 seconds.",
+      },
     ],
   }),
   component: Index,
 });
 
-// IMPORTANT: Replace this placeholder. See ./README.md for routing conventions.
 function Index() {
-  return (
-    <div
-      className="flex min-h-screen items-center justify-center"
-      style={{ backgroundColor: "#fcfbf8" }}
-    >
-      <img
-        data-lovable-blank-page-placeholder="REMOVE_THIS"
-        src="https://cdn.gpteng.co/blank-app-v1.svg"
-        alt="Your app will live here!"
-      />
-    </div>
-  );
+  return <RetroGenerator />;
 }
