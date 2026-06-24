@@ -15,6 +15,10 @@ import {
 } from "@/components/ui/tooltip";
 import { RetroAnimatedHeader } from "@/components/RetroAnimatedHeader";
 import { RetroButton, RetroInput, RetroWindow } from "@/components/retro";
+import {
+  describeFunctionInvokeError,
+  parsePropertyInput,
+} from "@/lib/parsePropertyInput";
 
 type PropertyType =
   | "sfr"
@@ -106,20 +110,31 @@ export default function RetroGenerator() {
     setShowProgress(true);
 
     try {
-      const isUrl =
-        query.trim().startsWith("http://") ||
-        query.trim().startsWith("https://");
+      const parsed = parsePropertyInput(query);
+      if (!parsed.url && !parsed.address) {
+        throw new Error("Enter an address or paste a listing URL.");
+      }
 
       const { data, error } = await supabase.functions.invoke(
         "receive-property",
         {
-          body: isUrl
-            ? { url: query.trim(), propertyType, source: "generator" }
-            : { address: query.trim(), propertyType, source: "generator" },
+          body: {
+            ...parsed,
+            propertyType,
+            source: "generator",
+          },
         },
       );
 
       if (error) throw error;
+
+      if (data?.error && !data?.propertyId) {
+        throw new Error(
+          typeof data.message === "string"
+            ? data.message
+            : String(data.error),
+        );
+      }
 
       if (data?.propertyId) {
         setPropertyId(data.propertyId);
@@ -130,8 +145,9 @@ export default function RetroGenerator() {
     } catch (err) {
       console.error("Error starting generation:", err);
       setShowProgress(false);
+      const description = await describeFunctionInvokeError(err);
       sonnerToast.error("Failed to start generation", {
-        description: "Please check the address or URL and try again.",
+        description,
       });
     }
   };
