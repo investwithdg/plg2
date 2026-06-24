@@ -91,12 +91,12 @@ export default function RetroGenerator() {
   const handleGenerate = async () => {
     if (!query.trim()) return;
 
-    if (!isDevHost() && !isPropertyTypeFree(propertyType)) {
+    if (generationsUsed >= MAX_GENERATIONS) {
       setShowPaywall(true);
       return;
     }
 
-    if (!isDevHost() && generationsUsed >= MAX_GENERATIONS) {
+    if (!isDevHost() && !isPropertyTypeFree(propertyType)) {
       setShowPaywall(true);
       return;
     }
