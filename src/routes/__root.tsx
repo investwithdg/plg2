@@ -78,14 +78,18 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
     meta: [
       { charSet: "utf-8" },
       { name: "viewport", content: "width=device-width, initial-scale=1" },
-      { title: "Lovable App" },
-      { name: "description", content: "Lovable Generated Project" },
+      { title: "PropertyListingGenerator.com" },
+      { name: "description", content: "Generate polished, FHA-compliant listing copy from any address or listing URL in seconds." },
       { name: "author", content: "Lovable" },
-      { property: "og:title", content: "Lovable App" },
-      { property: "og:description", content: "Lovable Generated Project" },
+      { property: "og:title", content: "PropertyListingGenerator.com" },
+      { property: "og:description", content: "Generate polished, FHA-compliant listing copy from any address or listing URL in seconds." },
       { property: "og:type", content: "website" },
       { name: "twitter:card", content: "summary" },
       { name: "twitter:site", content: "@Lovable" },
+      { name: "twitter:title", content: "PropertyListingGenerator.com" },
+      { name: "twitter:description", content: "Generate polished, FHA-compliant listing copy from any address or listing URL in seconds." },
+      { property: "og:image", content: "https://pub-bb2e103a32db4e198524a2e9ed8f35b4.r2.dev/fd9b0118-ec7e-4e79-b5e2-def916e87676/id-preview-47622f33--c76353e6-e57a-4f26-aef0-767e3a4734d3.lovable.app-1782271456544.png" },
+      { name: "twitter:image", content: "https://pub-bb2e103a32db4e198524a2e9ed8f35b4.r2.dev/fd9b0118-ec7e-4e79-b5e2-def916e87676/id-preview-47622f33--c76353e6-e57a-4f26-aef0-767e3a4734d3.lovable.app-1782271456544.png" },
     ],
     links: [
       {
