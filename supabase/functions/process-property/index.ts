@@ -8,8 +8,7 @@ import { z } from "https://deno.land/x/zod@v3.22.4/mod.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
-  "Access-Control-Allow-Headers":
-    "authorization, x-client-info, apikey, content-type",
+  "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
 };
 
 const BodySchema = z.object({ propertyId: z.string().uuid() });
@@ -17,13 +16,22 @@ const BodySchema = z.object({ propertyId: z.string().uuid() });
 const PERPLEXITY_URL = "https://api.perplexity.ai/chat/completions";
 const OPENAI_CHAT_URL = "https://api.openai.com/v1/chat/completions";
 
-const FHA_SYSTEM_PROMPT = `You are a real estate copywriter that produces strictly FHA Fair Housing compliant copy.
+const FHA_SYSTEM_PROMPT = `You are a top-producing real estate agent's personal copywriter. Your job is to sell, not describe. Every sentence earns its place by moving a buyer closer to wanting to see this property.
 
-Hard rules:
-- Never reference race, color, religion, sex, handicap, familial status, or national origin (direct or indirect).
-- Never describe the neighborhood's "character", "demographics", "vibe of people", or use coded language ("safe neighborhood", "exclusive", "private community", "good schools" framed as quality of residents, "walkable to churches", "near synagogue", "perfect for families", "great for singles", "bachelor pad", "master bedroom" — use "primary bedroom", etc.).
-- Stick to features of the property and verifiable facts about location (distances, named amenities, transit lines, school names without quality judgments tied to demographics).
-- Do not invent facts. If a field is missing from the provided JSON, omit it.
+Voice rules:
+- Lead with the property's single strongest feature in the first sentence
+- Frame every amenity as a lifestyle benefit, not a fact
+- If something isn't a selling point, omit it entirely — never mention drawbacks, limitations, or neutral observations
+- Write with energy and specificity
+- No generic filler: never use "nestled," "boasts," "perfect for," "don't miss out," "rare find," "priced to sell"
+
+FHA compliance rules (non-negotiable):
+- Never reference race, color, religion, sex, handicap, familial status, or national origin — direct or indirect
+- No coded language: "safe neighborhood," "exclusive," "private community," "good schools" framed as resident quality, "walkable to churches," "near synagogue," "perfect for families," "great for singles," "bachelor pad"
+- Use "primary bedroom" — never "master bedroom"
+- Never describe neighborhood character, demographics, or vibe of residents
+- Stick to property features and verifiable location facts only: distances, named amenities, transit lines, school names without quality judgments
+- Do not invent facts. If a field is missing from the provided JSON, omit it
 - Output ONLY the requested copy. No preamble, no headings, no markdown unless requested.`;
 
 const COPY_TYPES: Array<{
@@ -47,11 +55,7 @@ const COPY_TYPES: Array<{
   },
 ];
 
-function log(
-  propertyId: string,
-  step: string,
-  data?: Record<string, unknown>,
-) {
+function log(propertyId: string, step: string, data?: Record<string, unknown>) {
   console.log(
     JSON.stringify({
       propertyId,
@@ -92,9 +96,7 @@ async function fetchWithRetry(
           body: body.slice(0, 200),
         });
         if (attempt === maxAttempts) {
-          throw new Error(
-            `${label} failed after ${maxAttempts} attempts [${res.status}]: ${body.slice(0, 200)}`,
-          );
+          throw new Error(`${label} failed after ${maxAttempts} attempts [${res.status}]: ${body.slice(0, 200)}`);
         }
         await new Promise((r) => setTimeout(r, 1000 * Math.pow(2, attempt - 1)));
         continue;
@@ -159,10 +161,7 @@ async function extractWithPerplexity(
     "perplexity_extract",
     propertyId,
   );
-  if (!res.ok)
-    throw new Error(
-      `Perplexity extract failed [${res.status}]: ${await res.text()}`,
-    );
+  if (!res.ok) throw new Error(`Perplexity extract failed [${res.status}]: ${await res.text()}`);
   const data = await res.json();
   const content = data.choices?.[0]?.message?.content ?? "{}";
   try {
@@ -172,11 +171,7 @@ async function extractWithPerplexity(
   }
 }
 
-async function enrichWithPerplexity(
-  apiKey: string,
-  propertyId: string,
-  address: string,
-) {
+async function enrichWithPerplexity(apiKey: string, propertyId: string, address: string) {
   const schema = {
     type: "object",
     properties: {
@@ -218,10 +213,7 @@ async function enrichWithPerplexity(
     "perplexity_enrich",
     propertyId,
   );
-  if (!res.ok)
-    throw new Error(
-      `Perplexity enrich failed [${res.status}]: ${await res.text()}`,
-    );
+  if (!res.ok) throw new Error(`Perplexity enrich failed [${res.status}]: ${await res.text()}`);
   const data = await res.json();
   const content = data.choices?.[0]?.message?.content ?? "{}";
   let parsed: Record<string, unknown> = {};
@@ -264,10 +256,7 @@ async function generateCopy(
     `openai_${copyType}`,
     propertyId,
   );
-  if (!res.ok)
-    throw new Error(
-      `OpenAI ${copyType} failed [${res.status}]: ${await res.text()}`,
-    );
+  if (!res.ok) throw new Error(`OpenAI ${copyType} failed [${res.status}]: ${await res.text()}`);
   const data = await res.json();
   const text = data.choices?.[0]?.message?.content?.trim() ?? "";
   if (!text) throw new Error(`OpenAI ${copyType} returned empty content`);
@@ -310,14 +299,10 @@ async function process(propertyId: string) {
     failedStep = "extraction";
     await updateStep(supabase, propertyId, "researching_property", "processing");
     const extractStart = Date.now();
-    const extracted = await extractWithPerplexity(
-      PERPLEXITY_API_KEY,
-      propertyId,
-      {
-        address: property.address as string,
-        source_url: (property.source_url as string | null) ?? null,
-      },
-    );
+    const extracted = await extractWithPerplexity(PERPLEXITY_API_KEY, propertyId, {
+      address: property.address as string,
+      source_url: (property.source_url as string | null) ?? null,
+    });
     const extractionLatency = Date.now() - extractStart;
     log(propertyId, "extraction_done", { latencyMs: extractionLatency });
 
@@ -386,13 +371,7 @@ async function process(propertyId: string) {
 
     const results = await Promise.allSettled(
       COPY_TYPES.map((c, i) =>
-        generateCopy(
-          OPENAI_API_KEY,
-          propertyId,
-          context,
-          c.instruction,
-          c.type,
-        ).then((r) => ({
+        generateCopy(OPENAI_API_KEY, propertyId, context, c.instruction, c.type).then((r) => ({
           ...r,
           copy_type: c.type,
           generation_number: i + 1,
@@ -465,8 +444,7 @@ async function process(propertyId: string) {
 }
 
 serve(async (req) => {
-  if (req.method === "OPTIONS")
-    return new Response(null, { headers: corsHeaders });
+  if (req.method === "OPTIONS") return new Response(null, { headers: corsHeaders });
   try {
     const body = BodySchema.parse(await req.json());
     // @ts-expect-error EdgeRuntime is provided by Supabase Edge Runtime
