@@ -165,13 +165,13 @@
   display: inline-flex;
   align-items: center;
   justify-content: center;
-}
 
-@utility win95-control-btn:active {
-  border-top: 1px solid var(--win95-black);
-  border-left: 1px solid var(--win95-black);
-  border-bottom: 1px solid var(--win95-white);
-  border-right: 1px solid var(--win95-white);
+  &:active {
+    border-top: 1px solid var(--win95-black);
+    border-left: 1px solid var(--win95-black);
+    border-bottom: 1px solid var(--win95-white);
+    border-right: 1px solid var(--win95-white);
+  }
 }
 
 /* Focus ring — classic dotted outline */
