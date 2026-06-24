@@ -1,0 +1,8 @@
+# Supabase local CLI config — project_id matches VITE_SUPABASE_URL subdomain.
+project_id = "bbytwflsulxuctkpuvzs"
+
+[functions.receive-property]
+verify_jwt = false
+
+[functions.process-property]
+verify_jwt = false
