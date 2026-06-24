@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { toast as sonnerToast } from "sonner";
-import { supabase, isSupabaseConfigured } from "@/integrations/supabase/client";
+import { supabase } from "@/integrations/supabase/client";
 import { usePropertyPolling } from "@/hooks/usePropertyPolling";
 import type { CopyGeneration } from "@/hooks/usePropertyPolling";
 import OutputTabsWindow, {
@@ -91,14 +91,6 @@ export default function RetroGenerator() {
   const handleGenerate = async () => {
     if (!query.trim()) return;
 
-    if (!isSupabaseConfigured) {
-      sonnerToast.error("Backend not connected", {
-        description:
-          "Add VITE_SUPABASE_URL and VITE_SUPABASE_PUBLISHABLE_KEY to your .env file.",
-      });
-      return;
-    }
-
     if (!isDevHost() && !isPropertyTypeFree(propertyType)) {
       setShowPaywall(true);
       return;
@@ -178,21 +170,6 @@ export default function RetroGenerator() {
           showControls={false}
         >
           <div className="space-y-4">
-            {!isSupabaseConfigured && (
-              <div className="win95-inset bg-input p-3 text-win95-12">
-                <div className="font-bold mb-1">
-                  ⚠ Backend not connected
-                </div>
-                <p className="text-muted-foreground mb-1">
-                  Add <code>VITE_SUPABASE_URL</code> and{" "}
-                  <code>VITE_SUPABASE_PUBLISHABLE_KEY</code> to{" "}
-                  <code>.env</code>, then restart the dev server.
-                </p>
-                <p className="text-win95-11 text-muted-foreground">
-                  Values from Supabase Dashboard → Project Settings → API.
-                </p>
-              </div>
-            )}
             <div className="text-win95-11 text-muted-foreground">
               listing descriptions for agents that value their time
             </div>
@@ -216,7 +193,7 @@ export default function RetroGenerator() {
               <RetroButton
                 variant="primary"
                 onClick={handleGenerate}
-                disabled={showProgress || !query.trim() || !isSupabaseConfigured}
+                disabled={showProgress || !query.trim()}
               >
                 {outputs ? `regenerate (${generationCountLabel})` : "generate"}
               </RetroButton>

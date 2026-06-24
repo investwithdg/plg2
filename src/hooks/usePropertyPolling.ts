@@ -71,8 +71,9 @@ export function usePropertyPolling(
     if (!propertyId || stoppedRef.current) return;
 
     try {
-      const { data: propertyData, error: propertyError } = await supabase
-        .from("properties")
+      const { data: propertyData, error: propertyError } = await (
+        supabase.from("properties" as never) as any
+      )
         .select("*")
         .eq("id", propertyId)
         .maybeSingle();
@@ -89,11 +90,12 @@ export function usePropertyPolling(
         return;
       }
 
-      const propertyStatus = (propertyData.status || "pending") as PropertyStatus;
-      const propertyEnrichmentStep = propertyData.enrichment_step as EnrichmentStep;
+      const propertyRow = propertyData as Record<string, unknown>;
+      const propertyStatus = (propertyRow.status || "pending") as PropertyStatus;
+      const propertyEnrichmentStep = propertyRow.enrichment_step as EnrichmentStep;
 
       setProperty({
-        ...propertyData,
+        ...propertyRow,
         status: propertyStatus,
         enrichment_step: propertyEnrichmentStep,
       } as PropertyWithCopies);
@@ -101,8 +103,9 @@ export function usePropertyPolling(
       setEnrichmentStep(propertyEnrichmentStep);
 
       if (propertyStatus === "complete") {
-        const { data: copiesData, error: copiesError } = await supabase
-          .from("copy_generations")
+        const { data: copiesData, error: copiesError } = await (
+          supabase.from("copy_generations" as never) as any
+        )
           .select("id, copy_type, content, created_at")
           .eq("property_id", propertyId)
           .order("created_at", { ascending: false });
