@@ -4,17 +4,17 @@ import RetroGenerator from "@/components/RetroGenerator";
 export const Route = createFileRoute("/")({
   head: () => ({
     meta: [
-      { title: "PropertyListingGenerator.com — Listings in seconds" },
+      { title: "PLG — Listing Copy in 15 Seconds" },
       {
         name: "description",
         content:
-          "Paste a Zillow link or address. Get MLS, social, and email copy — FHA Fair Housing compliant — in 15 seconds.",
+          "Paste an address or Zillow link. Get FHA-compliant MLS, social, and email copy in 15 seconds. 10 free generations, no sign-up required.",
       },
-      { property: "og:title", content: "PropertyListingGenerator.com" },
+      { property: "og:title", content: "PLG — Listing Copy in 15 Seconds" },
       {
         property: "og:description",
         content:
-          "Listings for real estate agents who value their time. MLS, social, email — in 15 seconds.",
+          "The listing tool for agents who value their time. MLS, social, email — researched and compliant — in 15 seconds.",
       },
     ],
   }),

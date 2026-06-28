@@ -11,8 +11,9 @@ const corsHeaders = {
     "authorization, x-client-info, apikey, content-type",
 };
 
-const FREE_LIMIT = 3;
+const FREE_LIMIT = 10;
 const FREE_WINDOW_DAYS = 30;
+const FREE_PREMIUM_LIMIT = 1;
 const DEDUPE_WINDOW_SECONDS = 60;
 const FREE_PROPERTY_TYPES = ["sfr", "fsbo"];
 
@@ -161,6 +162,20 @@ serve(async (req) => {
     const isPremiumType = !FREE_PROPERTY_TYPES.includes(requestedType);
     let hasProPlan = false;
 
+    // Count premium-type generations for free-premium allowance
+    let premiumCount = 0;
+    if (isPremiumType) {
+      const premiumQuery = supabase
+        .from("properties")
+        .select("id", { count: "exact", head: true })
+        .gte("created_at", sinceWindow)
+        .not("property_type", "in", `("${FREE_PROPERTY_TYPES.join('","')}")`);
+      if (userId) premiumQuery.eq("user_id", userId);
+      else premiumQuery.eq("ip_hash", ipHash).is("user_id", null);
+      const { count: pc } = await premiumQuery;
+      premiumCount = pc ?? 0;
+    }
+
     if (userId) {
       const { data: sub } = await supabase
         .from("subscriptions")
@@ -170,13 +185,13 @@ serve(async (req) => {
         .limit(1);
       hasProPlan = (sub && sub.length > 0) ?? false;
 
-      if (isPremiumType && !hasProPlan) {
-        log("premium_type_blocked", { userId, requestedType });
+      if (isPremiumType && !hasProPlan && premiumCount >= FREE_PREMIUM_LIMIT) {
+        log("premium_type_blocked", { userId, requestedType, premiumCount });
         return new Response(
           JSON.stringify({
             success: false,
             error: "pro_required",
-            message: `${requestedType.toUpperCase()} requires a Pro plan. SFR and FSBO are free.`,
+            message: `You've used your free premium generation. Upgrade to Pro for all 9 property types.`,
           }),
           {
             status: 403,
@@ -199,13 +214,13 @@ serve(async (req) => {
           },
         );
       }
-    } else if (isPremiumType) {
-      log("anon_premium_type_blocked", { requestedType });
+    } else if (isPremiumType && premiumCount >= FREE_PREMIUM_LIMIT) {
+      log("anon_premium_type_blocked", { requestedType, premiumCount });
       return new Response(
         JSON.stringify({
           success: false,
           error: "pro_required",
-          message: `${requestedType.toUpperCase()} requires a Pro plan. Sign in and upgrade.`,
+          message: `You've used your free premium generation. Sign in and upgrade for all 9 property types.`,
         }),
         {
           status: 403,

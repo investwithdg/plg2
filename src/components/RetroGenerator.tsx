@@ -34,7 +34,7 @@ type PropertyType =
   | "commercial"
   | "lease";
 
-const MAX_GENERATIONS = 3;
+const MAX_GENERATIONS = 10;
 const STORAGE_KEY = "plg_generations_used";
 
 const FREE_PROPERTY_TYPES: PropertyType[] = ["sfr", "fsbo"];
@@ -212,21 +212,21 @@ export default function RetroGenerator() {
 
       <main className="flex flex-col items-center p-4 gap-4">
         <RetroWindow
-          title="PropertyListingGenerator.com"
+          title="PLG — Property Listing Generator"
           className="w-full max-w-3xl"
           showControls={false}
         >
           <div className="space-y-4">
             <div className="text-win95-11 text-muted-foreground">
-              listing descriptions for agents that value their time
+              propertylistinggenerator.com
             </div>
             <div className="text-win95-16 font-bold">
-              generate a listing in seconds
+              listing copy in 15 seconds
             </div>
             <div className="text-win95-12 text-muted-foreground">
-              enter an address or paste a zillow link. pick the property type.
+              paste an address or zillow link. pick the property type.
               hit generate. we research the property, analyze the neighborhood,
-              and write 3 FHA-compliant listings.
+              and write 3 FHA-compliant listings — MLS, social, and email.
             </div>
 
             <div className="flex gap-2 flex-wrap">
@@ -254,7 +254,7 @@ export default function RetroGenerator() {
             <div className="flex gap-3 text-win95-11 justify-center text-muted-foreground flex-wrap">
               <span>fha trained</span>
               <span>real property research</span>
-              <span>free for sfr &amp; fsbo</span>
+              <span>10 free generations</span>
             </div>
           </div>
         </RetroWindow>
@@ -330,6 +330,17 @@ export default function RetroGenerator() {
           <HowItWorks />
         )}
       </main>
+
+      <footer className="w-full border-t-2 border-black bg-card px-4 py-3 mt-4">
+        <div className="max-w-3xl mx-auto flex flex-col sm:flex-row items-center justify-between gap-2 text-win95-11 text-muted-foreground">
+          <span>
+            <strong className="text-foreground">PLG</strong> — PropertyListingGenerator.com
+          </span>
+          <span>
+            FHA-compliant listing copy for real estate agents
+          </span>
+        </div>
+      </footer>
     </div>
   );
 }
@@ -443,15 +454,15 @@ function Win95PaywallModal({
           {isPremiumType ? (
             <>
               <p className="text-win95-12 mb-2">
-                This property type requires a Pro account.
+                You&apos;ve used your free premium generation.
               </p>
               <p className="text-win95-11 text-muted-foreground mb-3">
-                SFR and FSBO listings are always free.
+                Pro unlocks all 9 property types, unlimited.
               </p>
             </>
           ) : (
             <p className="text-win95-12 mb-3">
-              You&apos;ve used your 3 free generations.
+              You&apos;ve used your 10 free generations.
             </p>
           )}
 
@@ -517,7 +528,7 @@ function HowItWorks() {
     {
       n: "2.",
       title: "Pick property type",
-      body: "SFR & FSBO are free. Other types unlock with Pro.",
+      body: "10 free generations. Try any type once — Pro unlocks all 9.",
     },
     {
       n: "3.",
