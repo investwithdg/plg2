@@ -15,6 +15,39 @@ const BodySchema = z.object({ propertyId: z.string().uuid() });
 
 const PERPLEXITY_URL = "https://api.perplexity.ai/chat/completions";
 const OPENAI_CHAT_URL = "https://api.openai.com/v1/chat/completions";
+const REQUEST_TIMEOUT_MS = 30_000;
+const ENRICHMENT_CACHE_DAYS = 7;
+
+// Per-million-token pricing (USD)
+const PRICING = {
+  "sonar-pro": { input: 3.0, output: 15.0 },
+  sonar: { input: 1.0, output: 1.0 },
+  "gpt-4o-mini": { input: 0.15, output: 0.60 },
+} as const;
+
+type ModelKey = keyof typeof PRICING;
+
+interface TokenUsage {
+  inputTokens: number;
+  outputTokens: number;
+  costUsd: number;
+}
+
+function computeCost(model: ModelKey, inputTokens: number, outputTokens: number): TokenUsage {
+  const rates = PRICING[model];
+  const costUsd =
+    (inputTokens * rates.input) / 1_000_000 +
+    (outputTokens * rates.output) / 1_000_000;
+  return { inputTokens, outputTokens, costUsd };
+}
+
+// Support multiple API keys via comma-separated env vars for load distribution
+function pickKey(envVar: string): string {
+  const raw = Deno.env.get(envVar);
+  if (!raw) throw new Error(`${envVar} not configured`);
+  const keys = raw.split(",").map((k) => k.trim()).filter(Boolean);
+  return keys[Math.floor(Math.random() * keys.length)];
+}
 
 const FHA_SYSTEM_PROMPT = `You are a top-producing real estate agent's personal copywriter. Your job is to sell, not describe. Every sentence earns its place by moving a buyer closer to wanting to see this property.
 
@@ -87,7 +120,10 @@ async function fetchWithRetry(
   let lastErr: unknown;
   for (let attempt = 1; attempt <= maxAttempts; attempt++) {
     try {
-      const res = await fetch(url, init);
+      const controller = new AbortController();
+      const timeout = setTimeout(() => controller.abort(), REQUEST_TIMEOUT_MS);
+      const res = await fetch(url, { ...init, signal: controller.signal });
+      clearTimeout(timeout);
       if (res.status === 429 || res.status >= 500) {
         const body = await res.text();
         log(propertyId, `${label}_retry`, {
@@ -115,7 +151,7 @@ async function extractWithPerplexity(
   apiKey: string,
   propertyId: string,
   property: { address: string; source_url: string | null },
-) {
+): Promise<{ parsed: Record<string, unknown>; usage: TokenUsage }> {
   const target = property.source_url || property.address;
   const schema = {
     type: "object",
@@ -164,14 +200,25 @@ async function extractWithPerplexity(
   if (!res.ok) throw new Error(`Perplexity extract failed [${res.status}]: ${await res.text()}`);
   const data = await res.json();
   const content = data.choices?.[0]?.message?.content ?? "{}";
+  const usage = computeCost(
+    "sonar-pro",
+    data.usage?.prompt_tokens ?? 0,
+    data.usage?.completion_tokens ?? 0,
+  );
+  let parsed: Record<string, unknown> = {};
   try {
-    return JSON.parse(content);
+    parsed = JSON.parse(content);
   } catch {
-    return {};
+    /* ignore */
   }
+  return { parsed, usage };
 }
 
-async function enrichWithPerplexity(apiKey: string, propertyId: string, address: string) {
+async function enrichWithPerplexity(
+  apiKey: string,
+  propertyId: string,
+  address: string,
+): Promise<{ parsed: Record<string, unknown>; raw: unknown; usage: TokenUsage }> {
   const schema = {
     type: "object",
     properties: {
@@ -216,13 +263,77 @@ async function enrichWithPerplexity(apiKey: string, propertyId: string, address:
   if (!res.ok) throw new Error(`Perplexity enrich failed [${res.status}]: ${await res.text()}`);
   const data = await res.json();
   const content = data.choices?.[0]?.message?.content ?? "{}";
+  const usage = computeCost(
+    "sonar",
+    data.usage?.prompt_tokens ?? 0,
+    data.usage?.completion_tokens ?? 0,
+  );
   let parsed: Record<string, unknown> = {};
   try {
     parsed = JSON.parse(content);
   } catch {
     /* ignore */
   }
-  return { parsed, raw: data };
+  return { parsed, raw: data, usage };
+}
+
+// Normalize address to a cache key (lowercase, collapse whitespace, strip unit/apt)
+function enrichmentCacheKey(address: string): string {
+  const parts = address.toLowerCase().trim().replace(/\s+/g, " ").split(",");
+  // Use city + state + zip (skip street number for neighborhood-level caching)
+  if (parts.length >= 2) {
+    return parts.slice(1).join(",").trim();
+  }
+  return parts[0];
+}
+
+async function getCachedEnrichment(
+  supabase: ReturnType<typeof createClient>,
+  address: string,
+  propertyId: string,
+): Promise<{
+  parsed: Record<string, unknown>;
+  raw: unknown;
+  usage: TokenUsage;
+} | null> {
+  const cacheKey = enrichmentCacheKey(address);
+  const since = new Date(
+    Date.now() - ENRICHMENT_CACHE_DAYS * 86400_000,
+  ).toISOString();
+
+  const { data, error } = await supabase
+    .from("enrichment_cache")
+    .select("enrichment_data, perplexity_raw")
+    .eq("cache_key", cacheKey)
+    .gte("created_at", since)
+    .order("created_at", { ascending: false })
+    .limit(1);
+
+  if (error || !data || data.length === 0) return null;
+
+  log(propertyId, "enrichment_cache_hit", { cacheKey });
+  return {
+    parsed: (data[0] as any).enrichment_data ?? {},
+    raw: (data[0] as any).perplexity_raw,
+    usage: { inputTokens: 0, outputTokens: 0, costUsd: 0 },
+  };
+}
+
+async function setCachedEnrichment(
+  supabase: ReturnType<typeof createClient>,
+  address: string,
+  parsed: Record<string, unknown>,
+  raw: unknown,
+) {
+  const cacheKey = enrichmentCacheKey(address);
+  await supabase.from("enrichment_cache").upsert(
+    {
+      cache_key: cacheKey,
+      enrichment_data: parsed,
+      perplexity_raw: raw,
+    },
+    { onConflict: "cache_key" },
+  );
 }
 
 async function generateCopy(
@@ -231,7 +342,7 @@ async function generateCopy(
   contextJson: string,
   instruction: string,
   copyType: string,
-): Promise<{ content: string; latencyMs: number }> {
+): Promise<{ content: string; latencyMs: number; usage: TokenUsage }> {
   const start = Date.now();
   const res = await fetchWithRetry(
     OPENAI_CHAT_URL,
@@ -260,7 +371,12 @@ async function generateCopy(
   const data = await res.json();
   const text = data.choices?.[0]?.message?.content?.trim() ?? "";
   if (!text) throw new Error(`OpenAI ${copyType} returned empty content`);
-  return { content: text, latencyMs: Date.now() - start };
+  const usage = computeCost(
+    "gpt-4o-mini",
+    data.usage?.prompt_tokens ?? 0,
+    data.usage?.completion_tokens ?? 0,
+  );
+  return { content: text, latencyMs: Date.now() - start, usage };
 }
 
 async function process(propertyId: string) {
@@ -268,22 +384,13 @@ async function process(propertyId: string) {
   const supabaseServiceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
   const supabase = createClient(supabaseUrl, supabaseServiceKey);
 
-  const PERPLEXITY_API_KEY = Deno.env.get("PERPLEXITY_API_KEY");
-  const OPENAI_API_KEY = Deno.env.get("OPENAI_API_KEY");
-
   log(propertyId, "start");
   const totalStart = Date.now();
   let failedStep: string | null = null;
 
   try {
-    if (!PERPLEXITY_API_KEY) {
-      failedStep = "config";
-      throw new Error("PERPLEXITY_API_KEY not configured");
-    }
-    if (!OPENAI_API_KEY) {
-      failedStep = "config";
-      throw new Error("OPENAI_API_KEY not configured");
-    }
+    const perplexityKey = pickKey("PERPLEXITY_API_KEY");
+    const openaiKey = pickKey("OPENAI_API_KEY");
 
     const { data: property, error: propErr } = await supabase
       .from("properties")
@@ -299,12 +406,20 @@ async function process(propertyId: string) {
     failedStep = "extraction";
     await updateStep(supabase, propertyId, "researching_property", "processing");
     const extractStart = Date.now();
-    const extracted = await extractWithPerplexity(PERPLEXITY_API_KEY, propertyId, {
-      address: property.address as string,
-      source_url: (property.source_url as string | null) ?? null,
-    });
+    const { parsed: extracted, usage: extractionUsage } = await extractWithPerplexity(
+      perplexityKey,
+      propertyId,
+      {
+        address: property.address as string,
+        source_url: (property.source_url as string | null) ?? null,
+      },
+    );
     const extractionLatency = Date.now() - extractStart;
-    log(propertyId, "extraction_done", { latencyMs: extractionLatency });
+    log(propertyId, "extraction_done", {
+      latencyMs: extractionLatency,
+      tokens: extractionUsage.inputTokens + extractionUsage.outputTokens,
+      costUsd: extractionUsage.costUsd,
+    });
 
     await supabase
       .from("properties")
@@ -321,17 +436,44 @@ async function process(propertyId: string) {
       })
       .eq("id", propertyId);
 
-    // 2) ENRICHMENT
+    // 2) ENRICHMENT (with neighborhood cache)
     failedStep = "enrichment";
     await updateStep(supabase, propertyId, "researching_schools");
-    const enrichStart = Date.now();
-    const { parsed: enrich, raw: enrichRaw } = await enrichWithPerplexity(
-      PERPLEXITY_API_KEY,
-      propertyId,
-      (extracted.address as string) || (property.address as string),
-    );
-    const enrichmentLatency = Date.now() - enrichStart;
-    log(propertyId, "enrichment_done", { latencyMs: enrichmentLatency });
+    const resolvedAddress =
+      (extracted.address as string) || (property.address as string);
+
+    let enrich: Record<string, unknown>;
+    let enrichRaw: unknown;
+    let enrichmentUsage: TokenUsage;
+    let enrichmentLatency: number;
+
+    const cached = await getCachedEnrichment(supabase, resolvedAddress, propertyId);
+    if (cached) {
+      enrich = cached.parsed;
+      enrichRaw = cached.raw;
+      enrichmentUsage = cached.usage;
+      enrichmentLatency = 0;
+    } else {
+      const enrichStart = Date.now();
+      const result = await enrichWithPerplexity(
+        perplexityKey,
+        propertyId,
+        resolvedAddress,
+      );
+      enrich = result.parsed;
+      enrichRaw = result.raw;
+      enrichmentUsage = result.usage;
+      enrichmentLatency = Date.now() - enrichStart;
+      // Cache for future requests in this neighborhood
+      await setCachedEnrichment(supabase, resolvedAddress, enrich, enrichRaw);
+    }
+
+    log(propertyId, "enrichment_done", {
+      latencyMs: enrichmentLatency,
+      tokens: enrichmentUsage.inputTokens + enrichmentUsage.outputTokens,
+      costUsd: enrichmentUsage.costUsd,
+      cached: !!cached,
+    });
     await updateStep(supabase, propertyId, "analyzing_neighborhood");
 
     await supabase.from("enrichments").insert({
@@ -344,7 +486,7 @@ async function process(propertyId: string) {
       median_home_value: enrich.median_home_value ?? null,
       perplexity_raw_response: enrichRaw,
       enrichment_latency_ms: enrichmentLatency,
-      enrichment_model_version: "perplexity-sonar",
+      enrichment_model_version: cached ? "cache" : "perplexity-sonar",
     });
 
     // 3) COPY GENERATION (3 parallel chat completions)
@@ -371,7 +513,7 @@ async function process(propertyId: string) {
 
     const results = await Promise.allSettled(
       COPY_TYPES.map((c, i) =>
-        generateCopy(OPENAI_API_KEY, propertyId, context, c.instruction, c.type).then((r) => ({
+        generateCopy(openaiKey, propertyId, context, c.instruction, c.type).then((r) => ({
           ...r,
           copy_type: c.type,
           generation_number: i + 1,
@@ -381,6 +523,10 @@ async function process(propertyId: string) {
 
     const userId = property.user_id as string | null;
     let successCount = 0;
+    let copyInputTokens = 0;
+    let copyOutputTokens = 0;
+    let copyCostUsd = 0;
+
     for (const r of results) {
       if (r.status !== "fulfilled") {
         log(propertyId, "copy_failed", {
@@ -391,7 +537,12 @@ async function process(propertyId: string) {
       log(propertyId, "copy_done", {
         copy_type: r.value.copy_type,
         latencyMs: r.value.latencyMs,
+        costUsd: r.value.usage.costUsd,
       });
+      copyInputTokens += r.value.usage.inputTokens;
+      copyOutputTokens += r.value.usage.outputTokens;
+      copyCostUsd += r.value.usage.costUsd;
+
       const { error: insErr } = await supabase.from("copy_generations").insert({
         property_id: propertyId,
         user_id: userId,
@@ -412,6 +563,28 @@ async function process(propertyId: string) {
 
     if (successCount === 0) throw new Error("All copy generations failed");
 
+    // Record costs
+    const totalCost =
+      extractionUsage.costUsd + enrichmentUsage.costUsd + copyCostUsd;
+    const { error: costErr } = await supabase.from("generation_costs").insert({
+      property_id: propertyId,
+      user_id: userId,
+      extraction_input_tokens: extractionUsage.inputTokens,
+      extraction_output_tokens: extractionUsage.outputTokens,
+      extraction_cost_usd: extractionUsage.costUsd,
+      enrichment_input_tokens: enrichmentUsage.inputTokens,
+      enrichment_output_tokens: enrichmentUsage.outputTokens,
+      enrichment_cost_usd: enrichmentUsage.costUsd,
+      copy_input_tokens: copyInputTokens,
+      copy_output_tokens: copyOutputTokens,
+      copy_cost_usd: copyCostUsd,
+    });
+    if (costErr) {
+      log(propertyId, "cost_insert_failed", { error: costErr.message });
+    } else {
+      log(propertyId, "cost_recorded", { totalCostUsd: totalCost });
+    }
+
     await supabase
       .from("properties")
       .update({
@@ -424,6 +597,7 @@ async function process(propertyId: string) {
     log(propertyId, "complete", {
       totalMs: Date.now() - totalStart,
       copies: successCount,
+      totalCostUsd: totalCost,
     });
   } catch (err) {
     const message = err instanceof Error ? err.message : "Unknown error";

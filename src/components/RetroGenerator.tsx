@@ -2,11 +2,14 @@ import { useEffect, useState } from "react";
 import { toast as sonnerToast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { usePropertyPolling } from "@/hooks/usePropertyPolling";
+import { useAuth } from "@/hooks/useAuth";
 import type { CopyGeneration } from "@/hooks/usePropertyPolling";
 import OutputTabsWindow, {
   type OutputTabKey,
 } from "@/components/OutputTabsWindow";
 import GenerationProgressModal from "@/components/GenerationProgressModal";
+import AuthModal from "@/components/AuthModal";
+import ListingHistory from "@/components/ListingHistory";
 import {
   Tooltip,
   TooltipContent,
@@ -50,11 +53,14 @@ const isDevHost = () => {
 };
 
 export default function RetroGenerator() {
+  const { user, signIn, signUp, signOut, loading: authLoading } = useAuth();
+
   const [query, setQuery] = useState("");
   const [propertyType, setPropertyType] = useState<PropertyType>("sfr");
   const [propertyId, setPropertyId] = useState<string | null>(null);
   const [showProgress, setShowProgress] = useState(false);
   const [showPaywall, setShowPaywall] = useState(false);
+  const [showAuthModal, setShowAuthModal] = useState(false);
   const [generationsUsed, setGenerationsUsed] = useState<number>(() => {
     if (typeof window === "undefined") return 0;
     const raw = window.localStorage.getItem(STORAGE_KEY);
@@ -63,6 +69,7 @@ export default function RetroGenerator() {
   const [outputs, setOutputs] = useState<Record<OutputTabKey, string> | null>(
     null,
   );
+  const [historyKey, setHistoryKey] = useState(0);
 
   const { status, enrichmentStep, copies, error, stopPolling } =
     usePropertyPolling(propertyId);
@@ -89,18 +96,19 @@ export default function RetroGenerator() {
       });
       setOutputs(outputMap);
       setShowProgress(false);
+      setHistoryKey((k) => k + 1);
     }
   }, [status, copies]);
 
   const handleGenerate = async () => {
     if (!query.trim()) return;
 
-    if (generationsUsed >= MAX_GENERATIONS) {
+    if (!devBypassActive && generationsUsed >= MAX_GENERATIONS && !user) {
       setShowPaywall(true);
       return;
     }
 
-    if (!isDevHost() && !isPropertyTypeFree(propertyType)) {
+    if (!devBypassActive && !isPropertyTypeFree(propertyType) && !user) {
       setShowPaywall(true);
       return;
     }
@@ -129,6 +137,14 @@ export default function RetroGenerator() {
       if (error) throw error;
 
       if (data?.error && !data?.propertyId) {
+        if (
+          data.error === "pro_required" ||
+          data.error === "free_limit_exceeded"
+        ) {
+          setShowProgress(false);
+          setShowPaywall(true);
+          return;
+        }
         throw new Error(
           typeof data.message === "string"
             ? data.message
@@ -138,7 +154,7 @@ export default function RetroGenerator() {
 
       if (data?.propertyId) {
         setPropertyId(data.propertyId);
-        setGenerationsUsed((prev) => prev + 1);
+        if (!user) setGenerationsUsed((prev) => prev + 1);
       } else {
         throw new Error("No property ID returned");
       }
@@ -175,9 +191,24 @@ export default function RetroGenerator() {
     onCopy(allText);
   };
 
+  const handleAuth = async (
+    email: string,
+    password: string,
+    mode: "signin" | "signup",
+  ) => {
+    if (mode === "signin") return signIn(email, password);
+    return signUp(email, password);
+  };
+
+  const userEmail = user?.email ?? null;
+
   return (
     <div className="min-h-screen font-system text-foreground">
-      <RetroAnimatedHeader />
+      <RetroAnimatedHeader
+        userName={userEmail}
+        onSignInClick={() => setShowAuthModal(true)}
+        onSignOutClick={signOut}
+      />
 
       <main className="flex flex-col items-center p-4 gap-4">
         <RetroWindow
@@ -250,7 +281,8 @@ export default function RetroGenerator() {
                     variant="primary"
                     onClick={handleGenerate}
                     disabled={
-                      (!devBypassActive && generationsLeft <= 0) || showProgress
+                      (!devBypassActive && !user && generationsLeft <= 0) ||
+                      showProgress
                     }
                   >
                     regenerate ({generationCountLabel})
@@ -275,11 +307,28 @@ export default function RetroGenerator() {
         {showPaywall && (
           <Win95PaywallModal
             isPremiumType={!isPropertyTypeFree(propertyType)}
+            isSignedIn={!!user}
             onClose={() => setShowPaywall(false)}
+            onSignIn={() => {
+              setShowPaywall(false);
+              setShowAuthModal(true);
+            }}
           />
         )}
 
-        <HowItWorks />
+        {showAuthModal && (
+          <AuthModal
+            onClose={() => setShowAuthModal(false)}
+            onAuth={handleAuth}
+          />
+        )}
+
+        {/* Authenticated users see their listing history; anonymous see How It Works */}
+        {user && !authLoading ? (
+          <ListingHistory key={historyKey} userId={user.id} />
+        ) : (
+          <HowItWorks />
+        )}
       </main>
     </div>
   );
@@ -345,10 +394,40 @@ function PropertyTypeToggle({
 function Win95PaywallModal({
   isPremiumType,
   onClose,
+  onSignIn,
+  isSignedIn,
 }: {
   isPremiumType: boolean;
   onClose: () => void;
+  onSignIn: () => void;
+  isSignedIn: boolean;
 }) {
+  const [loading, setLoading] = useState<"month" | "year" | null>(null);
+
+  const handleCheckout = async (interval: "month" | "year") => {
+    if (!isSignedIn) {
+      onSignIn();
+      return;
+    }
+    setLoading(interval);
+    try {
+      const { data, error } = await supabase.functions.invoke(
+        "create-checkout",
+        { body: { interval } },
+      );
+      if (error) throw error;
+      if (data?.url) {
+        window.location.href = data.url;
+      } else {
+        throw new Error("No checkout URL returned");
+      }
+    } catch (err) {
+      console.error("Checkout error:", err);
+      sonnerToast.error("Failed to start checkout");
+      setLoading(null);
+    }
+  };
+
   return (
     <div className="fixed inset-0 bg-black/50 flex items-center justify-center p-4 z-50">
       <div className="win95-window w-full max-w-md">
@@ -364,7 +443,7 @@ function Win95PaywallModal({
           {isPremiumType ? (
             <>
               <p className="text-win95-12 mb-2">
-                This property type requires a Pro account or one-time purchase.
+                This property type requires a Pro account.
               </p>
               <p className="text-win95-11 text-muted-foreground mb-3">
                 SFR and FSBO listings are always free.
@@ -377,17 +456,50 @@ function Win95PaywallModal({
           )}
 
           <div className="win95-inset bg-input p-2 mb-4">
+            <p className="text-win95-12 font-bold mb-2">Pro includes:</p>
             <ul className="text-win95-11 space-y-1">
               <li>* Unlimited generations</li>
               <li>* All 9 property types</li>
+              <li>* Listing history &amp; portfolio</li>
               <li>* Real property research</li>
               <li>* FHA compliance checks</li>
             </ul>
           </div>
 
-          <div className="flex gap-2 justify-center">
-            <RetroButton variant="primary">Pro $29/mo</RetroButton>
-            <RetroButton>One Listing $5</RetroButton>
+          <div className="space-y-2 mb-4">
+            <div className="flex gap-2 justify-center">
+              <RetroButton
+                variant="primary"
+                onClick={() => handleCheckout("month")}
+                disabled={loading !== null}
+              >
+                {loading === "month" ? "Loading..." : "Pro $49/mo — 7 days free"}
+              </RetroButton>
+            </div>
+            <div className="flex gap-2 justify-center">
+              <RetroButton
+                onClick={() => handleCheckout("year")}
+                disabled={loading !== null}
+              >
+                {loading === "year" ? "Loading..." : "Pro $39/mo — billed annually"}
+              </RetroButton>
+            </div>
+          </div>
+
+          <div className="border-t border-[var(--win95-gray-dark)] pt-3 flex justify-between items-center">
+            {!isSignedIn ? (
+              <button
+                className="text-win95-11 underline cursor-pointer bg-transparent border-none text-muted-foreground"
+                onClick={onSignIn}
+              >
+                Already have an account? Sign in
+              </button>
+            ) : (
+              <span className="text-win95-11 text-muted-foreground">
+                7-day free trial, cancel anytime
+              </span>
+            )}
+            <RetroButton onClick={onClose}>Cancel</RetroButton>
           </div>
         </div>
       </div>

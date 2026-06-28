@@ -64,6 +64,65 @@ export type Database = {
           },
         ]
       }
+      generation_costs: {
+        Row: {
+          id: string
+          property_id: string
+          user_id: string | null
+          extraction_input_tokens: number | null
+          extraction_output_tokens: number | null
+          extraction_cost_usd: number | null
+          enrichment_input_tokens: number | null
+          enrichment_output_tokens: number | null
+          enrichment_cost_usd: number | null
+          copy_input_tokens: number | null
+          copy_output_tokens: number | null
+          copy_cost_usd: number | null
+          total_input_tokens: number | null
+          total_output_tokens: number | null
+          total_cost_usd: number | null
+          created_at: string
+        }
+        Insert: {
+          id?: string
+          property_id: string
+          user_id?: string | null
+          extraction_input_tokens?: number | null
+          extraction_output_tokens?: number | null
+          extraction_cost_usd?: number | null
+          enrichment_input_tokens?: number | null
+          enrichment_output_tokens?: number | null
+          enrichment_cost_usd?: number | null
+          copy_input_tokens?: number | null
+          copy_output_tokens?: number | null
+          copy_cost_usd?: number | null
+          created_at?: string
+        }
+        Update: {
+          id?: string
+          property_id?: string
+          user_id?: string | null
+          extraction_input_tokens?: number | null
+          extraction_output_tokens?: number | null
+          extraction_cost_usd?: number | null
+          enrichment_input_tokens?: number | null
+          enrichment_output_tokens?: number | null
+          enrichment_cost_usd?: number | null
+          copy_input_tokens?: number | null
+          copy_output_tokens?: number | null
+          copy_cost_usd?: number | null
+          created_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "generation_costs_property_id_fkey"
+            columns: ["property_id"]
+            isOneToOne: false
+            referencedRelation: "properties"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       enrichments: {
         Row: {
           created_at: string
