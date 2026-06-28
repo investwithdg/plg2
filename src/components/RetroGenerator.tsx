@@ -137,6 +137,14 @@ export default function RetroGenerator() {
       if (error) throw error;
 
       if (data?.error && !data?.propertyId) {
+        if (
+          data.error === "pro_required" ||
+          data.error === "free_limit_exceeded"
+        ) {
+          setShowProgress(false);
+          setShowPaywall(true);
+          return;
+        }
         throw new Error(
           typeof data.message === "string"
             ? data.message
@@ -299,6 +307,7 @@ export default function RetroGenerator() {
         {showPaywall && (
           <Win95PaywallModal
             isPremiumType={!isPropertyTypeFree(propertyType)}
+            isSignedIn={!!user}
             onClose={() => setShowPaywall(false)}
             onSignIn={() => {
               setShowPaywall(false);
@@ -386,11 +395,39 @@ function Win95PaywallModal({
   isPremiumType,
   onClose,
   onSignIn,
+  isSignedIn,
 }: {
   isPremiumType: boolean;
   onClose: () => void;
   onSignIn: () => void;
+  isSignedIn: boolean;
 }) {
+  const [loading, setLoading] = useState<"month" | "year" | null>(null);
+
+  const handleCheckout = async (interval: "month" | "year") => {
+    if (!isSignedIn) {
+      onSignIn();
+      return;
+    }
+    setLoading(interval);
+    try {
+      const { data, error } = await supabase.functions.invoke(
+        "create-checkout",
+        { body: { interval } },
+      );
+      if (error) throw error;
+      if (data?.url) {
+        window.location.href = data.url;
+      } else {
+        throw new Error("No checkout URL returned");
+      }
+    } catch (err) {
+      console.error("Checkout error:", err);
+      sonnerToast.error("Failed to start checkout");
+      setLoading(null);
+    }
+  };
+
   return (
     <div className="fixed inset-0 bg-black/50 flex items-center justify-center p-4 z-50">
       <div className="win95-window w-full max-w-md">
@@ -431,24 +468,37 @@ function Win95PaywallModal({
 
           <div className="space-y-2 mb-4">
             <div className="flex gap-2 justify-center">
-              <RetroButton variant="primary">
-                Pro $49/mo — 7 days free
+              <RetroButton
+                variant="primary"
+                onClick={() => handleCheckout("month")}
+                disabled={loading !== null}
+              >
+                {loading === "month" ? "Loading..." : "Pro $49/mo — 7 days free"}
               </RetroButton>
             </div>
             <div className="flex gap-2 justify-center">
-              <RetroButton>
-                Pro $39/mo — billed annually
+              <RetroButton
+                onClick={() => handleCheckout("year")}
+                disabled={loading !== null}
+              >
+                {loading === "year" ? "Loading..." : "Pro $39/mo — billed annually"}
               </RetroButton>
             </div>
           </div>
 
           <div className="border-t border-[var(--win95-gray-dark)] pt-3 flex justify-between items-center">
-            <button
-              className="text-win95-11 underline cursor-pointer bg-transparent border-none text-muted-foreground"
-              onClick={onSignIn}
-            >
-              Already have an account? Sign in
-            </button>
+            {!isSignedIn ? (
+              <button
+                className="text-win95-11 underline cursor-pointer bg-transparent border-none text-muted-foreground"
+                onClick={onSignIn}
+              >
+                Already have an account? Sign in
+              </button>
+            ) : (
+              <span className="text-win95-11 text-muted-foreground">
+                7-day free trial, cancel anytime
+              </span>
+            )}
             <RetroButton onClick={onClose}>Cancel</RetroButton>
           </div>
         </div>

@@ -14,6 +14,7 @@ const corsHeaders = {
 const FREE_LIMIT = 3;
 const FREE_WINDOW_DAYS = 30;
 const DEDUPE_WINDOW_SECONDS = 60;
+const FREE_PROPERTY_TYPES = ["sfr", "fsbo"];
 
 const propertyInputSchema = z
   .object({
@@ -141,7 +142,6 @@ serve(async (req) => {
     if (countErr) log("cap_count_error", { error: countErr.message });
 
     if ((count ?? 0) >= FREE_LIMIT && !userId) {
-      // For anonymous only; signed-in pro/free checks live elsewhere
       log("cap_exceeded", { count, ipHashPrefix: ipHash.slice(0, 8) });
       return new Response(
         JSON.stringify({
@@ -151,6 +151,64 @@ serve(async (req) => {
         }),
         {
           status: 429,
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        },
+      );
+    }
+
+    // 2b) Plan enforcement for signed-in users
+    const requestedType = (validatedInput.propertyType || "sfr").toLowerCase();
+    const isPremiumType = !FREE_PROPERTY_TYPES.includes(requestedType);
+    let hasProPlan = false;
+
+    if (userId) {
+      const { data: sub } = await supabase
+        .from("subscriptions")
+        .select("status")
+        .eq("user_id", userId)
+        .in("status", ["active", "trialing"])
+        .limit(1);
+      hasProPlan = (sub && sub.length > 0) ?? false;
+
+      if (isPremiumType && !hasProPlan) {
+        log("premium_type_blocked", { userId, requestedType });
+        return new Response(
+          JSON.stringify({
+            success: false,
+            error: "pro_required",
+            message: `${requestedType.toUpperCase()} requires a Pro plan. SFR and FSBO are free.`,
+          }),
+          {
+            status: 403,
+            headers: { ...corsHeaders, "Content-Type": "application/json" },
+          },
+        );
+      }
+
+      if (!hasProPlan && (count ?? 0) >= FREE_LIMIT) {
+        log("free_user_cap_exceeded", { userId, count });
+        return new Response(
+          JSON.stringify({
+            success: false,
+            error: "free_limit_exceeded",
+            message: `Free limit reached (${FREE_LIMIT} per ${FREE_WINDOW_DAYS} days). Upgrade to Pro for unlimited.`,
+          }),
+          {
+            status: 429,
+            headers: { ...corsHeaders, "Content-Type": "application/json" },
+          },
+        );
+      }
+    } else if (isPremiumType) {
+      log("anon_premium_type_blocked", { requestedType });
+      return new Response(
+        JSON.stringify({
+          success: false,
+          error: "pro_required",
+          message: `${requestedType.toUpperCase()} requires a Pro plan. Sign in and upgrade.`,
+        }),
+        {
+          status: 403,
           headers: { ...corsHeaders, "Content-Type": "application/json" },
         },
       );
