@@ -16,6 +16,29 @@ const BodySchema = z.object({ propertyId: z.string().uuid() });
 const PERPLEXITY_URL = "https://api.perplexity.ai/chat/completions";
 const OPENAI_CHAT_URL = "https://api.openai.com/v1/chat/completions";
 
+// Per-million-token pricing (USD)
+const PRICING = {
+  "sonar-pro": { input: 3.0, output: 15.0 },
+  sonar: { input: 1.0, output: 1.0 },
+  "gpt-4o-mini": { input: 0.15, output: 0.60 },
+} as const;
+
+type ModelKey = keyof typeof PRICING;
+
+interface TokenUsage {
+  inputTokens: number;
+  outputTokens: number;
+  costUsd: number;
+}
+
+function computeCost(model: ModelKey, inputTokens: number, outputTokens: number): TokenUsage {
+  const rates = PRICING[model];
+  const costUsd =
+    (inputTokens * rates.input) / 1_000_000 +
+    (outputTokens * rates.output) / 1_000_000;
+  return { inputTokens, outputTokens, costUsd };
+}
+
 const FHA_SYSTEM_PROMPT = `You are a top-producing real estate agent's personal copywriter. Your job is to sell, not describe. Every sentence earns its place by moving a buyer closer to wanting to see this property.
 
 Voice rules:
@@ -115,7 +138,7 @@ async function extractWithPerplexity(
   apiKey: string,
   propertyId: string,
   property: { address: string; source_url: string | null },
-) {
+): Promise<{ parsed: Record<string, unknown>; usage: TokenUsage }> {
   const target = property.source_url || property.address;
   const schema = {
     type: "object",
@@ -164,14 +187,25 @@ async function extractWithPerplexity(
   if (!res.ok) throw new Error(`Perplexity extract failed [${res.status}]: ${await res.text()}`);
   const data = await res.json();
   const content = data.choices?.[0]?.message?.content ?? "{}";
+  const usage = computeCost(
+    "sonar-pro",
+    data.usage?.prompt_tokens ?? 0,
+    data.usage?.completion_tokens ?? 0,
+  );
+  let parsed: Record<string, unknown> = {};
   try {
-    return JSON.parse(content);
+    parsed = JSON.parse(content);
   } catch {
-    return {};
+    /* ignore */
   }
+  return { parsed, usage };
 }
 
-async function enrichWithPerplexity(apiKey: string, propertyId: string, address: string) {
+async function enrichWithPerplexity(
+  apiKey: string,
+  propertyId: string,
+  address: string,
+): Promise<{ parsed: Record<string, unknown>; raw: unknown; usage: TokenUsage }> {
   const schema = {
     type: "object",
     properties: {
@@ -216,13 +250,18 @@ async function enrichWithPerplexity(apiKey: string, propertyId: string, address:
   if (!res.ok) throw new Error(`Perplexity enrich failed [${res.status}]: ${await res.text()}`);
   const data = await res.json();
   const content = data.choices?.[0]?.message?.content ?? "{}";
+  const usage = computeCost(
+    "sonar",
+    data.usage?.prompt_tokens ?? 0,
+    data.usage?.completion_tokens ?? 0,
+  );
   let parsed: Record<string, unknown> = {};
   try {
     parsed = JSON.parse(content);
   } catch {
     /* ignore */
   }
-  return { parsed, raw: data };
+  return { parsed, raw: data, usage };
 }
 
 async function generateCopy(
@@ -231,7 +270,7 @@ async function generateCopy(
   contextJson: string,
   instruction: string,
   copyType: string,
-): Promise<{ content: string; latencyMs: number }> {
+): Promise<{ content: string; latencyMs: number; usage: TokenUsage }> {
   const start = Date.now();
   const res = await fetchWithRetry(
     OPENAI_CHAT_URL,
@@ -260,7 +299,12 @@ async function generateCopy(
   const data = await res.json();
   const text = data.choices?.[0]?.message?.content?.trim() ?? "";
   if (!text) throw new Error(`OpenAI ${copyType} returned empty content`);
-  return { content: text, latencyMs: Date.now() - start };
+  const usage = computeCost(
+    "gpt-4o-mini",
+    data.usage?.prompt_tokens ?? 0,
+    data.usage?.completion_tokens ?? 0,
+  );
+  return { content: text, latencyMs: Date.now() - start, usage };
 }
 
 async function process(propertyId: string) {
@@ -299,12 +343,20 @@ async function process(propertyId: string) {
     failedStep = "extraction";
     await updateStep(supabase, propertyId, "researching_property", "processing");
     const extractStart = Date.now();
-    const extracted = await extractWithPerplexity(PERPLEXITY_API_KEY, propertyId, {
-      address: property.address as string,
-      source_url: (property.source_url as string | null) ?? null,
-    });
+    const { parsed: extracted, usage: extractionUsage } = await extractWithPerplexity(
+      PERPLEXITY_API_KEY,
+      propertyId,
+      {
+        address: property.address as string,
+        source_url: (property.source_url as string | null) ?? null,
+      },
+    );
     const extractionLatency = Date.now() - extractStart;
-    log(propertyId, "extraction_done", { latencyMs: extractionLatency });
+    log(propertyId, "extraction_done", {
+      latencyMs: extractionLatency,
+      tokens: extractionUsage.inputTokens + extractionUsage.outputTokens,
+      costUsd: extractionUsage.costUsd,
+    });
 
     await supabase
       .from("properties")
@@ -325,13 +377,17 @@ async function process(propertyId: string) {
     failedStep = "enrichment";
     await updateStep(supabase, propertyId, "researching_schools");
     const enrichStart = Date.now();
-    const { parsed: enrich, raw: enrichRaw } = await enrichWithPerplexity(
+    const { parsed: enrich, raw: enrichRaw, usage: enrichmentUsage } = await enrichWithPerplexity(
       PERPLEXITY_API_KEY,
       propertyId,
       (extracted.address as string) || (property.address as string),
     );
     const enrichmentLatency = Date.now() - enrichStart;
-    log(propertyId, "enrichment_done", { latencyMs: enrichmentLatency });
+    log(propertyId, "enrichment_done", {
+      latencyMs: enrichmentLatency,
+      tokens: enrichmentUsage.inputTokens + enrichmentUsage.outputTokens,
+      costUsd: enrichmentUsage.costUsd,
+    });
     await updateStep(supabase, propertyId, "analyzing_neighborhood");
 
     await supabase.from("enrichments").insert({
@@ -381,6 +437,10 @@ async function process(propertyId: string) {
 
     const userId = property.user_id as string | null;
     let successCount = 0;
+    let copyInputTokens = 0;
+    let copyOutputTokens = 0;
+    let copyCostUsd = 0;
+
     for (const r of results) {
       if (r.status !== "fulfilled") {
         log(propertyId, "copy_failed", {
@@ -391,7 +451,12 @@ async function process(propertyId: string) {
       log(propertyId, "copy_done", {
         copy_type: r.value.copy_type,
         latencyMs: r.value.latencyMs,
+        costUsd: r.value.usage.costUsd,
       });
+      copyInputTokens += r.value.usage.inputTokens;
+      copyOutputTokens += r.value.usage.outputTokens;
+      copyCostUsd += r.value.usage.costUsd;
+
       const { error: insErr } = await supabase.from("copy_generations").insert({
         property_id: propertyId,
         user_id: userId,
@@ -412,6 +477,28 @@ async function process(propertyId: string) {
 
     if (successCount === 0) throw new Error("All copy generations failed");
 
+    // Record costs
+    const totalCost =
+      extractionUsage.costUsd + enrichmentUsage.costUsd + copyCostUsd;
+    const { error: costErr } = await supabase.from("generation_costs").insert({
+      property_id: propertyId,
+      user_id: userId,
+      extraction_input_tokens: extractionUsage.inputTokens,
+      extraction_output_tokens: extractionUsage.outputTokens,
+      extraction_cost_usd: extractionUsage.costUsd,
+      enrichment_input_tokens: enrichmentUsage.inputTokens,
+      enrichment_output_tokens: enrichmentUsage.outputTokens,
+      enrichment_cost_usd: enrichmentUsage.costUsd,
+      copy_input_tokens: copyInputTokens,
+      copy_output_tokens: copyOutputTokens,
+      copy_cost_usd: copyCostUsd,
+    });
+    if (costErr) {
+      log(propertyId, "cost_insert_failed", { error: costErr.message });
+    } else {
+      log(propertyId, "cost_recorded", { totalCostUsd: totalCost });
+    }
+
     await supabase
       .from("properties")
       .update({
@@ -424,6 +511,7 @@ async function process(propertyId: string) {
     log(propertyId, "complete", {
       totalMs: Date.now() - totalStart,
       copies: successCount,
+      totalCostUsd: totalCost,
     });
   } catch (err) {
     const message = err instanceof Error ? err.message : "Unknown error";

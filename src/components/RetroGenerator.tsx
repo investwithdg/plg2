@@ -386,7 +386,7 @@ function Win95PaywallModal({
           </div>
 
           <div className="flex gap-2 justify-center">
-            <RetroButton variant="primary">Pro $29/mo</RetroButton>
+            <RetroButton variant="primary">Pro $49/mo</RetroButton>
             <RetroButton>One Listing $5</RetroButton>
           </div>
         </div>
