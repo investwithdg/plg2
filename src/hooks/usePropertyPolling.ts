@@ -41,8 +41,8 @@ interface UsePropertyPollingResult {
   stopPolling: () => void;
 }
 
-const POLL_INTERVAL = 5000;
-const MAX_ATTEMPTS = 30;
+const FALLBACK_POLL_INTERVAL = 15000;
+const MAX_FALLBACK_ATTEMPTS = 12;
 
 export function usePropertyPolling(
   propertyId: string | null,
@@ -54,88 +54,82 @@ export function usePropertyPolling(
   const [isPolling, setIsPolling] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  const attemptRef = useRef(0);
-  const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const fallbackRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const stoppedRef = useRef(false);
+  const attemptRef = useRef(0);
 
   const stopPolling = useCallback(() => {
     stoppedRef.current = true;
-    if (intervalRef.current) {
-      clearInterval(intervalRef.current);
-      intervalRef.current = null;
+    if (fallbackRef.current) {
+      clearInterval(fallbackRef.current);
+      fallbackRef.current = null;
     }
     setIsPolling(false);
   }, []);
 
-  const fetchPropertyStatus = useCallback(async () => {
-    if (!propertyId || stoppedRef.current) return;
-
-    try {
-      const { data: propertyData, error: propertyError } = await (
-        supabase.from("properties" as never) as any
+  const fetchCopies = useCallback(
+    async (propId: string) => {
+      const { data, error: copiesError } = await (
+        supabase.from("copy_generations" as never) as any
       )
-        .select("*")
-        .eq("id", propertyId)
-        .maybeSingle();
-
-      if (propertyError) {
-        console.error("Error fetching property:", propertyError);
-        setError("Failed to fetch property status");
-        return;
+        .select("id, copy_type, content, created_at")
+        .eq("property_id", propId)
+        .order("created_at", { ascending: false });
+      if (copiesError) {
+        console.error("Error fetching copies:", copiesError);
+      } else {
+        setCopies((data ?? []) as CopyGeneration[]);
       }
+    },
+    [],
+  );
 
-      if (!propertyData) {
-        setError("Property not found");
+  const handlePropertyUpdate = useCallback(
+    (row: Record<string, unknown>) => {
+      if (stoppedRef.current) return;
+      const propStatus = (row.status || "pending") as PropertyStatus;
+      const propStep = row.enrichment_step as EnrichmentStep;
+      setProperty({ ...row, status: propStatus, enrichment_step: propStep } as PropertyWithCopies);
+      setStatus(propStatus);
+      setEnrichmentStep(propStep);
+
+      if (propStatus === "complete") {
+        fetchCopies(row.id as string);
         stopPolling();
-        return;
+      } else if (propStatus === "error") {
+        setError(propStep || "Generation failed");
+        stopPolling();
       }
+    },
+    [fetchCopies, stopPolling],
+  );
 
-      const propertyRow = propertyData as Record<string, unknown>;
-      const propertyStatus = (propertyRow.status || "pending") as PropertyStatus;
-      const propertyEnrichmentStep = propertyRow.enrichment_step as EnrichmentStep;
-
-      setProperty({
-        ...propertyRow,
-        status: propertyStatus,
-        enrichment_step: propertyEnrichmentStep,
-      } as PropertyWithCopies);
-      setStatus(propertyStatus);
-      setEnrichmentStep(propertyEnrichmentStep);
-
-      if (propertyStatus === "complete") {
-        const { data: copiesData, error: copiesError } = await (
-          supabase.from("copy_generations" as never) as any
+  const fetchOnce = useCallback(
+    async (propId: string) => {
+      if (stoppedRef.current) return;
+      try {
+        const { data, error: fetchErr } = await (
+          supabase.from("properties" as never) as any
         )
-          .select("id, copy_type, content, created_at")
-          .eq("property_id", propertyId)
-          .order("created_at", { ascending: false });
-
-        if (copiesError) {
-          console.error("Error fetching copies:", copiesError);
-        } else {
-          setCopies((copiesData ?? []) as CopyGeneration[]);
+          .select("*")
+          .eq("id", propId)
+          .maybeSingle();
+        if (fetchErr || !data) {
+          if (!data) setError("Property not found");
+          return;
         }
-
-        stopPolling();
-        return;
+        handlePropertyUpdate(data as Record<string, unknown>);
+      } catch (err) {
+        console.error("Fallback poll error:", err);
       }
-
-      if (propertyStatus === "error") {
-        setError(propertyEnrichmentStep || "Generation failed");
-        stopPolling();
-        return;
-      }
-
       attemptRef.current += 1;
-      if (attemptRef.current >= MAX_ATTEMPTS) {
+      if (attemptRef.current >= MAX_FALLBACK_ATTEMPTS) {
         setError("Generation timed out. Please try again.");
         stopPolling();
       }
-    } catch (err) {
-      console.error("Polling error:", err);
-      setError("An unexpected error occurred");
-    }
-  }, [propertyId, stopPolling]);
+    },
+    [handlePropertyUpdate, stopPolling],
+  );
 
   useEffect(() => {
     if (!propertyId) {
@@ -156,17 +150,40 @@ export function usePropertyPolling(
     setCopies([]);
     setIsPolling(true);
 
-    fetchPropertyStatus();
+    // Primary: Supabase Realtime subscription (push-based, no DB polling)
+    const channel = supabase
+      .channel(`property-${propertyId}`)
+      .on(
+        "postgres_changes" as any,
+        {
+          event: "UPDATE",
+          schema: "public",
+          table: "properties",
+          filter: `id=eq.${propertyId}`,
+        },
+        (payload: any) => {
+          if (payload.new) {
+            handlePropertyUpdate(payload.new as Record<string, unknown>);
+          }
+        },
+      )
+      .subscribe();
 
-    intervalRef.current = setInterval(fetchPropertyStatus, POLL_INTERVAL);
+    // Fallback: slow poll in case Realtime is unavailable or delayed
+    fetchOnce(propertyId);
+    fallbackRef.current = setInterval(
+      () => fetchOnce(propertyId),
+      FALLBACK_POLL_INTERVAL,
+    );
 
     return () => {
-      if (intervalRef.current) {
-        clearInterval(intervalRef.current);
-        intervalRef.current = null;
+      supabase.removeChannel(channel);
+      if (fallbackRef.current) {
+        clearInterval(fallbackRef.current);
+        fallbackRef.current = null;
       }
     };
-  }, [propertyId, fetchPropertyStatus]);
+  }, [propertyId, handlePropertyUpdate, fetchOnce]);
 
   return {
     status,

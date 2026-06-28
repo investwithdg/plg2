@@ -15,6 +15,8 @@ const BodySchema = z.object({ propertyId: z.string().uuid() });
 
 const PERPLEXITY_URL = "https://api.perplexity.ai/chat/completions";
 const OPENAI_CHAT_URL = "https://api.openai.com/v1/chat/completions";
+const REQUEST_TIMEOUT_MS = 30_000;
+const ENRICHMENT_CACHE_DAYS = 7;
 
 // Per-million-token pricing (USD)
 const PRICING = {
@@ -37,6 +39,14 @@ function computeCost(model: ModelKey, inputTokens: number, outputTokens: number)
     (inputTokens * rates.input) / 1_000_000 +
     (outputTokens * rates.output) / 1_000_000;
   return { inputTokens, outputTokens, costUsd };
+}
+
+// Support multiple API keys via comma-separated env vars for load distribution
+function pickKey(envVar: string): string {
+  const raw = Deno.env.get(envVar);
+  if (!raw) throw new Error(`${envVar} not configured`);
+  const keys = raw.split(",").map((k) => k.trim()).filter(Boolean);
+  return keys[Math.floor(Math.random() * keys.length)];
 }
 
 const FHA_SYSTEM_PROMPT = `You are a top-producing real estate agent's personal copywriter. Your job is to sell, not describe. Every sentence earns its place by moving a buyer closer to wanting to see this property.
@@ -110,7 +120,10 @@ async function fetchWithRetry(
   let lastErr: unknown;
   for (let attempt = 1; attempt <= maxAttempts; attempt++) {
     try {
-      const res = await fetch(url, init);
+      const controller = new AbortController();
+      const timeout = setTimeout(() => controller.abort(), REQUEST_TIMEOUT_MS);
+      const res = await fetch(url, { ...init, signal: controller.signal });
+      clearTimeout(timeout);
       if (res.status === 429 || res.status >= 500) {
         const body = await res.text();
         log(propertyId, `${label}_retry`, {
@@ -264,6 +277,65 @@ async function enrichWithPerplexity(
   return { parsed, raw: data, usage };
 }
 
+// Normalize address to a cache key (lowercase, collapse whitespace, strip unit/apt)
+function enrichmentCacheKey(address: string): string {
+  const parts = address.toLowerCase().trim().replace(/\s+/g, " ").split(",");
+  // Use city + state + zip (skip street number for neighborhood-level caching)
+  if (parts.length >= 2) {
+    return parts.slice(1).join(",").trim();
+  }
+  return parts[0];
+}
+
+async function getCachedEnrichment(
+  supabase: ReturnType<typeof createClient>,
+  address: string,
+  propertyId: string,
+): Promise<{
+  parsed: Record<string, unknown>;
+  raw: unknown;
+  usage: TokenUsage;
+} | null> {
+  const cacheKey = enrichmentCacheKey(address);
+  const since = new Date(
+    Date.now() - ENRICHMENT_CACHE_DAYS * 86400_000,
+  ).toISOString();
+
+  const { data, error } = await supabase
+    .from("enrichment_cache")
+    .select("enrichment_data, perplexity_raw")
+    .eq("cache_key", cacheKey)
+    .gte("created_at", since)
+    .order("created_at", { ascending: false })
+    .limit(1);
+
+  if (error || !data || data.length === 0) return null;
+
+  log(propertyId, "enrichment_cache_hit", { cacheKey });
+  return {
+    parsed: (data[0] as any).enrichment_data ?? {},
+    raw: (data[0] as any).perplexity_raw,
+    usage: { inputTokens: 0, outputTokens: 0, costUsd: 0 },
+  };
+}
+
+async function setCachedEnrichment(
+  supabase: ReturnType<typeof createClient>,
+  address: string,
+  parsed: Record<string, unknown>,
+  raw: unknown,
+) {
+  const cacheKey = enrichmentCacheKey(address);
+  await supabase.from("enrichment_cache").upsert(
+    {
+      cache_key: cacheKey,
+      enrichment_data: parsed,
+      perplexity_raw: raw,
+    },
+    { onConflict: "cache_key" },
+  );
+}
+
 async function generateCopy(
   openaiKey: string,
   propertyId: string,
@@ -312,22 +384,13 @@ async function process(propertyId: string) {
   const supabaseServiceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
   const supabase = createClient(supabaseUrl, supabaseServiceKey);
 
-  const PERPLEXITY_API_KEY = Deno.env.get("PERPLEXITY_API_KEY");
-  const OPENAI_API_KEY = Deno.env.get("OPENAI_API_KEY");
-
   log(propertyId, "start");
   const totalStart = Date.now();
   let failedStep: string | null = null;
 
   try {
-    if (!PERPLEXITY_API_KEY) {
-      failedStep = "config";
-      throw new Error("PERPLEXITY_API_KEY not configured");
-    }
-    if (!OPENAI_API_KEY) {
-      failedStep = "config";
-      throw new Error("OPENAI_API_KEY not configured");
-    }
+    const perplexityKey = pickKey("PERPLEXITY_API_KEY");
+    const openaiKey = pickKey("OPENAI_API_KEY");
 
     const { data: property, error: propErr } = await supabase
       .from("properties")
@@ -344,7 +407,7 @@ async function process(propertyId: string) {
     await updateStep(supabase, propertyId, "researching_property", "processing");
     const extractStart = Date.now();
     const { parsed: extracted, usage: extractionUsage } = await extractWithPerplexity(
-      PERPLEXITY_API_KEY,
+      perplexityKey,
       propertyId,
       {
         address: property.address as string,
@@ -373,20 +436,43 @@ async function process(propertyId: string) {
       })
       .eq("id", propertyId);
 
-    // 2) ENRICHMENT
+    // 2) ENRICHMENT (with neighborhood cache)
     failedStep = "enrichment";
     await updateStep(supabase, propertyId, "researching_schools");
-    const enrichStart = Date.now();
-    const { parsed: enrich, raw: enrichRaw, usage: enrichmentUsage } = await enrichWithPerplexity(
-      PERPLEXITY_API_KEY,
-      propertyId,
-      (extracted.address as string) || (property.address as string),
-    );
-    const enrichmentLatency = Date.now() - enrichStart;
+    const resolvedAddress =
+      (extracted.address as string) || (property.address as string);
+
+    let enrich: Record<string, unknown>;
+    let enrichRaw: unknown;
+    let enrichmentUsage: TokenUsage;
+    let enrichmentLatency: number;
+
+    const cached = await getCachedEnrichment(supabase, resolvedAddress, propertyId);
+    if (cached) {
+      enrich = cached.parsed;
+      enrichRaw = cached.raw;
+      enrichmentUsage = cached.usage;
+      enrichmentLatency = 0;
+    } else {
+      const enrichStart = Date.now();
+      const result = await enrichWithPerplexity(
+        perplexityKey,
+        propertyId,
+        resolvedAddress,
+      );
+      enrich = result.parsed;
+      enrichRaw = result.raw;
+      enrichmentUsage = result.usage;
+      enrichmentLatency = Date.now() - enrichStart;
+      // Cache for future requests in this neighborhood
+      await setCachedEnrichment(supabase, resolvedAddress, enrich, enrichRaw);
+    }
+
     log(propertyId, "enrichment_done", {
       latencyMs: enrichmentLatency,
       tokens: enrichmentUsage.inputTokens + enrichmentUsage.outputTokens,
       costUsd: enrichmentUsage.costUsd,
+      cached: !!cached,
     });
     await updateStep(supabase, propertyId, "analyzing_neighborhood");
 
@@ -400,7 +486,7 @@ async function process(propertyId: string) {
       median_home_value: enrich.median_home_value ?? null,
       perplexity_raw_response: enrichRaw,
       enrichment_latency_ms: enrichmentLatency,
-      enrichment_model_version: "perplexity-sonar",
+      enrichment_model_version: cached ? "cache" : "perplexity-sonar",
     });
 
     // 3) COPY GENERATION (3 parallel chat completions)
@@ -427,7 +513,7 @@ async function process(propertyId: string) {
 
     const results = await Promise.allSettled(
       COPY_TYPES.map((c, i) =>
-        generateCopy(OPENAI_API_KEY, propertyId, context, c.instruction, c.type).then((r) => ({
+        generateCopy(openaiKey, propertyId, context, c.instruction, c.type).then((r) => ({
           ...r,
           copy_type: c.type,
           generation_number: i + 1,
