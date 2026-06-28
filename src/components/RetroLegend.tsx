@@ -35,7 +35,7 @@ export default function RetroLegend() {
             className="fixed inset-0 z-40"
             onClick={() => setOpen(false)}
           />
-          <div className="absolute bottom-7 right-0 z-50 win95-window w-56">
+          <div className="absolute top-7 right-0 z-50 win95-window w-56">
             <div className="win95-titlebar">
               <span className="font-bold text-win95-11">Legend</span>
               <button
