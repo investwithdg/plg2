@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { toast as sonnerToast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { usePropertyPolling } from "@/hooks/usePropertyPolling";
@@ -70,6 +70,9 @@ export default function RetroGenerator() {
     null,
   );
   const [historyKey, setHistoryKey] = useState(0);
+  const [isProUser, setIsProUser] = useState(false);
+  const [portalLoading, setPortalLoading] = useState(false);
+  const [totalGenerations, setTotalGenerations] = useState<number | null>(null);
 
   const { status, enrichmentStep, copies, error, stopPolling } =
     usePropertyPolling(propertyId);
@@ -77,6 +80,57 @@ export default function RetroGenerator() {
   const devBypassActive = isDevHost();
   const generationsLeft = Math.max(0, MAX_GENERATIONS - generationsUsed);
   const generationCountLabel = devBypassActive ? "dev" : generationsLeft;
+
+  // --- Checkout success/cancel toast handling ---
+  const checkoutToastShown = useRef(false);
+  useEffect(() => {
+    if (typeof window === "undefined" || checkoutToastShown.current) return;
+    const params = new URLSearchParams(window.location.search);
+    const checkoutStatus = params.get("checkout");
+    if (checkoutStatus === "success") {
+      checkoutToastShown.current = true;
+      sonnerToast.success("Welcome to PLG Pro! Your 7-day trial has started.");
+      window.history.replaceState({}, "", window.location.pathname);
+    } else if (checkoutStatus === "cancel") {
+      checkoutToastShown.current = true;
+      sonnerToast("Checkout cancelled. You can upgrade anytime.");
+      window.history.replaceState({}, "", window.location.pathname);
+    }
+  }, []);
+
+  // --- Check if user has an active Pro subscription ---
+  useEffect(() => {
+    if (!user) {
+      setIsProUser(false);
+      return;
+    }
+    let cancelled = false;
+    (async () => {
+      const { data } = await (supabase.from("subscriptions" as never) as any)
+        .select("plan, status")
+        .eq("user_id", user.id)
+        .in("status", ["active", "trialing"])
+        .limit(1);
+      if (!cancelled && data && data.length > 0 && data[0].plan === "pro") {
+        setIsProUser(true);
+      }
+    })();
+    return () => { cancelled = true; };
+  }, [user]);
+
+  // --- Social proof: total generation count ---
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      const { count, error: countError } = await supabase
+        .from("properties")
+        .select("*", { count: "exact", head: true });
+      if (!cancelled && !countError && count !== null) {
+        setTotalGenerations(count);
+      }
+    })();
+    return () => { cancelled = true; };
+  }, []);
 
   useEffect(() => {
     if (typeof window === "undefined") return;
@@ -200,6 +254,26 @@ export default function RetroGenerator() {
     return signUp(email, password);
   };
 
+  const handleManageSubscription = async () => {
+    setPortalLoading(true);
+    try {
+      const { data, error } = await supabase.functions.invoke(
+        "create-portal-session",
+        { body: {} },
+      );
+      if (error) throw error;
+      if (data?.url) {
+        window.location.href = data.url;
+      } else {
+        throw new Error("No portal URL returned");
+      }
+    } catch (err) {
+      console.error("Portal error:", err);
+      sonnerToast.error("Failed to open subscription management");
+      setPortalLoading(false);
+    }
+  };
+
   const userEmail = user?.email ?? null;
 
   return (
@@ -217,8 +291,15 @@ export default function RetroGenerator() {
           showControls={false}
         >
           <div className="space-y-4">
-            <div className="text-win95-11 text-muted-foreground">
-              propertylistinggenerator.com
+            <div className="flex items-center justify-between flex-wrap gap-2">
+              <div className="text-win95-11 text-muted-foreground">
+                propertylistinggenerator.com
+              </div>
+              {totalGenerations !== null && (
+                <div className="win95-raised px-2 py-0.5 text-win95-11 font-bold text-center">
+                  {totalGenerations.toLocaleString()} listings generated
+                </div>
+              )}
             </div>
             <div className="text-win95-16 font-bold">
               listing copy in 15 seconds
@@ -251,10 +332,19 @@ export default function RetroGenerator() {
               onChange={setPropertyType}
             />
 
-            <div className="flex gap-3 text-win95-11 justify-center text-muted-foreground flex-wrap">
+            <div className="flex gap-3 text-win95-11 justify-center text-muted-foreground flex-wrap items-center">
               <span>fha trained</span>
               <span>real property research</span>
               <span>10 free generations</span>
+              {isProUser && (
+                <RetroButton
+                  onClick={handleManageSubscription}
+                  disabled={portalLoading}
+                  className="text-win95-11 px-2 py-0.5"
+                >
+                  {portalLoading ? "Loading..." : "Manage Subscription"}
+                </RetroButton>
+              )}
             </div>
           </div>
         </RetroWindow>
