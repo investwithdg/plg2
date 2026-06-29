@@ -9,7 +9,17 @@
 // Additionally, you should also exclude this file from your linter and/or formatter to prevent it from being checked or modified.
 
 import { Route as rootRouteImport } from './routes/__root'
+import { Route as PricingRouteImport } from './routes/pricing'
 import { Route as IndexRouteImport } from './routes/index'
+import { Route as CompareIndexRouteImport } from './routes/compare/index'
+import { Route as CompareListingaiRouteImport } from './routes/compare/listingai'
+import { Route as CompareDealmachineRouteImport } from './routes/compare/dealmachine'
+
+const PricingRoute = PricingRouteImport.update({
+  id: '/pricing',
+  path: '/pricing',
+  getParentRoute: () => rootRouteImport,
+} as any)
 
 const IndexRoute = IndexRouteImport.update({
   id: '/',
@@ -17,26 +27,60 @@ const IndexRoute = IndexRouteImport.update({
   getParentRoute: () => rootRouteImport,
 } as any)
 
+const CompareIndexRoute = CompareIndexRouteImport.update({
+  id: '/compare/',
+  path: '/compare/',
+  getParentRoute: () => rootRouteImport,
+} as any)
+
+const CompareListingaiRoute = CompareListingaiRouteImport.update({
+  id: '/compare/listingai',
+  path: '/compare/listingai',
+  getParentRoute: () => rootRouteImport,
+} as any)
+
+const CompareDealmachineRoute = CompareDealmachineRouteImport.update({
+  id: '/compare/dealmachine',
+  path: '/compare/dealmachine',
+  getParentRoute: () => rootRouteImport,
+} as any)
+
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
+  '/pricing': typeof PricingRoute
+  '/compare/': typeof CompareIndexRoute
+  '/compare/dealmachine': typeof CompareDealmachineRoute
+  '/compare/listingai': typeof CompareListingaiRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
+  '/pricing': typeof PricingRoute
+  '/compare': typeof CompareIndexRoute
+  '/compare/dealmachine': typeof CompareDealmachineRoute
+  '/compare/listingai': typeof CompareListingaiRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
+  '/pricing': typeof PricingRoute
+  '/compare/': typeof CompareIndexRoute
+  '/compare/dealmachine': typeof CompareDealmachineRoute
+  '/compare/listingai': typeof CompareListingaiRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
-  fullPaths: '/'
+  fullPaths: '/' | '/pricing' | '/compare/' | '/compare/dealmachine' | '/compare/listingai'
   fileRoutesByTo: FileRoutesByTo
-  to: '/'
-  id: '__root__' | '/'
+  to: '/' | '/pricing' | '/compare' | '/compare/dealmachine' | '/compare/listingai'
+  id: '__root__' | '/' | '/pricing' | '/compare/' | '/compare/dealmachine' | '/compare/listingai'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
+  PricingRoute: typeof PricingRoute
+  CompareIndexRoute: typeof CompareIndexRoute
+  CompareDealmachineRoute: typeof CompareDealmachineRoute
+  CompareListingaiRoute: typeof CompareListingaiRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -48,11 +92,43 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof IndexRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/pricing': {
+      id: '/pricing'
+      path: '/pricing'
+      fullPath: '/pricing'
+      preLoaderRoute: typeof PricingRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/compare/': {
+      id: '/compare/'
+      path: '/compare'
+      fullPath: '/compare/'
+      preLoaderRoute: typeof CompareIndexRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/compare/dealmachine': {
+      id: '/compare/dealmachine'
+      path: '/compare/dealmachine'
+      fullPath: '/compare/dealmachine'
+      preLoaderRoute: typeof CompareDealmachineRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/compare/listingai': {
+      id: '/compare/listingai'
+      path: '/compare/listingai'
+      fullPath: '/compare/listingai'
+      preLoaderRoute: typeof CompareListingaiRouteImport
+      parentRoute: typeof rootRouteImport
+    }
   }
 }
 
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
+  PricingRoute: PricingRoute,
+  CompareIndexRoute: CompareIndexRoute,
+  CompareDealmachineRoute: CompareDealmachineRoute,
+  CompareListingaiRoute: CompareListingaiRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
