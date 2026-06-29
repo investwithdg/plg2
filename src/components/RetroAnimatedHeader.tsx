@@ -16,14 +16,17 @@ export function RetroAnimatedHeader({
       <div className="w-4 h-4 win95-raised flex items-center justify-center text-black text-[10px] font-bold">
         P
       </div>
-      <span className="text-win95-12 font-bold">
+      <span className="text-win95-12 font-bold tracking-wide">
+        PLG
+      </span>
+      <span className="text-win95-11 opacity-70 hidden sm:inline">
         PropertyListingGenerator.com
       </span>
       <span className="ml-auto flex items-center gap-2">
         <span className="text-win95-11 opacity-80 hidden sm:inline">
           {userName
             ? `signed in as ${userName}`
-            : "listings for agents who value their time"}
+            : "the listing tool for agents"}
         </span>
         {userName ? (
           <button
