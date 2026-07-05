@@ -111,7 +111,7 @@ function ListingPage() {
   const [activeTab, setActiveTab] = useState<CopyTab>("mls");
 
   const copyMap = Object.fromEntries(
-    listing.copies.map((c) => [c.copy_type, c.content]),
+    listing.copies.map((c: { copy_type: string; content: string }) => [c.copy_type, c.content]),
   ) as Partial<Record<CopyTab, string>>;
 
   const tabs = (["mls", "social", "email"] as CopyTab[]).filter(
