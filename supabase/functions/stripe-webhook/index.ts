@@ -100,6 +100,32 @@ serve(async (req) => {
   return new Response(JSON.stringify({ received: true }), { status: 200 });
 });
 
+async function sendLoopsEvent(
+  loopsKey: string,
+  email: string,
+  eventName: string,
+  properties?: Record<string, unknown>,
+) {
+  try {
+    const res = await fetch("https://app.loops.so/api/v1/events/send", {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${loopsKey}`,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({ email, eventName, ...properties }),
+    });
+    if (!res.ok) {
+      const text = await res.text();
+      log("loops_event_failed", { eventName, status: res.status, text });
+    } else {
+      log("loops_event_sent", { email, eventName });
+    }
+  } catch (err) {
+    log("loops_event_error", { eventName, error: String(err) });
+  }
+}
+
 async function handleCheckoutCompleted(
   supabase: ReturnType<typeof createClient>,
   session: Record<string, any>,
@@ -128,6 +154,25 @@ async function handleCheckoutCompleted(
   );
 
   if (error) log("checkout_upsert_error", { error: error.message });
+
+  // Fire Loops 'upgraded' event so the Pro onboarding sequence starts
+  const loopsKey = Deno.env.get("LOOPS_API_KEY");
+  if (loopsKey) {
+    const { data: userData } = await supabase.auth.admin.getUserById(userId);
+    const email = userData?.user?.email;
+    if (email) {
+      // Upsert contact first in case they signed up via Google OAuth
+      await fetch("https://app.loops.so/api/v1/contacts/upsert", {
+        method: "POST",
+        headers: {
+          Authorization: `Bearer ${loopsKey}`,
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ email, userGroup: "pro", source: "plg_signup" }),
+      }).catch(() => {});
+      await sendLoopsEvent(loopsKey, email, "upgraded");
+    }
+  }
 }
 
 async function handleSubscriptionChange(
