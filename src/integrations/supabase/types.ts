@@ -64,64 +64,29 @@ export type Database = {
           },
         ]
       }
-      generation_costs: {
+      enrichment_cache: {
         Row: {
-          id: string
-          property_id: string
-          user_id: string | null
-          extraction_input_tokens: number | null
-          extraction_output_tokens: number | null
-          extraction_cost_usd: number | null
-          enrichment_input_tokens: number | null
-          enrichment_output_tokens: number | null
-          enrichment_cost_usd: number | null
-          copy_input_tokens: number | null
-          copy_output_tokens: number | null
-          copy_cost_usd: number | null
-          total_input_tokens: number | null
-          total_output_tokens: number | null
-          total_cost_usd: number | null
+          cache_key: string
           created_at: string
+          enrichment_data: Json
+          id: string
+          perplexity_raw: Json | null
         }
         Insert: {
-          id?: string
-          property_id: string
-          user_id?: string | null
-          extraction_input_tokens?: number | null
-          extraction_output_tokens?: number | null
-          extraction_cost_usd?: number | null
-          enrichment_input_tokens?: number | null
-          enrichment_output_tokens?: number | null
-          enrichment_cost_usd?: number | null
-          copy_input_tokens?: number | null
-          copy_output_tokens?: number | null
-          copy_cost_usd?: number | null
+          cache_key: string
           created_at?: string
+          enrichment_data?: Json
+          id?: string
+          perplexity_raw?: Json | null
         }
         Update: {
-          id?: string
-          property_id?: string
-          user_id?: string | null
-          extraction_input_tokens?: number | null
-          extraction_output_tokens?: number | null
-          extraction_cost_usd?: number | null
-          enrichment_input_tokens?: number | null
-          enrichment_output_tokens?: number | null
-          enrichment_cost_usd?: number | null
-          copy_input_tokens?: number | null
-          copy_output_tokens?: number | null
-          copy_cost_usd?: number | null
+          cache_key?: string
           created_at?: string
+          enrichment_data?: Json
+          id?: string
+          perplexity_raw?: Json | null
         }
-        Relationships: [
-          {
-            foreignKeyName: "generation_costs_property_id_fkey"
-            columns: ["property_id"]
-            isOneToOne: false
-            referencedRelation: "properties"
-            referencedColumns: ["id"]
-          },
-        ]
+        Relationships: []
       }
       enrichments: {
         Row: {
@@ -169,6 +134,71 @@ export type Database = {
         Relationships: [
           {
             foreignKeyName: "enrichments_property_id_fkey"
+            columns: ["property_id"]
+            isOneToOne: false
+            referencedRelation: "properties"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      generation_costs: {
+        Row: {
+          copy_cost_usd: number | null
+          copy_input_tokens: number | null
+          copy_output_tokens: number | null
+          created_at: string
+          enrichment_cost_usd: number | null
+          enrichment_input_tokens: number | null
+          enrichment_output_tokens: number | null
+          extraction_cost_usd: number | null
+          extraction_input_tokens: number | null
+          extraction_output_tokens: number | null
+          id: string
+          property_id: string
+          total_cost_usd: number | null
+          total_input_tokens: number | null
+          total_output_tokens: number | null
+          user_id: string | null
+        }
+        Insert: {
+          copy_cost_usd?: number | null
+          copy_input_tokens?: number | null
+          copy_output_tokens?: number | null
+          created_at?: string
+          enrichment_cost_usd?: number | null
+          enrichment_input_tokens?: number | null
+          enrichment_output_tokens?: number | null
+          extraction_cost_usd?: number | null
+          extraction_input_tokens?: number | null
+          extraction_output_tokens?: number | null
+          id?: string
+          property_id: string
+          total_cost_usd?: number | null
+          total_input_tokens?: number | null
+          total_output_tokens?: number | null
+          user_id?: string | null
+        }
+        Update: {
+          copy_cost_usd?: number | null
+          copy_input_tokens?: number | null
+          copy_output_tokens?: number | null
+          created_at?: string
+          enrichment_cost_usd?: number | null
+          enrichment_input_tokens?: number | null
+          enrichment_output_tokens?: number | null
+          extraction_cost_usd?: number | null
+          extraction_input_tokens?: number | null
+          extraction_output_tokens?: number | null
+          id?: string
+          property_id?: string
+          total_cost_usd?: number | null
+          total_input_tokens?: number | null
+          total_output_tokens?: number | null
+          user_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "generation_costs_property_id_fkey"
             columns: ["property_id"]
             isOneToOne: false
             referencedRelation: "properties"
@@ -239,6 +269,54 @@ export type Database = {
           sqft?: number | null
           status?: string
           user_id?: string | null
+        }
+        Relationships: []
+      }
+      subscriptions: {
+        Row: {
+          cancel_at_period_end: boolean
+          created_at: string
+          current_period_end: string | null
+          current_period_start: string | null
+          id: string
+          plan: string
+          status: string
+          stripe_customer_id: string
+          stripe_subscription_id: string
+          trial_end: string | null
+          trial_start: string | null
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          cancel_at_period_end?: boolean
+          created_at?: string
+          current_period_end?: string | null
+          current_period_start?: string | null
+          id?: string
+          plan?: string
+          status?: string
+          stripe_customer_id: string
+          stripe_subscription_id: string
+          trial_end?: string | null
+          trial_start?: string | null
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          cancel_at_period_end?: boolean
+          created_at?: string
+          current_period_end?: string | null
+          current_period_start?: string | null
+          id?: string
+          plan?: string
+          status?: string
+          stripe_customer_id?: string
+          stripe_subscription_id?: string
+          trial_end?: string | null
+          trial_start?: string | null
+          updated_at?: string
+          user_id?: string
         }
         Relationships: []
       }
