@@ -1,0 +1,3 @@
+User-agent: *
+Allow: /
+Sitemap: https://propertylistinggenerator.com/sitemap.xml

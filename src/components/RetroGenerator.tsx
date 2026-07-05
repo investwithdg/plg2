@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from "react";
+import { Link } from "@tanstack/react-router";
 import { toast as sonnerToast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { usePropertyPolling } from "@/hooks/usePropertyPolling";
@@ -16,7 +17,6 @@ import {
   TooltipProvider,
   TooltipTrigger,
 } from "@/components/ui/tooltip";
-import { RetroAnimatedHeader } from "@/components/RetroAnimatedHeader";
 import { RetroButton, RetroInput, RetroWindow } from "@/components/retro";
 import {
   describeFunctionInvokeError,
@@ -274,16 +274,8 @@ export default function RetroGenerator() {
     }
   };
 
-  const userEmail = user?.email ?? null;
-
   return (
     <div className="min-h-screen font-system text-foreground">
-      <RetroAnimatedHeader
-        userName={userEmail}
-        onSignInClick={() => setShowAuthModal(true)}
-        onSignOutClick={signOut}
-      />
-
       <main className="flex flex-col items-center p-4 gap-4">
         <RetroWindow
           title="PLG — Property Listing Generator"
@@ -422,13 +414,41 @@ export default function RetroGenerator() {
       </main>
 
       <footer className="w-full border-t-2 border-black bg-card px-4 py-3 mt-4">
-        <div className="max-w-3xl mx-auto flex flex-col sm:flex-row items-center justify-between gap-2 text-win95-11 text-muted-foreground">
-          <span>
-            <strong className="text-foreground">PLG</strong> — PropertyListingGenerator.com
-          </span>
-          <span>
-            FHA-compliant listing copy for real estate agents
-          </span>
+        <div className="max-w-3xl mx-auto flex flex-col items-center gap-2 text-win95-11 text-muted-foreground">
+          <div className="flex flex-col sm:flex-row items-center justify-between gap-2 w-full">
+            <span>
+              <strong className="text-foreground">PLG</strong> — PropertyListingGenerator.com
+            </span>
+            <span>
+              FHA-compliant listing copy for real estate agents
+            </span>
+          </div>
+          <div className="flex flex-wrap items-center justify-center gap-3">
+            <Link to="/explore" className="underline hover:text-foreground">
+              explore
+            </Link>
+            <span>|</span>
+            <Link to="/blog" className="underline hover:text-foreground">
+              blog
+            </Link>
+            <span>|</span>
+            <Link to="/terms" className="underline hover:text-foreground">
+              terms
+            </Link>
+            <span>|</span>
+            <Link to="/privacy" className="underline hover:text-foreground">
+              privacy
+            </Link>
+            <span>|</span>
+            <a
+              href="/sitemap.xml"
+              className="underline hover:text-foreground"
+              target="_blank"
+              rel="noopener noreferrer"
+            >
+              sitemap
+            </a>
+          </div>
         </div>
       </footer>
     </div>
