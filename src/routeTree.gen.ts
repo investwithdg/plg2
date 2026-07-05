@@ -19,6 +19,13 @@ import { Route as CompareListingaiRouteImport } from './routes/compare/listingai
 import { Route as CompareDealmachineRouteImport } from './routes/compare/dealmachine'
 import { Route as BlogIndexRouteImport } from './routes/blog/index'
 import { Route as BlogSlugRouteImport } from './routes/blog/$slug'
+import { Route as ListingIdRouteImport } from './routes/listing/$id'
+
+const ListingIdRoute = ListingIdRouteImport.update({
+  id: '/listing/$id',
+  path: '/listing/$id',
+  getParentRoute: () => rootRouteImport,
+} as any)
 
 const TermsRoute = TermsRouteImport.update({
   id: '/terms',
@@ -91,6 +98,7 @@ export interface FileRoutesByFullPath {
   '/compare/listingai': typeof CompareListingaiRoute
   '/blog/': typeof BlogIndexRoute
   '/blog/$slug': typeof BlogSlugRoute
+  '/listing/$id': typeof ListingIdRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
@@ -103,6 +111,7 @@ export interface FileRoutesByTo {
   '/compare/listingai': typeof CompareListingaiRoute
   '/blog': typeof BlogIndexRoute
   '/blog/$slug': typeof BlogSlugRoute
+  '/listing/$id': typeof ListingIdRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
@@ -116,13 +125,14 @@ export interface FileRoutesById {
   '/compare/listingai': typeof CompareListingaiRoute
   '/blog/': typeof BlogIndexRoute
   '/blog/$slug': typeof BlogSlugRoute
+  '/listing/$id': typeof ListingIdRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
-  fullPaths: '/' | '/pricing' | '/privacy' | '/terms' | '/explore' | '/compare/' | '/compare/dealmachine' | '/compare/listingai' | '/blog/' | '/blog/$slug'
+  fullPaths: '/' | '/pricing' | '/privacy' | '/terms' | '/explore' | '/compare/' | '/compare/dealmachine' | '/compare/listingai' | '/blog/' | '/blog/$slug' | '/listing/$id'
   fileRoutesByTo: FileRoutesByTo
-  to: '/' | '/pricing' | '/privacy' | '/terms' | '/explore' | '/compare' | '/compare/dealmachine' | '/compare/listingai' | '/blog' | '/blog/$slug'
-  id: '__root__' | '/' | '/pricing' | '/privacy' | '/terms' | '/explore' | '/compare/' | '/compare/dealmachine' | '/compare/listingai' | '/blog/' | '/blog/$slug'
+  to: '/' | '/pricing' | '/privacy' | '/terms' | '/explore' | '/compare' | '/compare/dealmachine' | '/compare/listingai' | '/blog' | '/blog/$slug' | '/listing/$id'
+  id: '__root__' | '/' | '/pricing' | '/privacy' | '/terms' | '/explore' | '/compare/' | '/compare/dealmachine' | '/compare/listingai' | '/blog/' | '/blog/$slug' | '/listing/$id'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -136,6 +146,7 @@ export interface RootRouteChildren {
   CompareListingaiRoute: typeof CompareListingaiRoute
   BlogIndexRoute: typeof BlogIndexRoute
   BlogSlugRoute: typeof BlogSlugRoute
+  ListingIdRoute: typeof ListingIdRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -210,6 +221,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof BlogSlugRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/listing/$id': {
+      id: '/listing/$id'
+      path: '/listing/$id'
+      fullPath: '/listing/$id'
+      preLoaderRoute: typeof ListingIdRouteImport
+      parentRoute: typeof rootRouteImport
+    }
   }
 }
 
@@ -224,6 +242,7 @@ const rootRouteChildren: RootRouteChildren = {
   CompareListingaiRoute: CompareListingaiRoute,
   BlogIndexRoute: BlogIndexRoute,
   BlogSlugRoute: BlogSlugRoute,
+  ListingIdRoute: ListingIdRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
