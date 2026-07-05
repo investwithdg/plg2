@@ -1,11 +1,21 @@
-import { useState } from "react";
+import { useState, useCallback } from "react";
+import { supabase } from "@/integrations/supabase/client";
 import { RetroButton, RetroInput } from "@/components/retro";
+import TurnstileWidget from "@/components/TurnstileWidget";
+
+const TURNSTILE_SITE_KEY = import.meta.env.VITE_TURNSTILE_SITE_KEY as
+  | string
+  | undefined;
 
 type AuthMode = "signin" | "signup";
 
 interface AuthModalProps {
   onClose: () => void;
-  onAuth: (email: string, password: string, mode: AuthMode) => Promise<string | null>;
+  onAuth: (
+    email: string,
+    password: string,
+    mode: AuthMode,
+  ) => Promise<string | null>;
 }
 
 export default function AuthModal({ onClose, onAuth }: AuthModalProps) {
@@ -15,11 +25,43 @@ export default function AuthModal({ onClose, onAuth }: AuthModalProps) {
   const [error, setError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
   const [success, setSuccess] = useState(false);
+  const [turnstileToken, setTurnstileToken] = useState<string | null>(null);
+
+  const handleTurnstileVerify = useCallback((token: string) => {
+    setTurnstileToken(token);
+  }, []);
+
+  const handleTurnstileExpire = useCallback(() => {
+    setTurnstileToken(null);
+  }, []);
+
+  const requiresTurnstile = mode === "signup" && !!TURNSTILE_SITE_KEY;
+  const canSubmit =
+    !!email.trim() &&
+    !!password.trim() &&
+    (!requiresTurnstile || !!turnstileToken);
 
   const handleSubmit = async () => {
-    if (!email.trim() || !password.trim()) return;
+    if (!canSubmit || submitting) return;
     setError(null);
     setSubmitting(true);
+
+    if (requiresTurnstile && turnstileToken) {
+      try {
+        const { data } = await supabase.functions.invoke("verify-turnstile", {
+          body: { token: turnstileToken },
+        });
+        if (!data?.success) {
+          setError("Security check failed. Please try again.");
+          setTurnstileToken(null);
+          setSubmitting(false);
+          return;
+        }
+      } catch {
+        // Fail open — don't block signup if verification call fails
+      }
+    }
+
     const err = await onAuth(email, password, mode);
     setSubmitting(false);
     if (err) {
@@ -84,6 +126,17 @@ export default function AuthModal({ onClose, onAuth }: AuthModalProps) {
                   onKeyDown={(e) => e.key === "Enter" && handleSubmit()}
                 />
               </div>
+
+              {requiresTurnstile && (
+                <div className="flex justify-center">
+                  <TurnstileWidget
+                    siteKey={TURNSTILE_SITE_KEY!}
+                    onVerify={handleTurnstileVerify}
+                    onExpire={handleTurnstileExpire}
+                  />
+                </div>
+              )}
+
               {error && (
                 <p className="text-win95-11 text-[color:var(--destructive)]">
                   {error}
@@ -95,6 +148,7 @@ export default function AuthModal({ onClose, onAuth }: AuthModalProps) {
                   onClick={() => {
                     setMode(mode === "signin" ? "signup" : "signin");
                     setError(null);
+                    setTurnstileToken(null);
                   }}
                 >
                   {mode === "signin"
@@ -104,7 +158,7 @@ export default function AuthModal({ onClose, onAuth }: AuthModalProps) {
                 <RetroButton
                   variant="primary"
                   onClick={handleSubmit}
-                  disabled={submitting || !email.trim() || !password.trim()}
+                  disabled={submitting || !canSubmit}
                 >
                   {submitting
                     ? "..."

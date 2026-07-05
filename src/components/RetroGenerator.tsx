@@ -96,6 +96,9 @@ export default function RetroGenerator() {
       checkoutToastShown.current = true;
       sonnerToast("Checkout cancelled. You can upgrade anytime.");
       window.history.replaceState({}, "", window.location.pathname);
+    } else if (params.get("upgrade") === "true") {
+      setShowPaywall(true);
+      window.history.replaceState({}, "", window.location.pathname);
     }
   }, []);
 
@@ -427,11 +430,15 @@ export default function RetroGenerator() {
           />
         )}
 
-        {/* Authenticated users see their listing history; anonymous see How It Works */}
+        {/* Authenticated users see their listing history; anonymous see landing content */}
         {user && !authLoading ? (
           <ListingHistory key={historyKey} userId={user.id} />
         ) : (
-          <HowItWorks />
+          <>
+            <HowItWorks />
+            <SampleOutput />
+            <WhyPLG />
+          </>
         )}
       </main>
 
@@ -655,23 +662,23 @@ function HowItWorks() {
   const steps = [
     {
       n: "1.",
-      title: "Paste address or URL",
-      body: "Zillow, Redfin, Realtor.com — or just type an address.",
+      title: "Paste address or listing URL",
+      body: "Works with Zillow, Redfin, Realtor.com, MLS links — or just type any address.",
     },
     {
       n: "2.",
       title: "Pick property type",
-      body: "10 free generations. Try any type once — Pro unlocks all 9.",
+      body: "SFR, FSBO, Multi-Family, STR, MTR, LTR, Estate, Commercial, or Lease. Free tier includes SFR + FSBO.",
     },
     {
       n: "3.",
-      title: "Hit generate",
-      body: "Research, analyze, and write 3 FHA-compliant listings in ~15s.",
+      title: "Generate in ~15 seconds",
+      body: "PLG researches the property, pulls neighborhood data, and writes FHA-compliant copy — automatically.",
     },
     {
       n: "4.",
-      title: "Copy & ship",
-      body: "One-click copy for MLS, Social, and Email — ready to paste.",
+      title: "One-click copy & paste",
+      body: "Copy your MLS description, social post, or email individually — or grab all three at once.",
     },
   ];
   return (
@@ -684,6 +691,92 @@ function HowItWorks() {
                 {s.n} {s.title}
               </div>
               <p className="text-win95-12 text-muted-foreground">{s.body}</p>
+            </div>
+          ))}
+        </div>
+      </RetroWindow>
+    </div>
+  );
+}
+
+function SampleOutput() {
+  return (
+    <div className="w-full max-w-3xl">
+      <RetroWindow title="sample output — 742 Evergreen Terrace, Springfield" showControls={false}>
+        <div className="space-y-3">
+          <div className="win95-inset bg-input p-3">
+            <p className="text-win95-11 font-bold mb-1 text-[var(--win95-blue)]">
+              MLS Description
+            </p>
+            <p className="text-win95-11">
+              Meticulously maintained 3BR/2BA craftsman on a quiet tree-lined
+              street. Open-concept kitchen with granite countertops, stainless
+              appliances, and breakfast bar. Primary suite features walk-in
+              closet and ensuite with double vanity. Original hardwood floors
+              throughout. Spacious backyard with covered patio — ideal for
+              entertaining. New roof (2022), updated HVAC, 2-car garage. Walk to
+              top-rated Elmwood Elementary. Minutes to downtown. Equal housing
+              opportunity.
+            </p>
+          </div>
+          <div className="win95-inset bg-input p-3">
+            <p className="text-win95-11 font-bold mb-1 text-[var(--win95-blue)]">
+              Social Post (Instagram / Facebook)
+            </p>
+            <p className="text-win95-11">
+              Just listed — 742 Evergreen Terrace. A beautifully maintained
+              craftsman with 3 beds, 2 baths, and a kitchen that'll make you
+              want to cook. Hardwood floors, covered patio, and a backyard built
+              for summer. New roof + updated HVAC. Priced to move in a
+              neighborhood people are moving into. DM for a private showing.
+            </p>
+          </div>
+          <div className="win95-inset bg-input p-3">
+            <p className="text-win95-11 font-bold mb-1 text-[var(--win95-blue)]">
+              Email Subject + Opener
+            </p>
+            <p className="text-win95-11 whitespace-pre-line">{`Subject: Just Listed — 742 Evergreen Terrace (3/2, move-in ready)
+
+Hi [Name],
+
+A new listing just came to market that I think is worth a look. 742 Evergreen Terrace is a 3BR/2BA craftsman in one of Springfield's most sought-after pockets...`}</p>
+          </div>
+          <p className="text-win95-10 text-muted-foreground text-center italic">
+            Generated in 14 seconds from a street address. FHA-compliant. No editing required.
+          </p>
+        </div>
+      </RetroWindow>
+    </div>
+  );
+}
+
+function WhyPLG() {
+  const reasons = [
+    {
+      title: "Real research, not hallucination",
+      body: "PLG uses Perplexity AI to pull actual property data and neighborhood context before writing. ChatGPT invents details. PLG verifies them.",
+    },
+    {
+      title: "FHA Fair Housing — built in",
+      body: "Every output is screened for discriminatory language and restricted terms. Use it confidently without a compliance review.",
+    },
+    {
+      title: "Three formats, one generation",
+      body: "MLS description, Instagram/Facebook post, and buyer email — all in one click. No copy-pasting between tools.",
+    },
+    {
+      title: "15 seconds vs. 45 minutes",
+      body: "Agents average 45 minutes writing listing copy from scratch. PLG cuts that to under 15 seconds. Across 50 listings, that's 37 hours back.",
+    },
+  ];
+  return (
+    <div className="w-full max-w-3xl">
+      <RetroWindow title="why PLG vs. writing it yourself" showControls={false}>
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+          {reasons.map((r) => (
+            <div key={r.title} className="win95-inset bg-input p-3">
+              <p className="text-win95-12 font-bold mb-1">{r.title}</p>
+              <p className="text-win95-11 text-muted-foreground">{r.body}</p>
             </div>
           ))}
         </div>
