@@ -84,7 +84,7 @@ function BlogPost() {
         </div>
 
         {/* Each section as its own window panel */}
-        {article.sections.map((section) => (
+        {article.sections.map((section: typeof article.sections[number]) => (
           <div key={section.title} className="win95-window">
             <div className="win95-titlebar">
               <span className="font-bold text-win95-12 truncate pl-1">
