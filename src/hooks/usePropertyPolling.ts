@@ -111,7 +111,9 @@ export function usePropertyPolling(
         const { data, error: fetchErr } = await (
           supabase.from("properties" as never) as any
         )
-          .select("*")
+          .select(
+            "id, address, property_type, status, enrichment_step, extraction_status, failed_step, beds, baths, sqft, price, created_at",
+          )
           .eq("id", propId)
           .maybeSingle();
         if (fetchErr || !data) {
