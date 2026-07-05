@@ -140,7 +140,7 @@ export function AppNav() {
                     to={link.to}
                     className="block w-full text-left px-4 py-1.5 text-win95-12 text-black no-underline hover:bg-[color:var(--win95-blue)] hover:text-white"
                     activeProps={{ className: "block w-full text-left px-4 py-1.5 text-win95-12 no-underline bg-[color:var(--win95-blue)] text-white" }}
-                    activeOptions={link.exact ? { exact: true } : undefined}
+                    activeOptions={"exact" in link && link.exact ? { exact: true } : undefined}
                     onClick={() => setMenuOpen(false)}
                   >
                     {link.label}
@@ -176,7 +176,7 @@ export function AppNav() {
       {showAuthModal && (
         <AuthModal
           onClose={() => setShowAuthModal(false)}
-          onAuth={() => setShowAuthModal(false)}
+          onAuth={async () => { setShowAuthModal(false); return null; }}
         />
       )}
     </>
