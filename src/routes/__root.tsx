@@ -13,6 +13,8 @@ import appCss from "../styles.css?url";
 import { reportLovableError } from "../lib/lovable-error-reporting";
 import { Toaster } from "@/components/ui/sonner";
 import { AppNav } from "@/components/AppNav";
+import { initPostHog, identifyUser, resetUser, track } from "@/lib/posthog";
+import { useAuth } from "@/hooks/useAuth";
 
 function NotFoundComponent() {
   return (
@@ -168,10 +170,36 @@ function RootComponent() {
 
   return (
     <QueryClientProvider client={queryClient}>
+      <PostHogInit />
       <AppNav />
       {/* Required: nested routes render here. Removing <Outlet /> breaks all child routes. */}
       <Outlet />
       <Toaster />
     </QueryClientProvider>
   );
+}
+
+function PostHogInit() {
+  const { user } = useAuth();
+
+  useEffect(() => {
+    initPostHog();
+  }, []);
+
+  useEffect(() => {
+    if (user) {
+      identifyUser(user.id, user.email ?? undefined);
+    } else {
+      resetUser();
+    }
+  }, [user?.id]);
+
+  const router = useRouter();
+  useEffect(() => {
+    return router.subscribe("onLoad", ({ toLocation }) => {
+      track("$pageview", { path: toLocation.pathname });
+    });
+  }, [router]);
+
+  return null;
 }
