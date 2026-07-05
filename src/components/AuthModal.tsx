@@ -24,7 +24,6 @@ export default function AuthModal({ onClose, onAuth }: AuthModalProps) {
   const [password, setPassword] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
-  const [success, setSuccess] = useState(false);
   const [turnstileToken, setTurnstileToken] = useState<string | null>(null);
 
   const handleTurnstileVerify = useCallback((token: string) => {
@@ -58,7 +57,7 @@ export default function AuthModal({ onClose, onAuth }: AuthModalProps) {
           return;
         }
       } catch {
-        // Fail open — don't block signup if verification call fails
+        // Fail open — don't block signup if the verification call errors
       }
     }
 
@@ -66,8 +65,6 @@ export default function AuthModal({ onClose, onAuth }: AuthModalProps) {
     setSubmitting(false);
     if (err) {
       setError(err);
-    } else if (mode === "signup") {
-      setSuccess(true);
     } else {
       onClose();
     }
@@ -85,90 +82,61 @@ export default function AuthModal({ onClose, onAuth }: AuthModalProps) {
           </button>
         </div>
         <div className="p-4 bg-card space-y-3">
-          {success ? (
-            <>
-              <div className="win95-inset bg-input p-3">
-                <p className="text-win95-12">
-                  Check your email for a confirmation link, then sign in.
-                </p>
-              </div>
-              <div className="flex justify-center">
-                <RetroButton
-                  variant="primary"
-                  onClick={() => {
-                    setSuccess(false);
-                    setMode("signin");
-                  }}
-                >
-                  Sign In
-                </RetroButton>
-              </div>
-            </>
-          ) : (
-            <>
-              <div className="space-y-2">
-                <label className="text-win95-11 block">Email:</label>
-                <RetroInput
-                  type="email"
-                  value={email}
-                  onChange={(e) => setEmail(e.target.value)}
-                  placeholder="agent@example.com"
-                  onKeyDown={(e) => e.key === "Enter" && handleSubmit()}
-                />
-              </div>
-              <div className="space-y-2">
-                <label className="text-win95-11 block">Password:</label>
-                <RetroInput
-                  type="password"
-                  value={password}
-                  onChange={(e) => setPassword(e.target.value)}
-                  placeholder="min 6 characters"
-                  onKeyDown={(e) => e.key === "Enter" && handleSubmit()}
-                />
-              </div>
+          <div className="space-y-2">
+            <label className="text-win95-11 block">Email:</label>
+            <RetroInput
+              type="email"
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+              placeholder="agent@example.com"
+              onKeyDown={(e) => e.key === "Enter" && handleSubmit()}
+            />
+          </div>
+          <div className="space-y-2">
+            <label className="text-win95-11 block">Password:</label>
+            <RetroInput
+              type="password"
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+              placeholder="min 6 characters"
+              onKeyDown={(e) => e.key === "Enter" && handleSubmit()}
+            />
+          </div>
 
-              {requiresTurnstile && (
-                <div className="flex justify-center">
-                  <TurnstileWidget
-                    siteKey={TURNSTILE_SITE_KEY!}
-                    onVerify={handleTurnstileVerify}
-                    onExpire={handleTurnstileExpire}
-                  />
-                </div>
-              )}
-
-              {error && (
-                <p className="text-win95-11 text-[color:var(--destructive)]">
-                  {error}
-                </p>
-              )}
-              <div className="flex gap-2 justify-between items-center">
-                <button
-                  className="text-win95-11 underline cursor-pointer bg-transparent border-none text-muted-foreground"
-                  onClick={() => {
-                    setMode(mode === "signin" ? "signup" : "signin");
-                    setError(null);
-                    setTurnstileToken(null);
-                  }}
-                >
-                  {mode === "signin"
-                    ? "Need an account?"
-                    : "Already have an account?"}
-                </button>
-                <RetroButton
-                  variant="primary"
-                  onClick={handleSubmit}
-                  disabled={submitting || !canSubmit}
-                >
-                  {submitting
-                    ? "..."
-                    : mode === "signin"
-                      ? "Sign In"
-                      : "Sign Up"}
-                </RetroButton>
-              </div>
-            </>
+          {requiresTurnstile && (
+            <div className="flex justify-center">
+              <TurnstileWidget
+                siteKey={TURNSTILE_SITE_KEY!}
+                onVerify={handleTurnstileVerify}
+                onExpire={handleTurnstileExpire}
+              />
+            </div>
           )}
+
+          {error && (
+            <p className="text-win95-11 text-[color:var(--destructive)]">
+              {error}
+            </p>
+          )}
+          <div className="flex gap-2 justify-between items-center">
+            <button
+              className="text-win95-11 underline cursor-pointer bg-transparent border-none text-muted-foreground"
+              onClick={() => {
+                setMode(mode === "signin" ? "signup" : "signin");
+                setError(null);
+                setTurnstileToken(null);
+              }}
+            >
+              {mode === "signin" ? "Need an account?" : "Already have an account?"}
+            </button>
+            <RetroButton
+              variant="primary"
+              onClick={handleSubmit}
+              disabled={submitting || !canSubmit}
+            >
+              {submitting ? "..." : mode === "signin" ? "Sign In" : "Sign Up"}
+            </RetroButton>
+          </div>
         </div>
       </div>
     </div>
