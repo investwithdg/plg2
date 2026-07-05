@@ -7,12 +7,14 @@ import {
   HeadContent,
   Scripts,
 } from "@tanstack/react-router";
-import { useEffect, type ReactNode } from "react";
+import { useEffect, useRef, type ReactNode } from "react";
 
 import appCss from "../styles.css?url";
 import { reportLovableError } from "../lib/lovable-error-reporting";
 import { Toaster } from "@/components/ui/sonner";
 import { AppNav } from "@/components/AppNav";
+import { initPostHog, identifyUser, resetUser, track } from "@/lib/posthog";
+import { useAuth } from "@/hooks/useAuth";
 
 function NotFoundComponent() {
   return (
@@ -168,10 +170,58 @@ function RootComponent() {
 
   return (
     <QueryClientProvider client={queryClient}>
+      <PostHogInit />
       <AppNav />
       {/* Required: nested routes render here. Removing <Outlet /> breaks all child routes. */}
       <Outlet />
       <Toaster />
     </QueryClientProvider>
   );
+}
+
+function PostHogInit() {
+  const { user, loading: authLoading } = useAuth();
+  // undefined = unresolved; null = resolved anonymous; string = resolved user id
+  const prevUserId = useRef<string | null | undefined>(undefined);
+
+  useEffect(() => {
+    initPostHog();
+  }, []);
+
+  useEffect(() => {
+    // Wait until the session check resolves before touching identity — otherwise
+    // resetUser() fires before getSession() returns, wiping distinct_id for returning users.
+    if (authLoading) return;
+
+    const currentId = user?.id ?? null;
+
+    if (prevUserId.current === undefined) {
+      // First settled value after session check
+      if (currentId) {
+        identifyUser(currentId, user?.email ?? undefined);
+      }
+      // If null here, visitor is genuinely anonymous — no reset needed
+    } else if (currentId !== prevUserId.current) {
+      if (currentId) {
+        identifyUser(currentId, user?.email ?? undefined);
+      } else {
+        // Explicit logout transition
+        resetUser();
+      }
+    } else if (currentId && user?.email) {
+      // Same user id but email may have changed
+      identifyUser(currentId, user.email);
+    }
+
+    prevUserId.current = currentId;
+  }, [authLoading, user?.id, user?.email]);
+
+  const router = useRouter();
+  useEffect(() => {
+    return router.subscribe("onLoad", ({ toLocation }) => {
+      track("$pageview", { path: toLocation.pathname });
+    });
+  }, [router]);
+
+  return null;
 }

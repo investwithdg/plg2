@@ -22,6 +22,7 @@ import {
   describeFunctionInvokeError,
   parsePropertyInput,
 } from "@/lib/parsePropertyInput";
+import { track } from "@/lib/posthog";
 
 type PropertyType =
   | "sfr"
@@ -151,25 +152,30 @@ export default function RetroGenerator() {
       setOutputs(outputMap);
       setShowProgress(false);
       setHistoryKey((k) => k + 1);
+      track("generation_completed", { property_type: propertyType, property_id: propertyId });
     }
-  }, [status, copies]);
+  }, [status, copies, propertyType, propertyId]);
 
   const handleGenerate = async () => {
     if (!query.trim()) return;
 
     if (!devBypassActive && generationsUsed >= MAX_GENERATIONS && !user) {
       setShowPaywall(true);
+      track("paywall_shown", { reason: "free_limit_exceeded_local", property_type: propertyType });
       return;
     }
 
     if (!devBypassActive && !isPropertyTypeFree(propertyType) && !user) {
       setShowPaywall(true);
+      track("paywall_shown", { reason: "premium_type_anon", property_type: propertyType });
       return;
     }
 
     setOutputs(null);
     setPropertyId(null);
     setShowProgress(true);
+
+    track("generation_started", { property_type: propertyType, is_authenticated: !!user });
 
     try {
       const parsed = parsePropertyInput(query);
@@ -197,6 +203,7 @@ export default function RetroGenerator() {
         ) {
           setShowProgress(false);
           setShowPaywall(true);
+          track("paywall_shown", { reason: data.error, property_type: propertyType });
           return;
         }
         throw new Error(
@@ -234,15 +241,16 @@ export default function RetroGenerator() {
     handleGenerate();
   };
 
-  const onCopy = (text: string) => {
+  const onCopy = (text: string, tabKey?: string) => {
     navigator.clipboard.writeText(text);
     sonnerToast.success("Copied!", { description: "Text copied to clipboard" });
+    track("copy_clicked", { tab: tabKey ?? "unknown", property_id: propertyId });
   };
 
   const onCopyAll = () => {
     if (!outputs) return;
     const allText = `MLS Description:\n${outputs.mls}\n\nSocial Post:\n${outputs.social}\n\nEmail:\n${outputs.email}`;
-    onCopy(allText);
+    onCopy(allText, "all");
   };
 
   const handleAuth = async (
@@ -251,7 +259,13 @@ export default function RetroGenerator() {
     mode: "signin" | "signup",
   ) => {
     if (mode === "signin") return signIn(email, password);
-    return signUp(email, password);
+    const { error, isNewUser } = await signUp(email, password);
+    if (isNewUser) {
+      track("signup_completed", { method: "email" });
+      // fire-and-forget: add to Loops welcome sequence
+      supabase.functions.invoke("send-welcome-email", { body: { email } }).catch(console.error);
+    }
+    return error;
   };
 
   const handleManageSubscription = async () => {
@@ -355,7 +369,7 @@ export default function RetroGenerator() {
               }
               renderActions={(activeTab) => (
                 <div className="flex flex-wrap gap-2 mt-3">
-                  <RetroButton onClick={() => onCopy(outputs[activeTab])}>
+                  <RetroButton onClick={() => onCopy(outputs[activeTab], activeTab)}>
                     copy {activeTab}
                   </RetroButton>
                   <RetroButton onClick={onCopyAll}>copy all</RetroButton>
@@ -538,6 +552,7 @@ function Win95PaywallModal({
       onSignIn();
       return;
     }
+    track("checkout_started", { interval });
     setLoading(interval);
     try {
       const { data, error } = await supabase.functions.invoke(
