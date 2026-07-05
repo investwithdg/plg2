@@ -359,6 +359,14 @@ export default function RetroGenerator() {
                     copy {activeTab}
                   </RetroButton>
                   <RetroButton onClick={onCopyAll}>copy all</RetroButton>
+                  {propertyId && (
+                    <RetroButton onClick={() => {
+                      navigator.clipboard.writeText(`${window.location.origin}/listing/${propertyId}`);
+                      sonnerToast.success("Link copied!", { description: "Share this listing with anyone" });
+                    }}>
+                      share link
+                    </RetroButton>
+                  )}
                   <RetroButton
                     variant="primary"
                     onClick={handleGenerate}

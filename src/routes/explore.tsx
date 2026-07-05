@@ -206,9 +206,17 @@ function Explore() {
                           </p>
                         </div>
                         <div className="mt-2 flex gap-2">
+                          <Link
+                            to="/listing/$id"
+                            params={{ id: property.id }}
+                          >
+                            <button className="win95-raised px-3 py-1 text-win95-11 cursor-pointer active:win95-pressed">
+                              View full listing →
+                            </button>
+                          </Link>
                           <Link to="/">
                             <button className="win95-raised px-3 py-1 text-win95-11 cursor-pointer active:win95-pressed">
-                              Generate similar listing →
+                              Generate similar →
                             </button>
                           </Link>
                         </div>
