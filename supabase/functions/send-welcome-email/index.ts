@@ -31,6 +31,20 @@ serve(async (req) => {
     });
   }
 
+  // Reject requests that don't carry the Supabase anon key — basic abuse mitigation.
+  // The anon key is public, so this is not a security boundary, but it blocks
+  // arbitrary callers who don't go through the Supabase JS client.
+  // Proper fix: trigger via DB webhook on auth.users insert (no client call at all).
+  const apiKey = req.headers.get("apikey") ?? req.headers.get("authorization")?.replace("Bearer ", "");
+  const anonKey = Deno.env.get("SUPABASE_ANON_KEY");
+  if (!apiKey || apiKey !== anonKey) {
+    log("unauthorized");
+    return new Response(JSON.stringify({ ok: false, error: "Unauthorized" }), {
+      status: 401,
+      headers: { ...corsHeaders, "Content-Type": "application/json" },
+    });
+  }
+
   try {
     const raw = await req.json().catch(() => ({}));
     const parsed = bodySchema.safeParse(raw);

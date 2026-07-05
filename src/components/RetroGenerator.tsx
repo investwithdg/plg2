@@ -154,7 +154,7 @@ export default function RetroGenerator() {
       setHistoryKey((k) => k + 1);
       track("generation_completed", { property_type: propertyType, property_id: propertyId });
     }
-  }, [status, copies]);
+  }, [status, copies, propertyType, propertyId]);
 
   const handleGenerate = async () => {
     if (!query.trim()) return;
@@ -250,7 +250,7 @@ export default function RetroGenerator() {
   const onCopyAll = () => {
     if (!outputs) return;
     const allText = `MLS Description:\n${outputs.mls}\n\nSocial Post:\n${outputs.social}\n\nEmail:\n${outputs.email}`;
-    onCopy(allText);
+    onCopy(allText, "all");
   };
 
   const handleAuth = async (
@@ -259,13 +259,13 @@ export default function RetroGenerator() {
     mode: "signin" | "signup",
   ) => {
     if (mode === "signin") return signIn(email, password);
-    const err = await signUp(email, password);
-    if (!err) {
+    const { error, isNewUser } = await signUp(email, password);
+    if (isNewUser) {
       track("signup_completed", { method: "email" });
       // fire-and-forget: add to Loops welcome sequence
-      supabase.functions.invoke("send-welcome-email", { body: { email } }).catch(() => {});
+      supabase.functions.invoke("send-welcome-email", { body: { email } }).catch(console.error);
     }
-    return err;
+    return error;
   };
 
   const handleManageSubscription = async () => {

@@ -10,8 +10,8 @@ export function initPostHog() {
   posthog.init(key, {
     api_host: host,
     person_profiles: "identified_only",
-    capture_pageview: true,
-    capture_pageleave: true,
+    capture_pageview: false, // fired manually via router.subscribe
+    capture_pageleave: false, // beforeunload doesn't fire on SPA navigation
     autocapture: false,
   });
   initialised = true;
