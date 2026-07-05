@@ -62,6 +62,13 @@ export type Database = {
             referencedRelation: "properties"
             referencedColumns: ["id"]
           },
+          {
+            foreignKeyName: "copy_generations_property_id_fkey"
+            columns: ["property_id"]
+            isOneToOne: false
+            referencedRelation: "public_properties"
+            referencedColumns: ["id"]
+          },
         ]
       }
       enrichment_cache: {
@@ -139,6 +146,13 @@ export type Database = {
             referencedRelation: "properties"
             referencedColumns: ["id"]
           },
+          {
+            foreignKeyName: "enrichments_property_id_fkey"
+            columns: ["property_id"]
+            isOneToOne: false
+            referencedRelation: "public_properties"
+            referencedColumns: ["id"]
+          },
         ]
       }
       generation_costs: {
@@ -202,6 +216,13 @@ export type Database = {
             columns: ["property_id"]
             isOneToOne: false
             referencedRelation: "properties"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "generation_costs_property_id_fkey"
+            columns: ["property_id"]
+            isOneToOne: false
+            referencedRelation: "public_properties"
             referencedColumns: ["id"]
           },
         ]
@@ -322,7 +343,93 @@ export type Database = {
       }
     }
     Views: {
-      [_ in never]: never
+      public_copy_generations: {
+        Row: {
+          content: string | null
+          copy_type: string | null
+          created_at: string | null
+          generation_number: number | null
+          id: string | null
+          property_id: string | null
+        }
+        Insert: {
+          content?: string | null
+          copy_type?: string | null
+          created_at?: string | null
+          generation_number?: number | null
+          id?: string | null
+          property_id?: string | null
+        }
+        Update: {
+          content?: string | null
+          copy_type?: string | null
+          created_at?: string | null
+          generation_number?: number | null
+          id?: string | null
+          property_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "copy_generations_property_id_fkey"
+            columns: ["property_id"]
+            isOneToOne: false
+            referencedRelation: "properties"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "copy_generations_property_id_fkey"
+            columns: ["property_id"]
+            isOneToOne: false
+            referencedRelation: "public_properties"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      public_properties: {
+        Row: {
+          address: string | null
+          baths: number | null
+          beds: number | null
+          created_at: string | null
+          enrichment_step: string | null
+          extraction_status: string | null
+          failed_step: string | null
+          id: string | null
+          price: number | null
+          property_type: string | null
+          sqft: number | null
+          status: string | null
+        }
+        Insert: {
+          address?: string | null
+          baths?: number | null
+          beds?: number | null
+          created_at?: string | null
+          enrichment_step?: string | null
+          extraction_status?: string | null
+          failed_step?: string | null
+          id?: string | null
+          price?: number | null
+          property_type?: string | null
+          sqft?: number | null
+          status?: string | null
+        }
+        Update: {
+          address?: string | null
+          baths?: number | null
+          beds?: number | null
+          created_at?: string | null
+          enrichment_step?: string | null
+          extraction_status?: string | null
+          failed_step?: string | null
+          id?: string | null
+          price?: number | null
+          property_type?: string | null
+          sqft?: number | null
+          status?: string | null
+        }
+        Relationships: []
+      }
     }
     Functions: {
       [_ in never]: never
