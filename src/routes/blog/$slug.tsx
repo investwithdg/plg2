@@ -54,8 +54,8 @@ function BlogPost() {
 
   return (
     <div className="min-h-screen bg-[var(--background)] p-4 flex flex-col items-center">
-      <div className="w-full max-w-3xl space-y-4">
-        {/* Article window */}
+      <div className="w-full max-w-3xl space-y-3">
+        {/* Article header window */}
         <div className="win95-window">
           <div className="win95-titlebar">
             <span className="font-bold text-win95-12 truncate pl-1">
@@ -67,9 +67,7 @@ function BlogPost() {
               </Link>
             </div>
           </div>
-
-          <div className="p-4 space-y-4">
-            {/* Article header */}
+          <div className="p-4 space-y-3">
             <div>
               <h1 className="text-win95-16 font-bold mb-2">{article.title}</h1>
               <div className="flex gap-3 text-win95-11 text-muted-foreground">
@@ -78,31 +76,40 @@ function BlogPost() {
                 <span>{article.readTime}</span>
               </div>
             </div>
-
-            {/* Divider */}
             <div className="border-t-2 border-[var(--win95-gray-dark)]" />
-
-            {/* Article body */}
             <article>
-              <article.Body />
+              <article.intro />
             </article>
+          </div>
+        </div>
 
-            {/* Divider */}
-            <div className="border-t-2 border-[var(--win95-gray-dark)]" />
-
-            {/* Footer nav */}
-            <div className="flex items-center justify-between flex-wrap gap-2">
-              <Link to="/blog">
-                <button className="win95-raised px-3 py-1 text-win95-11 cursor-pointer active:win95-pressed">
-                  ← All Articles
-                </button>
-              </Link>
-              <Link to="/">
-                <button className="win95-raised px-3 py-1 text-win95-12 font-bold cursor-pointer active:win95-pressed">
-                  Try PLG Free →
-                </button>
-              </Link>
+        {/* Each section as its own window panel */}
+        {article.sections.map((section) => (
+          <div key={section.title} className="win95-window">
+            <div className="win95-titlebar">
+              <span className="font-bold text-win95-12 truncate pl-1">
+                {section.title}
+              </span>
             </div>
+            <div className="p-4">
+              <section.Body />
+            </div>
+          </div>
+        ))}
+
+        {/* Footer nav */}
+        <div className="win95-window">
+          <div className="p-3 flex items-center justify-between flex-wrap gap-2">
+            <Link to="/blog">
+              <button className="win95-raised px-3 py-1 text-win95-11 cursor-pointer active:win95-pressed">
+                ← All Articles
+              </button>
+            </Link>
+            <Link to="/">
+              <button className="win95-raised px-3 py-1 text-win95-12 font-bold cursor-pointer active:win95-pressed">
+                Try PLG Free →
+              </button>
+            </Link>
           </div>
         </div>
 
