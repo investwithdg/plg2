@@ -12,10 +12,13 @@ import { Route as rootRouteImport } from './routes/__root'
 import { Route as TermsRouteImport } from './routes/terms'
 import { Route as PrivacyRouteImport } from './routes/privacy'
 import { Route as PricingRouteImport } from './routes/pricing'
+import { Route as ExploreRouteImport } from './routes/explore'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as CompareIndexRouteImport } from './routes/compare/index'
 import { Route as CompareListingaiRouteImport } from './routes/compare/listingai'
 import { Route as CompareDealmachineRouteImport } from './routes/compare/dealmachine'
+import { Route as BlogIndexRouteImport } from './routes/blog/index'
+import { Route as BlogSlugRouteImport } from './routes/blog/$slug'
 
 const TermsRoute = TermsRouteImport.update({
   id: '/terms',
@@ -32,6 +35,12 @@ const PrivacyRoute = PrivacyRouteImport.update({
 const PricingRoute = PricingRouteImport.update({
   id: '/pricing',
   path: '/pricing',
+  getParentRoute: () => rootRouteImport,
+} as any)
+
+const ExploreRoute = ExploreRouteImport.update({
+  id: '/explore',
+  path: '/explore',
   getParentRoute: () => rootRouteImport,
 } as any)
 
@@ -59,23 +68,41 @@ const CompareDealmachineRoute = CompareDealmachineRouteImport.update({
   getParentRoute: () => rootRouteImport,
 } as any)
 
+const BlogIndexRoute = BlogIndexRouteImport.update({
+  id: '/blog/',
+  path: '/blog/',
+  getParentRoute: () => rootRouteImport,
+} as any)
+
+const BlogSlugRoute = BlogSlugRouteImport.update({
+  id: '/blog/$slug',
+  path: '/blog/$slug',
+  getParentRoute: () => rootRouteImport,
+} as any)
+
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/pricing': typeof PricingRoute
   '/privacy': typeof PrivacyRoute
   '/terms': typeof TermsRoute
+  '/explore': typeof ExploreRoute
   '/compare/': typeof CompareIndexRoute
   '/compare/dealmachine': typeof CompareDealmachineRoute
   '/compare/listingai': typeof CompareListingaiRoute
+  '/blog/': typeof BlogIndexRoute
+  '/blog/$slug': typeof BlogSlugRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/pricing': typeof PricingRoute
   '/privacy': typeof PrivacyRoute
   '/terms': typeof TermsRoute
+  '/explore': typeof ExploreRoute
   '/compare': typeof CompareIndexRoute
   '/compare/dealmachine': typeof CompareDealmachineRoute
   '/compare/listingai': typeof CompareListingaiRoute
+  '/blog': typeof BlogIndexRoute
+  '/blog/$slug': typeof BlogSlugRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
@@ -83,16 +110,19 @@ export interface FileRoutesById {
   '/pricing': typeof PricingRoute
   '/privacy': typeof PrivacyRoute
   '/terms': typeof TermsRoute
+  '/explore': typeof ExploreRoute
   '/compare/': typeof CompareIndexRoute
   '/compare/dealmachine': typeof CompareDealmachineRoute
   '/compare/listingai': typeof CompareListingaiRoute
+  '/blog/': typeof BlogIndexRoute
+  '/blog/$slug': typeof BlogSlugRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
-  fullPaths: '/' | '/pricing' | '/privacy' | '/terms' | '/compare/' | '/compare/dealmachine' | '/compare/listingai'
+  fullPaths: '/' | '/pricing' | '/privacy' | '/terms' | '/explore' | '/compare/' | '/compare/dealmachine' | '/compare/listingai' | '/blog/' | '/blog/$slug'
   fileRoutesByTo: FileRoutesByTo
-  to: '/' | '/pricing' | '/privacy' | '/terms' | '/compare' | '/compare/dealmachine' | '/compare/listingai'
-  id: '__root__' | '/' | '/pricing' | '/privacy' | '/terms' | '/compare/' | '/compare/dealmachine' | '/compare/listingai'
+  to: '/' | '/pricing' | '/privacy' | '/terms' | '/explore' | '/compare' | '/compare/dealmachine' | '/compare/listingai' | '/blog' | '/blog/$slug'
+  id: '__root__' | '/' | '/pricing' | '/privacy' | '/terms' | '/explore' | '/compare/' | '/compare/dealmachine' | '/compare/listingai' | '/blog/' | '/blog/$slug'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -100,9 +130,12 @@ export interface RootRouteChildren {
   PricingRoute: typeof PricingRoute
   PrivacyRoute: typeof PrivacyRoute
   TermsRoute: typeof TermsRoute
+  ExploreRoute: typeof ExploreRoute
   CompareIndexRoute: typeof CompareIndexRoute
   CompareDealmachineRoute: typeof CompareDealmachineRoute
   CompareListingaiRoute: typeof CompareListingaiRoute
+  BlogIndexRoute: typeof BlogIndexRoute
+  BlogSlugRoute: typeof BlogSlugRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -135,6 +168,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof TermsRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/explore': {
+      id: '/explore'
+      path: '/explore'
+      fullPath: '/explore'
+      preLoaderRoute: typeof ExploreRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/compare/': {
       id: '/compare/'
       path: '/compare'
@@ -156,6 +196,20 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof CompareListingaiRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/blog/': {
+      id: '/blog/'
+      path: '/blog'
+      fullPath: '/blog/'
+      preLoaderRoute: typeof BlogIndexRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/blog/$slug': {
+      id: '/blog/$slug'
+      path: '/blog/$slug'
+      fullPath: '/blog/$slug'
+      preLoaderRoute: typeof BlogSlugRouteImport
+      parentRoute: typeof rootRouteImport
+    }
   }
 }
 
@@ -164,9 +218,12 @@ const rootRouteChildren: RootRouteChildren = {
   PricingRoute: PricingRoute,
   PrivacyRoute: PrivacyRoute,
   TermsRoute: TermsRoute,
+  ExploreRoute: ExploreRoute,
   CompareIndexRoute: CompareIndexRoute,
   CompareDealmachineRoute: CompareDealmachineRoute,
   CompareListingaiRoute: CompareListingaiRoute,
+  BlogIndexRoute: BlogIndexRoute,
+  BlogSlugRoute: BlogSlugRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)

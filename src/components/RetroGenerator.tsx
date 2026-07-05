@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Link } from "@tanstack/react-router";
 import { toast as sonnerToast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
@@ -17,7 +17,6 @@ import {
   TooltipProvider,
   TooltipTrigger,
 } from "@/components/ui/tooltip";
-import { RetroAnimatedHeader } from "@/components/RetroAnimatedHeader";
 import { RetroButton, RetroInput, RetroWindow } from "@/components/retro";
 import {
   describeFunctionInvokeError,
@@ -275,16 +274,8 @@ export default function RetroGenerator() {
     }
   };
 
-  const userEmail = user?.email ?? null;
-
   return (
     <div className="min-h-screen font-system text-foreground">
-      <RetroAnimatedHeader
-        userName={userEmail}
-        onSignInClick={() => setShowAuthModal(true)}
-        onSignOutClick={signOut}
-      />
-
       <main className="flex flex-col items-center p-4 gap-4">
         <RetroWindow
           title="PLG — Property Listing Generator"
@@ -433,12 +424,12 @@ export default function RetroGenerator() {
             </span>
           </div>
           <div className="flex flex-wrap items-center justify-center gap-3">
-            <Link to="/pricing" className="underline hover:text-foreground">
-              pricing
+            <Link to="/explore" className="underline hover:text-foreground">
+              explore
             </Link>
             <span>|</span>
-            <Link to="/compare" className="underline hover:text-foreground">
-              compare
+            <Link to="/blog" className="underline hover:text-foreground">
+              blog
             </Link>
             <span>|</span>
             <Link to="/terms" className="underline hover:text-foreground">
