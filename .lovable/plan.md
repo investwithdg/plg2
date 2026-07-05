@@ -1,16 +1,32 @@
-## Problem
+## Goal
 
-The preview blank screen is caused by `createClient("", "")` throwing `supabaseUrl is required.` at module load. The previous CSS fix is in, but `VITE_SUPABASE_URL` / `VITE_SUPABASE_PUBLISHABLE_KEY` aren't set in the sandbox `.env`, so the Supabase client crashes the whole React tree on import.
+Swap the current `?` Legend popover — which mostly just spells out abbreviations already visible on-screen — for a short, genuinely useful "How it works" popover.
 
-## Fix
+## What changes
 
-1. **Make `src/integrations/supabase/client.ts` crash-safe.** When env vars are missing, export a lazy proxy that throws only when actually used (e.g. on `.from(...)` / `.functions.invoke(...)`), with a clear message. Module import no longer throws, so the UI renders.
+File: `src/components/RetroLegend.tsx` (keep the file, keep the `?` button and its placement in `AppNav`; only the popover contents and title change).
 
-2. **Add a visible Win95 "Backend not connected" banner** in `RetroGenerator` that appears when the env vars are missing. It tells the user exactly what to do: copy `.env.example` → `.env` and paste `VITE_SUPABASE_URL` + `VITE_SUPABASE_PUBLISHABLE_KEY` from the Supabase dashboard. The Generate button is disabled while this is the case.
+- Rename the titlebar from **Legend** → **How PLG works**.
+- Replace the abbreviation list with 4 short, scannable sections in Win95-styled rows:
 
-3. **No backend/edge-function changes**, no schema changes, no new env wiring beyond what's already documented in `.env.example`.
+  1. **What you get** — Every generation produces 3 pieces of copy:
+     - **MLS** — long-form listing description for the MLS/Zillow/Redfin
+     - **Social** — short Instagram/Facebook caption with hashtags
+     - **Email** — buyer-list email blurb
+  2. **FHA-compliant** — Copy avoids protected-class language (race, religion, familial status, disability, etc.) so it's safe to publish on the MLS.
+  3. **Free vs Pro** — 10 free generations. Single Family (SFR) and FSBO are always free. Property types marked with `*` (Multi-Family, STR, MTR, LTR, Estate, Commercial, Lease) require Pro.
+  4. **How generation works** — Paste an address or Zillow/Redfin/Realtor URL → we research the property + neighborhood → we write all 3 pieces in ~15 seconds.
 
-## Result
+- Bump popover width from `w-56` to `w-72` and raise `max-h` from `52` to `80` to fit the richer content comfortably without scrolling on desktop.
+- Keep the outside-click backdrop, close button, and z-index behavior unchanged.
 
-- Preview renders the full retro UI immediately, even before credentials are added.
-- Once the user fills in `.env` and restarts the dev server, the banner disappears and Generate works against the existing Supabase project.
+## Out of scope
+
+- No changes to `AppNav.tsx` — the `?` button stays where it is.
+- No tooltips on the property-type buttons.
+- No copy/tone changes to the homepage itself.
+
+## Technical notes
+
+- Pure presentational change inside `RetroLegend.tsx`. Replace the `LEGEND_ITEMS` array with a small `SECTIONS` array of `{ title, body: ReactNode }` and render each as a titled block inside the existing `win95-inset` container.
+- Reuse existing `text-win95-11` / `font-bold` / `text-muted-foreground` classes so it visually matches the rest of the retro UI. No new dependencies.
