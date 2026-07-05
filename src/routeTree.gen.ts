@@ -15,72 +15,62 @@ import { Route as PricingRouteImport } from './routes/pricing'
 import { Route as ExploreRouteImport } from './routes/explore'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as CompareIndexRouteImport } from './routes/compare/index'
+import { Route as BlogIndexRouteImport } from './routes/blog/index'
+import { Route as ListingIdRouteImport } from './routes/listing/$id'
 import { Route as CompareListingaiRouteImport } from './routes/compare/listingai'
 import { Route as CompareDealmachineRouteImport } from './routes/compare/dealmachine'
-import { Route as BlogIndexRouteImport } from './routes/blog/index'
 import { Route as BlogSlugRouteImport } from './routes/blog/$slug'
-import { Route as ListingIdRouteImport } from './routes/listing/$id'
-
-const ListingIdRoute = ListingIdRouteImport.update({
-  id: '/listing/$id',
-  path: '/listing/$id',
-  getParentRoute: () => rootRouteImport,
-} as any)
 
 const TermsRoute = TermsRouteImport.update({
   id: '/terms',
   path: '/terms',
   getParentRoute: () => rootRouteImport,
 } as any)
-
 const PrivacyRoute = PrivacyRouteImport.update({
   id: '/privacy',
   path: '/privacy',
   getParentRoute: () => rootRouteImport,
 } as any)
-
 const PricingRoute = PricingRouteImport.update({
   id: '/pricing',
   path: '/pricing',
   getParentRoute: () => rootRouteImport,
 } as any)
-
 const ExploreRoute = ExploreRouteImport.update({
   id: '/explore',
   path: '/explore',
   getParentRoute: () => rootRouteImport,
 } as any)
-
 const IndexRoute = IndexRouteImport.update({
   id: '/',
   path: '/',
   getParentRoute: () => rootRouteImport,
 } as any)
-
 const CompareIndexRoute = CompareIndexRouteImport.update({
   id: '/compare/',
   path: '/compare/',
   getParentRoute: () => rootRouteImport,
 } as any)
-
-const CompareListingaiRoute = CompareListingaiRouteImport.update({
-  id: '/compare/listingai',
-  path: '/compare/listingai',
-  getParentRoute: () => rootRouteImport,
-} as any)
-
-const CompareDealmachineRoute = CompareDealmachineRouteImport.update({
-  id: '/compare/dealmachine',
-  path: '/compare/dealmachine',
-  getParentRoute: () => rootRouteImport,
-} as any)
-
 const BlogIndexRoute = BlogIndexRouteImport.update({
   id: '/blog/',
   path: '/blog/',
   getParentRoute: () => rootRouteImport,
 } as any)
-
+const ListingIdRoute = ListingIdRouteImport.update({
+  id: '/listing/$id',
+  path: '/listing/$id',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const CompareListingaiRoute = CompareListingaiRouteImport.update({
+  id: '/compare/listingai',
+  path: '/compare/listingai',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const CompareDealmachineRoute = CompareDealmachineRouteImport.update({
+  id: '/compare/dealmachine',
+  path: '/compare/dealmachine',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const BlogSlugRoute = BlogSlugRouteImport.update({
   id: '/blog/$slug',
   path: '/blog/$slug',
@@ -89,80 +79,107 @@ const BlogSlugRoute = BlogSlugRouteImport.update({
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
+  '/explore': typeof ExploreRoute
   '/pricing': typeof PricingRoute
   '/privacy': typeof PrivacyRoute
   '/terms': typeof TermsRoute
-  '/explore': typeof ExploreRoute
-  '/compare/': typeof CompareIndexRoute
+  '/blog/$slug': typeof BlogSlugRoute
   '/compare/dealmachine': typeof CompareDealmachineRoute
   '/compare/listingai': typeof CompareListingaiRoute
-  '/blog/': typeof BlogIndexRoute
-  '/blog/$slug': typeof BlogSlugRoute
   '/listing/$id': typeof ListingIdRoute
+  '/blog/': typeof BlogIndexRoute
+  '/compare/': typeof CompareIndexRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
+  '/explore': typeof ExploreRoute
   '/pricing': typeof PricingRoute
   '/privacy': typeof PrivacyRoute
   '/terms': typeof TermsRoute
-  '/explore': typeof ExploreRoute
-  '/compare': typeof CompareIndexRoute
+  '/blog/$slug': typeof BlogSlugRoute
   '/compare/dealmachine': typeof CompareDealmachineRoute
   '/compare/listingai': typeof CompareListingaiRoute
-  '/blog': typeof BlogIndexRoute
-  '/blog/$slug': typeof BlogSlugRoute
   '/listing/$id': typeof ListingIdRoute
+  '/blog': typeof BlogIndexRoute
+  '/compare': typeof CompareIndexRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
+  '/explore': typeof ExploreRoute
   '/pricing': typeof PricingRoute
   '/privacy': typeof PrivacyRoute
   '/terms': typeof TermsRoute
-  '/explore': typeof ExploreRoute
-  '/compare/': typeof CompareIndexRoute
+  '/blog/$slug': typeof BlogSlugRoute
   '/compare/dealmachine': typeof CompareDealmachineRoute
   '/compare/listingai': typeof CompareListingaiRoute
-  '/blog/': typeof BlogIndexRoute
-  '/blog/$slug': typeof BlogSlugRoute
   '/listing/$id': typeof ListingIdRoute
+  '/blog/': typeof BlogIndexRoute
+  '/compare/': typeof CompareIndexRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
-  fullPaths: '/' | '/pricing' | '/privacy' | '/terms' | '/explore' | '/compare/' | '/compare/dealmachine' | '/compare/listingai' | '/blog/' | '/blog/$slug' | '/listing/$id'
+  fullPaths:
+    | '/'
+    | '/explore'
+    | '/pricing'
+    | '/privacy'
+    | '/terms'
+    | '/blog/$slug'
+    | '/compare/dealmachine'
+    | '/compare/listingai'
+    | '/listing/$id'
+    | '/blog/'
+    | '/compare/'
   fileRoutesByTo: FileRoutesByTo
-  to: '/' | '/pricing' | '/privacy' | '/terms' | '/explore' | '/compare' | '/compare/dealmachine' | '/compare/listingai' | '/blog' | '/blog/$slug' | '/listing/$id'
-  id: '__root__' | '/' | '/pricing' | '/privacy' | '/terms' | '/explore' | '/compare/' | '/compare/dealmachine' | '/compare/listingai' | '/blog/' | '/blog/$slug' | '/listing/$id'
+  to:
+    | '/'
+    | '/explore'
+    | '/pricing'
+    | '/privacy'
+    | '/terms'
+    | '/blog/$slug'
+    | '/compare/dealmachine'
+    | '/compare/listingai'
+    | '/listing/$id'
+    | '/blog'
+    | '/compare'
+  id:
+    | '__root__'
+    | '/'
+    | '/explore'
+    | '/pricing'
+    | '/privacy'
+    | '/terms'
+    | '/blog/$slug'
+    | '/compare/dealmachine'
+    | '/compare/listingai'
+    | '/listing/$id'
+    | '/blog/'
+    | '/compare/'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
+  ExploreRoute: typeof ExploreRoute
   PricingRoute: typeof PricingRoute
   PrivacyRoute: typeof PrivacyRoute
   TermsRoute: typeof TermsRoute
-  ExploreRoute: typeof ExploreRoute
-  CompareIndexRoute: typeof CompareIndexRoute
+  BlogSlugRoute: typeof BlogSlugRoute
   CompareDealmachineRoute: typeof CompareDealmachineRoute
   CompareListingaiRoute: typeof CompareListingaiRoute
-  BlogIndexRoute: typeof BlogIndexRoute
-  BlogSlugRoute: typeof BlogSlugRoute
   ListingIdRoute: typeof ListingIdRoute
+  BlogIndexRoute: typeof BlogIndexRoute
+  CompareIndexRoute: typeof CompareIndexRoute
 }
 
 declare module '@tanstack/react-router' {
   interface FileRoutesByPath {
-    '/': {
-      id: '/'
-      path: '/'
-      fullPath: '/'
-      preLoaderRoute: typeof IndexRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/pricing': {
-      id: '/pricing'
-      path: '/pricing'
-      fullPath: '/pricing'
-      preLoaderRoute: typeof PricingRouteImport
+    '/terms': {
+      id: '/terms'
+      path: '/terms'
+      fullPath: '/terms'
+      preLoaderRoute: typeof TermsRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/privacy': {
@@ -172,11 +189,11 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof PrivacyRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/terms': {
-      id: '/terms'
-      path: '/terms'
-      fullPath: '/terms'
-      preLoaderRoute: typeof TermsRouteImport
+    '/pricing': {
+      id: '/pricing'
+      path: '/pricing'
+      fullPath: '/pricing'
+      preLoaderRoute: typeof PricingRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/explore': {
@@ -186,25 +203,18 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ExploreRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/': {
+      id: '/'
+      path: '/'
+      fullPath: '/'
+      preLoaderRoute: typeof IndexRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/compare/': {
       id: '/compare/'
       path: '/compare'
       fullPath: '/compare/'
       preLoaderRoute: typeof CompareIndexRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/compare/dealmachine': {
-      id: '/compare/dealmachine'
-      path: '/compare/dealmachine'
-      fullPath: '/compare/dealmachine'
-      preLoaderRoute: typeof CompareDealmachineRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/compare/listingai': {
-      id: '/compare/listingai'
-      path: '/compare/listingai'
-      fullPath: '/compare/listingai'
-      preLoaderRoute: typeof CompareListingaiRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/blog/': {
@@ -214,13 +224,6 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof BlogIndexRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/blog/$slug': {
-      id: '/blog/$slug'
-      path: '/blog/$slug'
-      fullPath: '/blog/$slug'
-      preLoaderRoute: typeof BlogSlugRouteImport
-      parentRoute: typeof rootRouteImport
-    }
     '/listing/$id': {
       id: '/listing/$id'
       path: '/listing/$id'
@@ -228,21 +231,42 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ListingIdRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/compare/listingai': {
+      id: '/compare/listingai'
+      path: '/compare/listingai'
+      fullPath: '/compare/listingai'
+      preLoaderRoute: typeof CompareListingaiRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/compare/dealmachine': {
+      id: '/compare/dealmachine'
+      path: '/compare/dealmachine'
+      fullPath: '/compare/dealmachine'
+      preLoaderRoute: typeof CompareDealmachineRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/blog/$slug': {
+      id: '/blog/$slug'
+      path: '/blog/$slug'
+      fullPath: '/blog/$slug'
+      preLoaderRoute: typeof BlogSlugRouteImport
+      parentRoute: typeof rootRouteImport
+    }
   }
 }
 
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
+  ExploreRoute: ExploreRoute,
   PricingRoute: PricingRoute,
   PrivacyRoute: PrivacyRoute,
   TermsRoute: TermsRoute,
-  ExploreRoute: ExploreRoute,
-  CompareIndexRoute: CompareIndexRoute,
+  BlogSlugRoute: BlogSlugRoute,
   CompareDealmachineRoute: CompareDealmachineRoute,
   CompareListingaiRoute: CompareListingaiRoute,
-  BlogIndexRoute: BlogIndexRoute,
-  BlogSlugRoute: BlogSlugRoute,
   ListingIdRoute: ListingIdRoute,
+  BlogIndexRoute: BlogIndexRoute,
+  CompareIndexRoute: CompareIndexRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
