@@ -7,13 +7,13 @@ export const Route = createFileRoute("/pricing")({
       {
         name: "description",
         content:
-          "PropertyListingGenerator.com pricing: 10 free generations, or Pro at $49/mo for unlimited generations, all 9 property types, listing history, and priority support.",
+          "PropertyListingGenerator.com pricing: 10 free generations with 1 Pro-tier property sample, or Pro at $49/mo for unlimited generations and all Pro-tier property types.",
       },
       { property: "og:title", content: "PLG Pricing — Free & Pro Plans" },
       {
         property: "og:description",
         content:
-          "Free: 10 generations. Pro: $49/mo for unlimited listing copy generation.",
+          "Free: 10 generations with 1 Pro-tier sample. Pro: $49/mo for unlimited listing copy generation.",
       },
     ],
   }),
@@ -41,8 +41,9 @@ function Pricing() {
               Simple pricing. No surprises.
             </h1>
             <p className="text-win95-12">
-              Start free. Upgrade when you need unlimited volume. Every plan
-              includes FHA-compliant copy and real property research.
+              Start free. Upgrade when you need unlimited volume and unlimited
+              Pro-tier property types. Every plan includes FHA-compliant copy
+              and real property research.
             </p>
           </div>
         </div>
@@ -76,7 +77,11 @@ function Pricing() {
                   </li>
                   <li className="flex gap-2">
                     <span className="font-bold text-[var(--win95-blue)]">+</span>
-                    <span>All 9 property types</span>
+                    <span>SFR + FSBO included</span>
+                  </li>
+                  <li className="flex gap-2">
+                    <span className="font-bold text-[var(--win95-blue)]">+</span>
+                    <span>1 Pro-tier property generation included</span>
                   </li>
                   <li className="flex gap-2">
                     <span className="font-bold text-[var(--win95-blue)]">+</span>
@@ -93,6 +98,10 @@ function Pricing() {
                   <li className="flex gap-2 text-muted-foreground">
                     <span className="font-bold">-</span>
                     <span>Unlimited generation volume</span>
+                  </li>
+                  <li className="flex gap-2 text-muted-foreground">
+                    <span className="font-bold">-</span>
+                    <span>Unlimited Pro-tier property types</span>
                   </li>
                   <li className="flex gap-2 text-muted-foreground">
                     <span className="font-bold">-</span>
@@ -150,7 +159,7 @@ function Pricing() {
                   <li className="flex gap-2">
                     <span className="font-bold text-[var(--win95-blue)]">+</span>
                     <span>
-                      All <strong>9 property types</strong>
+                      Unlimited <strong>Pro-tier property types</strong>
                     </span>
                   </li>
                   <li className="flex gap-2">
@@ -207,10 +216,9 @@ function Pricing() {
                 What property types are included in each plan?
               </p>
               <p className="text-win95-11 text-muted-foreground">
-                All plans can generate Single Family Residential, For Sale By
-                Owner, Multi-Family, Short Term Rental, Mid Term Rental, Long
-                Term Rental, Estate/Luxury, Commercial, and Lease copy. Pro
-                removes the generation cap.
+                Free includes SFR and FSBO, plus 1 Pro-tier property generation
+                from MF, STR, MTR, LTR, Estate/Luxury, Commercial, or Lease.
+                Pro removes both the generation cap and the Pro-tier cap.
               </p>
             </div>
             <div>
@@ -238,8 +246,9 @@ function Pricing() {
                 Do I need to sign up to use the free tier?
               </p>
               <p className="text-win95-11 text-muted-foreground">
-                No. You can generate 10 listings without an account. Sign up to
-                get 10 free generations per month and keep your listing history.
+                No. You can generate 10 listings without an account, including
+                1 Pro-tier property type. Sign up to get 10 free generations per
+                month with 1 monthly Pro-tier sample and keep your listing history.
               </p>
             </div>
           </div>
