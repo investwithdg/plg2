@@ -1,4 +1,5 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
+import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { z } from "https://deno.land/x/zod@v3.22.4/mod.ts";
 
 const corsHeaders = {
@@ -31,19 +32,28 @@ serve(async (req) => {
     });
   }
 
-  // Reject requests that don't carry the Supabase anon key — basic abuse mitigation.
-  // The anon key is public, so this is not a security boundary, but it blocks
-  // arbitrary callers who don't go through the Supabase JS client.
-  // Proper fix: trigger via DB webhook on auth.users insert (no client call at all).
-  const apiKey = req.headers.get("apikey") ?? req.headers.get("authorization")?.replace("Bearer ", "");
-  const anonKey = Deno.env.get("SUPABASE_ANON_KEY");
-  if (!apiKey || apiKey !== anonKey) {
-    log("unauthorized");
+  // Require an authenticated Supabase user and only allow enrolling their own email.
+  const authHeader = req.headers.get("authorization");
+  if (!authHeader?.startsWith("Bearer ")) {
+    log("unauthorized_no_bearer");
     return new Response(JSON.stringify({ ok: false, error: "Unauthorized" }), {
       status: 401,
       headers: { ...corsHeaders, "Content-Type": "application/json" },
     });
   }
+  const token = authHeader.replace("Bearer ", "");
+  const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
+  const supabaseServiceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
+  const supabase = createClient(supabaseUrl, supabaseServiceKey);
+  const { data: claimsData, error: claimsError } = await supabase.auth.getClaims(token);
+  if (claimsError || !claimsData?.claims?.sub) {
+    log("unauthorized_invalid_token");
+    return new Response(JSON.stringify({ ok: false, error: "Unauthorized" }), {
+      status: 401,
+      headers: { ...corsHeaders, "Content-Type": "application/json" },
+    });
+  }
+  const callerEmail = (claimsData.claims.email as string | undefined)?.toLowerCase();
 
   try {
     const raw = await req.json().catch(() => ({}));
@@ -56,6 +66,13 @@ serve(async (req) => {
     }
 
     const { email } = parsed.data;
+    if (!callerEmail || callerEmail !== email.toLowerCase()) {
+      log("email_mismatch");
+      return new Response(JSON.stringify({ ok: false, error: "Forbidden" }), {
+        status: 403,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
     log("adding_contact", { email });
 
     // 1. Upsert contact in Loops
