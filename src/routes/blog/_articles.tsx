@@ -21,7 +21,7 @@ export const ARTICLES: Article[] = [
     title: "How to Write an MLS Listing Description That Gets More Showings",
     description:
       "A step-by-step formula for writing property descriptions that attract buyers, stay Fair Housing compliant, and actually convert.",
-    date: "2026-07-01",
+    date: "2026-05-27",
     readTime: "6 min read",
     intro: () => (
       <>
@@ -175,7 +175,7 @@ export const ARTICLES: Article[] = [
     title: "Fair Housing Act: What Every Agent Must Know About Listing Copy",
     description:
       "A practical guide to Fair Housing compliance in property descriptions — what language to avoid, common violations, and how to write listings that protect you and your clients.",
-    date: "2026-07-03",
+    date: "2026-06-01",
     readTime: "5 min read",
     intro: () => (
       <>
@@ -309,7 +309,7 @@ export const ARTICLES: Article[] = [
     title: "How to Write a Short-Term Rental Listing Description (Airbnb, VRBO, Booking.com)",
     description:
       "Stand out on crowded STR platforms with listing copy that converts browsers into bookers — what to include, what to skip, and how to write for the algorithm.",
-    date: "2026-07-05",
+    date: "2026-06-06",
     readTime: "5 min read",
     intro: () => (
       <>
@@ -446,7 +446,7 @@ export const ARTICLES: Article[] = [
     title: "FSBO Listing Description: How to Write Copy That Competes With Agent Listings",
     description:
       "Selling your home without an agent? Your listing copy needs to work twice as hard. Here's how to write an FSBO description that attracts serious buyers.",
-    date: "2026-07-06",
+    date: "2026-06-11",
     readTime: "5 min read",
     intro: () => (
       <>
@@ -571,7 +571,7 @@ export const ARTICLES: Article[] = [
     title: "How to Write a Rental Property Listing Description That Fills Vacancies Fast",
     description:
       "Long-term rental listings compete on Zillow, Apartments.com, and Craigslist simultaneously. Here's the formula for copy that attracts qualified tenants and reduces vacancy time.",
-    date: "2026-07-07",
+    date: "2026-06-16",
     readTime: "5 min read",
     intro: () => (
       <>
@@ -691,7 +691,7 @@ export const ARTICLES: Article[] = [
     title: "How to Write a Luxury Home Listing Description (Estate & High-End Properties)",
     description:
       "Luxury buyers have a different decision process. Here's how to write listing copy for high-end estates that matches the quality of the property.",
-    date: "2026-07-08",
+    date: "2026-06-21",
     readTime: "5 min read",
     intro: () => (
       <>
@@ -813,7 +813,7 @@ export const ARTICLES: Article[] = [
     title: "Real Estate Social Media Copy: How to Write Instagram and Facebook Posts for Listings",
     description:
       "MLS copy doesn't work on social. Here's how to write real estate Instagram captions and Facebook posts that stop the scroll and drive inquiries.",
-    date: "2026-07-09",
+    date: "2026-06-26",
     readTime: "5 min read",
     intro: () => (
       <>
@@ -908,7 +908,7 @@ export const ARTICLES: Article[] = [
     title: "How to Write a Commercial Real Estate Listing Description",
     description:
       "Commercial buyers and tenants are analytical. Here's how to write CRE listing copy that answers the questions investors and business owners actually care about.",
-    date: "2026-07-10",
+    date: "2026-07-01",
     readTime: "5 min read",
     intro: () => (
       <>
@@ -1023,7 +1023,7 @@ export const ARTICLES: Article[] = [
     title: "Real Estate Email Templates for Property Listings (Buyers, Sellers, and Investors)",
     description:
       "Email is still the highest-converting channel in real estate. Here are the templates and formulas agents use to get replies and book showings.",
-    date: "2026-07-11",
+    date: "2026-07-06",
     readTime: "5 min read",
     intro: () => (
       <>
