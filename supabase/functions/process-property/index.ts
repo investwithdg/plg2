@@ -620,7 +620,32 @@ async function process(propertyId: string) {
 serve(async (req) => {
   if (req.method === "OPTIONS") return new Response(null, { headers: corsHeaders });
   try {
+    const expectedSecret = Deno.env.get("PROCESS_PROPERTY_SECRET");
+    const providedSecret = req.headers.get("x-internal-secret");
+    if (!expectedSecret || providedSecret !== expectedSecret) {
+      return new Response(JSON.stringify({ error: "Unauthorized" }), {
+        status: 401,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
     const body = BodySchema.parse(await req.json());
+    // Re-processing guard: bail out early if this property is already complete.
+    const supabaseUrl = Deno.env.get("SUPABASE_URL");
+    const supabaseServiceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY");
+    if (supabaseUrl && supabaseServiceKey) {
+      const supabase = createClient(supabaseUrl, supabaseServiceKey);
+      const { data: existing } = await supabase
+        .from("properties")
+        .select("status")
+        .eq("id", body.propertyId)
+        .maybeSingle();
+      if (existing?.status === "complete") {
+        return new Response(JSON.stringify({ accepted: false, reason: "already_complete" }), {
+          status: 200,
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      }
+    }
     // @ts-expect-error EdgeRuntime is provided by Supabase Edge Runtime
     EdgeRuntime.waitUntil(process(body.propertyId));
     return new Response(JSON.stringify({ accepted: true }), {
