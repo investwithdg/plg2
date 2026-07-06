@@ -16,6 +16,7 @@ const FREE_WINDOW_DAYS = 30;
 const FREE_PRO_TIER_LIMIT = 1;
 const DEDUPE_WINDOW_SECONDS = 60;
 const FREE_PROPERTY_TYPES = ["sfr", "fsbo"];
+const TURNSTILE_VERIFY_URL = "https://challenges.cloudflare.com/turnstile/v0/siteverify";
 
 const propertyInputSchema = z
   .object({
@@ -23,6 +24,8 @@ const propertyInputSchema = z
     address: z.string().trim().min(1).max(500).optional(),
     propertyType: z.string().trim().max(100).optional(),
     source: z.string().trim().max(100).optional(),
+    anonymousId: z.string().trim().min(16).max(128).optional(),
+    turnstileToken: z.string().trim().max(4096).optional(),
   })
   .refine((d) => d.url || d.address, {
     message: "Either 'url' or 'address' must be provided",
@@ -48,6 +51,31 @@ async function sha256(input: string): Promise<string> {
     .join("");
 }
 
+async function hmacSha256(input: string, secret: string): Promise<string> {
+  const key = await crypto.subtle.importKey(
+    "raw",
+    new TextEncoder().encode(secret),
+    { name: "HMAC", hash: "SHA-256" },
+    false,
+    ["sign"],
+  );
+  const signature = await crypto.subtle.sign(
+    "HMAC",
+    key,
+    new TextEncoder().encode(input),
+  );
+  return Array.from(new Uint8Array(signature))
+    .map((b) => b.toString(16).padStart(2, "0"))
+    .join("");
+}
+
+function jsonResponse(body: Record<string, unknown>, status: number) {
+  return new Response(JSON.stringify(body), {
+    status,
+    headers: { ...corsHeaders, "Content-Type": "application/json" },
+  });
+}
+
 function log(step: string, data?: Record<string, unknown>) {
   console.log(
     JSON.stringify({
@@ -60,27 +88,166 @@ function log(step: string, data?: Record<string, unknown>) {
 }
 
 function usageCheckUnavailableResponse() {
-  return new Response(
-    JSON.stringify({
+  return jsonResponse(
+    {
       success: false,
       error: "usage_check_unavailable",
       message: "Usage limit verification is temporarily unavailable. Please try again.",
-    }),
-    {
-      status: 503,
-      headers: { ...corsHeaders, "Content-Type": "application/json" },
     },
+    503,
   );
+}
+
+function gateResponse(errorCode: string, userId: string | null) {
+  if (errorCode === "pro_required") {
+    return jsonResponse(
+      {
+        success: false,
+        error: "pro_required",
+        message: userId
+          ? "Free accounts include 1 Pro-tier property generation per month. Upgrade to Pro for unlimited Pro-tier generations."
+          : "Anonymous users include 1 Pro-tier property generation. Sign in for a monthly Pro-tier sample or upgrade to Pro.",
+      },
+      403,
+    );
+  }
+
+  if (errorCode === "free_limit_exceeded") {
+    return jsonResponse(
+      {
+        success: false,
+        error: "free_limit_exceeded",
+        message: userId
+          ? `Free monthly limit reached (${FREE_LIMIT} per ${FREE_WINDOW_DAYS} days). Upgrade to Pro for unlimited generations.`
+          : `Free anonymous limit reached (${FREE_LIMIT} generations). Sign in for ${FREE_LIMIT} monthly generations or upgrade to Pro.`,
+      },
+      429,
+    );
+  }
+
+  if (errorCode === "anonymous_id_required") {
+    return jsonResponse(
+      {
+        success: false,
+        error: "anonymous_id_required",
+        message: "Anonymous usage identity is required. Refresh and try again.",
+      },
+      400,
+    );
+  }
+
+  return usageCheckUnavailableResponse();
+}
+
+async function verifyAnonymousTurnstile(
+  token: string | undefined,
+  ipRaw: string,
+): Promise<{ ok: true } | { ok: false; response: Response }> {
+  if (!token) {
+    return {
+      ok: false,
+      response: jsonResponse(
+        {
+          success: false,
+          error: "turnstile_required",
+          message: "Security check required. Please try again.",
+        },
+        400,
+      ),
+    };
+  }
+
+  const secret = Deno.env.get("TURNSTILE_SECRET_KEY");
+  if (!secret) {
+    log("missing_turnstile_secret");
+    return {
+      ok: false,
+      response: jsonResponse(
+        {
+          success: false,
+          error: "security_check_unavailable",
+          message: "Security check unavailable. Please try again.",
+        },
+        503,
+      ),
+    };
+  }
+
+  const body = new URLSearchParams({ secret, response: token });
+  if (ipRaw && ipRaw !== "unknown") body.set("remoteip", ipRaw);
+
+  try {
+    const res = await fetch(TURNSTILE_VERIFY_URL, {
+      method: "POST",
+      headers: { "Content-Type": "application/x-www-form-urlencoded" },
+      body: body.toString(),
+    });
+
+    if (!res.ok) {
+      log("turnstile_http_error", { status: res.status });
+      return {
+        ok: false,
+        response: jsonResponse(
+          {
+            success: false,
+            error: "security_check_unavailable",
+            message: "Security check unavailable. Please try again.",
+          },
+          503,
+        ),
+      };
+    }
+
+    const result = await res.json();
+    if (!result?.success) {
+      log("turnstile_failed", { codes: result?.["error-codes"] });
+      return {
+        ok: false,
+        response: jsonResponse(
+          {
+            success: false,
+            error: "turnstile_failed",
+            message: "Security check failed. Please try again.",
+          },
+          403,
+        ),
+      };
+    }
+
+    return { ok: true };
+  } catch (error) {
+    log("turnstile_verify_error", {
+      error: error instanceof Error ? error.message : "Unknown",
+    });
+    return {
+      ok: false,
+      response: jsonResponse(
+        {
+          success: false,
+          error: "security_check_unavailable",
+          message: "Security check unavailable. Please try again.",
+        },
+        503,
+      ),
+    };
+  }
 }
 
 serve(async (req) => {
   if (req.method === "OPTIONS")
     return new Response(null, { headers: corsHeaders });
 
+  let anonymousUsageKey: string | null = null;
+  let anonymousUsageReserved = false;
+  let proTierRequest = false;
+  let supabase: ReturnType<typeof createClient> | null = null;
+
   try {
     const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
     const supabaseServiceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
-    const supabase = createClient(supabaseUrl, supabaseServiceKey);
+    const anonymousUsageSecret =
+      Deno.env.get("ANON_USAGE_SECRET") || supabaseServiceKey;
+    supabase = createClient(supabaseUrl, supabaseServiceKey);
 
     // Identify caller
     const authHeader = req.headers.get("Authorization");
@@ -93,36 +260,52 @@ serve(async (req) => {
         userId = claimsData.claims.sub as string;
     }
 
-    // Best-effort IP for anonymous rate-limit + dedupe
     const ipRaw =
       req.headers.get("x-forwarded-for")?.split(",")[0].trim() ||
       req.headers.get("cf-connecting-ip") ||
       "unknown";
-    const ipHash = await sha256(ipRaw + "|plg-salt");
+    const userAgentRaw = req.headers.get("user-agent") || "unknown";
+    const ipHash = await hmacSha256(`ip:${ipRaw}`, anonymousUsageSecret);
+    const userAgentHash = await hmacSha256(
+      `ua:${userAgentRaw}`,
+      anonymousUsageSecret,
+    );
+    const networkKey = await hmacSha256(
+      `network:${ipRaw}|${userAgentRaw}`,
+      anonymousUsageSecret,
+    );
 
     const rawBody = await req.json();
     const parsed = propertyInputSchema.safeParse(rawBody);
     if (!parsed.success) {
-      return new Response(
-        JSON.stringify({
+      return jsonResponse(
+        {
           success: false,
           error: "Invalid input",
           details: parsed.error.errors,
-        }),
-        {
-          status: 400,
-          headers: { ...corsHeaders, "Content-Type": "application/json" },
         },
+        400,
       );
     }
     const validatedInput = parsed.data;
     const requestedType = normalizePropertyType(validatedInput.propertyType);
-    const proTierRequest = isProTierPropertyType(requestedType);
+    proTierRequest = isProTierPropertyType(requestedType);
+
+    if (!userId && !validatedInput.anonymousId) {
+      return gateResponse("anonymous_id_required", null);
+    }
+
+    if (!userId && validatedInput.anonymousId) {
+      anonymousUsageKey = await hmacSha256(
+        `anon:v1:${validatedInput.anonymousId}|${ipRaw}|${userAgentRaw}`,
+        anonymousUsageSecret,
+      );
+    }
 
     // 1) Idempotency: same (caller, address|url) within window returns existing propertyId
     const dedupeKey = await sha256(
       [
-        userId ?? `ip:${ipHash}`,
+        userId ?? `anon:${anonymousUsageKey ?? ipHash}`,
         (validatedInput.url || validatedInput.address || "")
           .toLowerCase()
           .trim(),
@@ -141,17 +324,14 @@ serve(async (req) => {
     const { data: dedupeMatch } = await dedupeQuery;
     if (dedupeMatch && dedupeMatch.length > 0) {
       log("dedupe_hit", { propertyId: dedupeMatch[0].id });
-      return new Response(
-        JSON.stringify({
+      return jsonResponse(
+        {
           success: true,
           propertyId: dedupeMatch[0].id,
           message: "Existing in-flight generation reused",
           deduped: true,
-        }),
-        {
-          status: 200,
-          headers: { ...corsHeaders, "Content-Type": "application/json" },
         },
+        200,
       );
     }
 
@@ -173,92 +353,100 @@ serve(async (req) => {
     ).toISOString();
 
     // 3) Server-side free-generation caps.
-    // Anonymous users get 10 total generations by IP hash, including 1 Pro-tier
-    // generation. Signed-in free users get 10 generations per 30-day window,
-    // including 1 Pro-tier generation per window. Pro users skip these caps.
+    // Anonymous users are reserved in anonymous_usage by HMAC(IP + UA + anon cookie).
+    // Signed-in free users keep the monthly property-row cap. Pro users skip caps.
     if (!hasProPlan) {
-      if (proTierRequest) {
-        const proTierQuery = supabase
-          .from("properties")
-          .select("id", { count: "exact", head: true })
-          .not("property_type", "in", `("${FREE_PROPERTY_TYPES.join('","')}")`);
+      if (!userId) {
+        const turnstileResult = await verifyAnonymousTurnstile(
+          validatedInput.turnstileToken,
+          ipRaw,
+        );
+        if (!turnstileResult.ok) return turnstileResult.response;
 
-        if (userId) {
-          proTierQuery.eq("user_id", userId).gte("created_at", sinceWindow);
-        } else {
-          proTierQuery.eq("ip_hash", ipHash).is("user_id", null);
+        if (!anonymousUsageKey || !validatedInput.anonymousId) {
+          return gateResponse("anonymous_id_required", null);
         }
 
-        const { count: proTierCount, error: proTierCountErr } = await proTierQuery;
-        if (proTierCountErr) {
-          log("pro_tier_count_error", { error: proTierCountErr.message });
+        const anonCookieHash = await hmacSha256(
+          `anon-cookie:${validatedInput.anonymousId}`,
+          anonymousUsageSecret,
+        );
+
+        const { data: reservation, error: reservationErr } = await supabase
+          .rpc("reserve_anonymous_generation", {
+            p_anon_key: anonymousUsageKey,
+            p_anon_cookie_hash: anonCookieHash,
+            p_ip_hash: ipHash,
+            p_user_agent_hash: userAgentHash,
+            p_network_key: networkKey,
+            p_is_pro_tier: proTierRequest,
+            p_total_limit: FREE_LIMIT,
+            p_pro_tier_limit: FREE_PRO_TIER_LIMIT,
+          })
+          .single();
+
+        if (reservationErr) {
+          log("anonymous_usage_reservation_error", {
+            error: reservationErr.message,
+          });
           return usageCheckUnavailableResponse();
         }
 
-        if ((proTierCount ?? 0) >= FREE_PRO_TIER_LIMIT) {
-          log(userId ? "free_user_pro_tier_exceeded" : "anon_pro_tier_exceeded", {
-            userId,
-            requestedType,
-            proTierCount,
-            ipHashPrefix: userId ? undefined : ipHash.slice(0, 8),
+        const allowed = (reservation as { allowed?: boolean } | null)?.allowed;
+        const errorCode = (reservation as { error_code?: string } | null)
+          ?.error_code;
+
+        if (!allowed) {
+          log("anonymous_usage_blocked", {
+            errorCode,
+            proTierRequest,
+            anonKeyPrefix: anonymousUsageKey.slice(0, 8),
           });
-
-          const message = userId
-            ? "Free accounts include 1 Pro-tier property generation per month. Upgrade to Pro for unlimited Pro-tier generations."
-            : "Anonymous users include 1 Pro-tier property generation. Sign in for a monthly Pro-tier sample or upgrade to Pro.";
-
-          return new Response(
-            JSON.stringify({
-              success: false,
-              error: "pro_required",
-              message,
-            }),
-            {
-              status: 403,
-              headers: { ...corsHeaders, "Content-Type": "application/json" },
-            },
-          );
+          return gateResponse(errorCode || "usage_check_unavailable", null);
         }
-      }
 
-      const countQuery = supabase
-        .from("properties")
-        .select("id", { count: "exact", head: true });
-
-      if (userId) {
-        countQuery.eq("user_id", userId).gte("created_at", sinceWindow);
+        anonymousUsageReserved = true;
       } else {
-        countQuery.eq("ip_hash", ipHash).is("user_id", null);
-      }
+        if (proTierRequest) {
+          const proTierQuery = supabase
+            .from("properties")
+            .select("id", { count: "exact", head: true })
+            .not("property_type", "in", `("${FREE_PROPERTY_TYPES.join('","')}")`)
+            .eq("user_id", userId)
+            .gte("created_at", sinceWindow);
 
-      const { count, error: countErr } = await countQuery;
-      if (countErr) {
-        log("cap_count_error", { error: countErr.message });
-        return usageCheckUnavailableResponse();
-      }
+          const { count: proTierCount, error: proTierCountErr } = await proTierQuery;
+          if (proTierCountErr) {
+            log("pro_tier_count_error", { error: proTierCountErr.message });
+            return usageCheckUnavailableResponse();
+          }
 
-      if ((count ?? 0) >= FREE_LIMIT) {
-        log(userId ? "free_user_cap_exceeded" : "anon_cap_exceeded", {
-          userId,
-          count,
-          ipHashPrefix: userId ? undefined : ipHash.slice(0, 8),
-        });
+          if ((proTierCount ?? 0) >= FREE_PRO_TIER_LIMIT) {
+            log("free_user_pro_tier_exceeded", {
+              userId,
+              requestedType,
+              proTierCount,
+            });
+            return gateResponse("pro_required", userId);
+          }
+        }
 
-        const message = userId
-          ? `Free monthly limit reached (${FREE_LIMIT} per ${FREE_WINDOW_DAYS} days). Upgrade to Pro for unlimited generations.`
-          : `Free anonymous limit reached (${FREE_LIMIT} generations). Sign in for ${FREE_LIMIT} monthly generations or upgrade to Pro.`;
+        const countQuery = supabase
+          .from("properties")
+          .select("id", { count: "exact", head: true })
+          .eq("user_id", userId)
+          .gte("created_at", sinceWindow);
 
-        return new Response(
-          JSON.stringify({
-            success: false,
-            error: "free_limit_exceeded",
-            message,
-          }),
-          {
-            status: 429,
-            headers: { ...corsHeaders, "Content-Type": "application/json" },
-          },
-        );
+        const { count, error: countErr } = await countQuery;
+        if (countErr) {
+          log("cap_count_error", { error: countErr.message });
+          return usageCheckUnavailableResponse();
+        }
+
+        if ((count ?? 0) >= FREE_LIMIT) {
+          log("free_user_cap_exceeded", { userId, count });
+          return gateResponse("free_limit_exceeded", userId);
+        }
       }
     }
 
@@ -281,16 +469,19 @@ serve(async (req) => {
 
     if (insertError) {
       log("insert_error", { error: insertError.message });
-      return new Response(
-        JSON.stringify({
+      if (anonymousUsageReserved && anonymousUsageKey) {
+        await supabase.rpc("refund_anonymous_generation", {
+          p_anon_key: anonymousUsageKey,
+          p_is_pro_tier: proTierRequest,
+        });
+      }
+      return jsonResponse(
+        {
           success: false,
           error: "Failed to create property record",
           details: insertError.message,
-        }),
-        {
-          status: 500,
-          headers: { ...corsHeaders, "Content-Type": "application/json" },
         },
+        500,
       );
     }
 
@@ -322,30 +513,32 @@ serve(async (req) => {
         }
       });
 
-    return new Response(
-      JSON.stringify({
+    return jsonResponse(
+      {
         success: true,
         propertyId: property.id,
         message: "Property processing started",
-      }),
-      {
-        status: 200,
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
       },
+      200,
     );
   } catch (error) {
     log("unhandled_error", {
       error: error instanceof Error ? error.message : "Unknown",
     });
-    return new Response(
-      JSON.stringify({
+
+    if (anonymousUsageReserved && anonymousUsageKey && supabase) {
+      await supabase.rpc("refund_anonymous_generation", {
+        p_anon_key: anonymousUsageKey,
+        p_is_pro_tier: proTierRequest,
+      });
+    }
+
+    return jsonResponse(
+      {
         success: false,
         error: error instanceof Error ? error.message : "Unknown error",
-      }),
-      {
-        status: 500,
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
       },
+      500,
     );
   }
 });
