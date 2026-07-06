@@ -1,0 +1,1783 @@
+diff --git a/src/components/AppNav.tsx b/src/components/AppNav.tsx
+index d9fbdca..efe560e 100644
+--- a/src/components/AppNav.tsx
++++ b/src/components/AppNav.tsx
+@@ -1,6 +1,7 @@
+ import { useState, useEffect, useRef } from "react";
+ import { Link } from "@tanstack/react-router";
+ import { supabase } from "@/integrations/supabase/client";
++import { useAuth } from "@/hooks/useAuth";
+ import AuthModal from "@/components/AuthModal";
+ import RetroLegend from "@/components/RetroLegend";
+ 
+@@ -13,20 +14,11 @@ const NAV_LINKS = [
+ ] as const;
+ 
+ export function AppNav() {
+-  const [userEmail, setUserEmail] = useState<string | null>(null);
++  const { user, signIn, signUp, signOut } = useAuth();
+   const [menuOpen, setMenuOpen] = useState(false);
+   const [showAuthModal, setShowAuthModal] = useState(false);
+   const menuRef = useRef<HTMLDivElement>(null);
+-
+-  useEffect(() => {
+-    supabase.auth.getSession().then(({ data: { session } }) => {
+-      setUserEmail(session?.user?.email ?? null);
+-    });
+-    const { data: { subscription } } = supabase.auth.onAuthStateChange((_e, session) => {
+-      setUserEmail(session?.user?.email ?? null);
+-    });
+-    return () => subscription.unsubscribe();
+-  }, []);
++  const userEmail = user?.email ?? null;
+ 
+   // Close mobile menu on outside click
+   useEffect(() => {
+@@ -48,10 +40,26 @@ export function AppNav() {
+   }, [menuOpen]);
+ 
+   const handleSignOut = async () => {
+-    await supabase.auth.signOut();
++    await signOut();
+     setMenuOpen(false);
+   };
+ 
++  const handleAuth = async (
++    email: string,
++    password: string,
++    mode: "signin" | "signup",
++  ) => {
++    if (mode === "signin") return signIn(email, password);
++
++    const { error, isNewUser } = await signUp(email, password);
++    if (isNewUser) {
++      supabase.functions
++        .invoke("send-welcome-email", { body: { email } })
++        .catch(console.error);
++    }
++    return error;
++  };
++
+   return (
+     <>
+       <header className="w-full bg-[color:var(--win95-blue)] text-white px-3 py-1.5 flex items-center gap-2 border-b-2 border-black relative z-40">
+@@ -176,7 +184,7 @@ export function AppNav() {
+       {showAuthModal && (
+         <AuthModal
+           onClose={() => setShowAuthModal(false)}
+-          onAuth={async () => { setShowAuthModal(false); return null; }}
++          onAuth={handleAuth}
+         />
+       )}
+     </>
+diff --git a/src/components/AuthModal.tsx b/src/components/AuthModal.tsx
+index 9a0028c..c25e43d 100644
+--- a/src/components/AuthModal.tsx
++++ b/src/components/AuthModal.tsx
+@@ -57,7 +57,10 @@ export default function AuthModal({ onClose, onAuth }: AuthModalProps) {
+           return;
+         }
+       } catch {
+-        // Fail open — don't block signup if the verification call errors
++        setError("Security check unavailable. Please try again.");
++        setTurnstileToken(null);
++        setSubmitting(false);
++        return;
+       }
+     }
+ 
+diff --git a/src/components/RetroGenerator.tsx b/src/components/RetroGenerator.tsx
+index 9e5ae55..b7cab7c 100644
+--- a/src/components/RetroGenerator.tsx
++++ b/src/components/RetroGenerator.tsx
+@@ -1,4 +1,4 @@
+-import { useEffect, useRef, useState } from "react";
++import { useCallback, useEffect, useRef, useState } from "react";
+ import { Link } from "@tanstack/react-router";
+ import { toast as sonnerToast } from "sonner";
+ import { supabase } from "@/integrations/supabase/client";
+@@ -11,12 +11,7 @@ import OutputTabsWindow, {
+ import GenerationProgressModal from "@/components/GenerationProgressModal";
+ import AuthModal from "@/components/AuthModal";
+ import ListingHistory from "@/components/ListingHistory";
+-import {
+-  Tooltip,
+-  TooltipContent,
+-  TooltipProvider,
+-  TooltipTrigger,
+-} from "@/components/ui/tooltip";
++import TurnstileWidget from "@/components/TurnstileWidget";
+ import { RetroButton, RetroInput, RetroWindow } from "@/components/retro";
+ import {
+   describeFunctionInvokeError,
+@@ -35,12 +30,20 @@ type PropertyType =
+   | "commercial"
+   | "lease";
+ 
++type PaywallReason = "free_limit" | "pro_tier_limit";
++
+ const MAX_GENERATIONS = 10;
++const FREE_PRO_TIER_LIMIT = 1;
+ const STORAGE_KEY = "plg_generations_used";
+-
++const PRO_TIER_STORAGE_KEY = "plg_pro_tier_generations_used";
++const ANON_ID_COOKIE = "plg_anon_id";
+ const FREE_PROPERTY_TYPES: PropertyType[] = ["sfr", "fsbo"];
+-const isPropertyTypeFree = (type: PropertyType) =>
+-  FREE_PROPERTY_TYPES.includes(type);
++const TURNSTILE_SITE_KEY = import.meta.env.VITE_TURNSTILE_SITE_KEY as
++  | string
++  | undefined;
++
++const isProTierPropertyType = (type: PropertyType) =>
++  !FREE_PROPERTY_TYPES.includes(type);
+ 
+ const isDevHost = () => {
+   if (typeof window === "undefined") return false;
+@@ -53,20 +56,85 @@ const isDevHost = () => {
+   );
+ };
+ 
++function getCookieValue(name: string): string | null {
++  if (typeof document === "undefined") return null;
++  const prefix = `${name}=`;
++  return (
++    document.cookie
++      .split(";")
++      .map((part) => part.trim())
++      .find((part) => part.startsWith(prefix))
++      ?.slice(prefix.length) || null
++  );
++}
++
++function setCookieValue(name: string, value: string) {
++  if (typeof document === "undefined") return;
++  const secure = window.location.protocol === "https:" ? "; Secure" : "";
++  document.cookie = `${name}=${value}; Max-Age=31536000; Path=/; SameSite=Lax${secure}`;
++}
++
++function createAnonymousId(): string {
++  if (typeof window !== "undefined" && window.crypto?.randomUUID) {
++    return window.crypto.randomUUID();
++  }
++  const bytes = new Uint8Array(16);
++  crypto.getRandomValues(bytes);
++  return Array.from(bytes)
++    .map((byte) => byte.toString(16).padStart(2, "0"))
++    .join("");
++}
++
++function getOrCreateAnonymousId(): string {
++  if (typeof window === "undefined") return "";
++  const existing = getCookieValue(ANON_ID_COOKIE);
++  if (existing) return existing;
++
++  const next = createAnonymousId();
++  setCookieValue(ANON_ID_COOKIE, next);
++  return next;
++}
++
++async function readFunctionInvokeErrorBody(
++  error: unknown,
++): Promise<Record<string, unknown> | null> {
++  if (!error || typeof error !== "object") return null;
++  const err = error as { context?: { json?: () => Promise<unknown> } };
++  if (!err.context?.json) return null;
++
++  try {
++    const body = await err.context.json();
++    return body && typeof body === "object"
++      ? (body as Record<string, unknown>)
++      : null;
++  } catch {
++    return null;
++  }
++}
++
+ export default function RetroGenerator() {
+-  const { user, signIn, signUp, signOut, loading: authLoading } = useAuth();
++  const { user, signIn, signUp, loading: authLoading } = useAuth();
+ 
+   const [query, setQuery] = useState("");
+   const [propertyType, setPropertyType] = useState<PropertyType>("sfr");
+   const [propertyId, setPropertyId] = useState<string | null>(null);
+   const [showProgress, setShowProgress] = useState(false);
+   const [showPaywall, setShowPaywall] = useState(false);
++  const [paywallReason, setPaywallReason] = useState<PaywallReason>("free_limit");
+   const [showAuthModal, setShowAuthModal] = useState(false);
++  const [anonymousId] = useState(() => getOrCreateAnonymousId());
++  const [turnstileToken, setTurnstileToken] = useState<string | null>(null);
++  const [turnstileWidgetKey, setTurnstileWidgetKey] = useState(0);
+   const [generationsUsed, setGenerationsUsed] = useState<number>(() => {
+     if (typeof window === "undefined") return 0;
+     const raw = window.localStorage.getItem(STORAGE_KEY);
+     return raw ? Number(raw) || 0 : 0;
+   });
++  const [proTierGenerationsUsed, setProTierGenerationsUsed] = useState<number>(() => {
++    if (typeof window === "undefined") return 0;
++    const raw = window.localStorage.getItem(PRO_TIER_STORAGE_KEY);
++    return raw ? Number(raw) || 0 : 0;
++  });
+   const [outputs, setOutputs] = useState<Record<OutputTabKey, string> | null>(
+     null,
+   );
+@@ -80,7 +148,38 @@ export default function RetroGenerator() {
+ 
+   const devBypassActive = isDevHost();
+   const generationsLeft = Math.max(0, MAX_GENERATIONS - generationsUsed);
+-  const generationCountLabel = devBypassActive ? "dev" : generationsLeft;
++  const proTierGenerationsLeft = Math.max(
++    0,
++    FREE_PRO_TIER_LIMIT - proTierGenerationsUsed,
++  );
++  const selectedProTier = isProTierPropertyType(propertyType);
++  const anonymousTurnstileRequired =
++    !devBypassActive && !user && !!TURNSTILE_SITE_KEY;
++  const generateDisabled =
++    showProgress ||
++    !query.trim() ||
++    (anonymousTurnstileRequired && !turnstileToken);
++  const generationCountLabel = devBypassActive
++    ? "dev"
++    : isProUser
++      ? "pro"
++      : user
++        ? "10/mo"
++        : generationsLeft;
++
++  const resetAnonymousTurnstile = useCallback(() => {
++    if (!anonymousTurnstileRequired) return;
++    setTurnstileToken(null);
++    setTurnstileWidgetKey((key) => key + 1);
++  }, [anonymousTurnstileRequired]);
++
++  const handleTurnstileVerify = useCallback((token: string) => {
++    setTurnstileToken(token);
++  }, []);
++
++  const handleTurnstileExpire = useCallback(() => {
++    setTurnstileToken(null);
++  }, []);
+ 
+   // --- Checkout success/cancel toast handling ---
+   const checkoutToastShown = useRef(false);
+@@ -90,13 +189,14 @@ export default function RetroGenerator() {
+     const checkoutStatus = params.get("checkout");
+     if (checkoutStatus === "success") {
+       checkoutToastShown.current = true;
+-      sonnerToast.success("Welcome to PLG Pro! Your 7-day trial has started.");
++      sonnerToast.success("Welcome to PLG Pro! Your subscription is active.");
+       window.history.replaceState({}, "", window.location.pathname);
+     } else if (checkoutStatus === "cancel") {
+       checkoutToastShown.current = true;
+       sonnerToast("Checkout cancelled. You can upgrade anytime.");
+       window.history.replaceState({}, "", window.location.pathname);
+     } else if (params.get("upgrade") === "true") {
++      setPaywallReason("free_limit");
+       setShowPaywall(true);
+       window.history.replaceState({}, "", window.location.pathname);
+     }
+@@ -113,11 +213,13 @@ export default function RetroGenerator() {
+       const { data } = await (supabase.from("subscriptions" as never) as any)
+         .select("plan, status")
+         .eq("user_id", user.id)
+-        .in("status", ["active", "trialing"])
++        .eq("status", "active")
+         .limit(1);
+-      if (!cancelled && data && data.length > 0 && data[0].plan === "pro") {
+-        setIsProUser(true);
+-      }
++      const active = !!data?.some(
++        (row: { plan?: string; status?: string }) =>
++          row.plan === "pro" && row.status === "active",
++      );
++      if (!cancelled) setIsProUser(active);
+     })();
+     return () => { cancelled = true; };
+   }, [user]);
+@@ -141,6 +243,11 @@ export default function RetroGenerator() {
+     window.localStorage.setItem(STORAGE_KEY, String(generationsUsed));
+   }, [generationsUsed]);
+ 
++  useEffect(() => {
++    if (typeof window === "undefined") return;
++    window.localStorage.setItem(PRO_TIER_STORAGE_KEY, String(proTierGenerationsUsed));
++  }, [proTierGenerationsUsed]);
++
+   useEffect(() => {
+     if (status === "complete" && copies.length > 0) {
+       const outputMap: Record<OutputTabKey, string> = {
+@@ -162,15 +269,27 @@ export default function RetroGenerator() {
+   const handleGenerate = async () => {
+     if (!query.trim()) return;
+ 
++    if (anonymousTurnstileRequired && !turnstileToken) {
++      sonnerToast.error("Complete the security check to generate.");
++      return;
++    }
++
+     if (!devBypassActive && generationsUsed >= MAX_GENERATIONS && !user) {
++      setPaywallReason("free_limit");
+       setShowPaywall(true);
+       track("paywall_shown", { reason: "free_limit_exceeded_local", property_type: propertyType });
+       return;
+     }
+ 
+-    if (!devBypassActive && !isPropertyTypeFree(propertyType) && !user) {
++    if (
++      !devBypassActive &&
++      !user &&
++      selectedProTier &&
++      proTierGenerationsUsed >= FREE_PRO_TIER_LIMIT
++    ) {
++      setPaywallReason("pro_tier_limit");
+       setShowPaywall(true);
+-      track("paywall_shown", { reason: "premium_type_anon", property_type: propertyType });
++      track("paywall_shown", { reason: "pro_tier_limit_local", property_type: propertyType });
+       return;
+     }
+ 
+@@ -193,6 +312,12 @@ export default function RetroGenerator() {
+             ...parsed,
+             propertyType,
+             source: "generator",
++            ...(!user
++              ? {
++                  anonymousId,
++                  turnstileToken,
++                }
++              : {}),
+           },
+         },
+       );
+@@ -205,6 +330,10 @@ export default function RetroGenerator() {
+           data.error === "free_limit_exceeded"
+         ) {
+           setShowProgress(false);
++          if (!user) resetAnonymousTurnstile();
++          setPaywallReason(
++            data.error === "pro_required" ? "pro_tier_limit" : "free_limit",
++          );
+           setShowPaywall(true);
+           track("paywall_shown", { reason: data.error, property_type: propertyType });
+           return;
+@@ -218,14 +347,37 @@ export default function RetroGenerator() {
+ 
+       if (data?.propertyId) {
+         setPropertyId(data.propertyId);
+-        if (!user) setGenerationsUsed((prev) => prev + 1);
++        if (!user) {
++          setGenerationsUsed((prev) => prev + 1);
++          if (selectedProTier) setProTierGenerationsUsed((prev) => prev + 1);
++          resetAnonymousTurnstile();
++        }
+       } else {
+         throw new Error("No property ID returned");
+       }
+     } catch (err) {
+       console.error("Error starting generation:", err);
+       setShowProgress(false);
+-      const description = await describeFunctionInvokeError(err);
++      if (!user) resetAnonymousTurnstile();
++      const errorBody = await readFunctionInvokeErrorBody(err);
++      const errorCode =
++        typeof errorBody?.error === "string" ? errorBody.error : null;
++
++      if (errorCode === "pro_required" || errorCode === "free_limit_exceeded") {
++        setPaywallReason(
++          errorCode === "pro_required" ? "pro_tier_limit" : "free_limit",
++        );
++        setShowPaywall(true);
++        track("paywall_shown", { reason: errorCode, property_type: propertyType });
++        return;
++      }
++
++      const description =
++        typeof errorBody?.message === "string" && errorBody.message
++          ? errorBody.message
++          : typeof errorBody?.error === "string" && errorBody.error
++            ? errorBody.error
++            : await describeFunctionInvokeError(err);
+       sonnerToast.error("Failed to start generation", {
+         description,
+       });
+@@ -330,7 +482,7 @@ export default function RetroGenerator() {
+               <RetroButton
+                 variant="primary"
+                 onClick={handleGenerate}
+-                disabled={showProgress || !query.trim()}
++                disabled={generateDisabled}
+               >
+                 {outputs ? `regenerate (${generationCountLabel})` : "generate"}
+               </RetroButton>
+@@ -341,10 +493,28 @@ export default function RetroGenerator() {
+               onChange={setPropertyType}
+             />
+ 
++            {anonymousTurnstileRequired && (
++              <div className="flex justify-center">
++                <TurnstileWidget
++                  key={turnstileWidgetKey}
++                  siteKey={TURNSTILE_SITE_KEY!}
++                  onVerify={handleTurnstileVerify}
++                  onExpire={handleTurnstileExpire}
++                />
++              </div>
++            )}
++
+             <div className="flex gap-3 text-win95-11 justify-center text-muted-foreground flex-wrap items-center">
+               <span>fha trained</span>
+               <span>real property research</span>
+-              <span>10 free generations</span>
++              <span>
++                {isProUser
++                  ? "unlimited generations"
++                  : "10 free generations, 1 Pro-tier included"}
++              </span>
++              {!user && !isProUser && selectedProTier && (
++                <span>{proTierGenerationsLeft} Pro-tier left</span>
++              )}
+               {isProUser && (
+                 <RetroButton
+                   onClick={handleManageSubscription}
+@@ -388,8 +558,8 @@ export default function RetroGenerator() {
+                     variant="primary"
+                     onClick={handleGenerate}
+                     disabled={
+-                      (!devBypassActive && !user && generationsLeft <= 0) ||
+-                      showProgress
++                      generateDisabled ||
++                      (!devBypassActive && !user && generationsLeft <= 0)
+                     }
+                   >
+                     regenerate ({generationCountLabel})
+@@ -413,7 +583,7 @@ export default function RetroGenerator() {
+ 
+         {showPaywall && (
+           <Win95PaywallModal
+-            isPremiumType={!isPropertyTypeFree(propertyType)}
++            reason={paywallReason}
+             isSignedIn={!!user}
+             onClose={() => setShowPaywall(false)}
+             onSignIn={() => {
+@@ -504,50 +674,39 @@ function PropertyTypeToggle({
+   ];
+ 
+   return (
+-    <TooltipProvider>
+-      <div className="flex flex-wrap gap-1">
+-        {options.map((opt) => {
+-          const isPremium = !isPropertyTypeFree(opt.key);
+-          const isActive = value === opt.key;
+-          return (
+-            <Tooltip key={opt.key}>
+-              <TooltipTrigger asChild>
+-                <button
+-                  onClick={() => onChange(opt.key)}
+-                  className={`px-2 py-1 text-win95-11 font-bold cursor-pointer relative ${
+-                    isActive ? "win95-pressed bg-input" : "win95-raised bg-card"
+-                  }`}
+-                >
+-                  {opt.label}
+-                  {isPremium && (
+-                    <span className="absolute -top-1 -right-1 text-[color:var(--destructive)] text-xs">
+-                      *
+-                    </span>
+-                  )}
+-                </button>
+-              </TooltipTrigger>
+-              {isPremium && (
+-                <TooltipContent className="bg-card win95-raised text-foreground">
+-                  <p className="text-win95-11">
+-                    Premium property type. Upgrade to Pro.
+-                  </p>
+-                </TooltipContent>
+-              )}
+-            </Tooltip>
+-          );
+-        })}
+-      </div>
+-    </TooltipProvider>
++    <div className="flex flex-wrap gap-1">
++      {options.map((opt) => {
++        const isActive = value === opt.key;
++        const isProTier = isProTierPropertyType(opt.key);
++        return (
++          <button
++            key={opt.key}
++            onClick={() => onChange(opt.key)}
++            title={isProTier ? "Pro tier: 1 included free, then Pro" : "Free tier"}
++            className={`px-2 py-1 text-win95-11 font-bold cursor-pointer relative ${
++              isActive ? "win95-pressed bg-input" : "win95-raised bg-card"
++            }`}
++          >
++            {opt.label}
++            {isProTier && (
++              <span className="absolute -top-1 -right-1 text-[color:var(--destructive)] text-xs">
++                *
++              </span>
++            )}
++          </button>
++        );
++      })}
++    </div>
+   );
+ }
+ 
+ function Win95PaywallModal({
+-  isPremiumType,
++  reason,
+   onClose,
+   onSignIn,
+   isSignedIn,
+ }: {
+-  isPremiumType: boolean;
++  reason: PaywallReason;
+   onClose: () => void;
+   onSignIn: () => void;
+   isSignedIn: boolean;
+@@ -579,44 +738,69 @@ function Win95PaywallModal({
+     }
+   };
+ 
++  const proTierLimit = reason === "pro_tier_limit";
++
+   return (
+     <div className="fixed inset-0 bg-black/50 flex items-center justify-center p-4 z-50">
+       <div className="win95-window w-full max-w-md">
+         <div className="win95-titlebar">
+           <span className="font-bold text-win95-12">
+-            {isPremiumType ? "Premium Property Type" : "Free Generations Used"}
++            {proTierLimit ? "Pro-Tier Limit Used" : "Free Generations Used"}
+           </span>
+           <button className="win95-control-btn" onClick={onClose}>
+             x
+           </button>
+         </div>
+         <div className="p-4 bg-card">
+-          {isPremiumType ? (
++          {proTierLimit ? (
+             <>
+               <p className="text-win95-12 mb-2">
+-                You&apos;ve used your free premium generation.
++                You&apos;ve used your included Pro-tier property generation.
+               </p>
+               <p className="text-win95-11 text-muted-foreground mb-3">
+-                Pro unlocks all 9 property types, unlimited.
++                Free users can use 1 of their 10 generations on MF, STR, MTR,
++                LTR, Estate/Luxury, Commercial, or Lease. Pro makes those
++                unlimited.
++              </p>
++            </>
++          ) : isSignedIn ? (
++            <>
++              <p className="text-win95-12 mb-2">
++                You&apos;ve used your 10 free monthly generations.
++              </p>
++              <p className="text-win95-11 text-muted-foreground mb-3">
++                Pro removes the cap and keeps generation unlimited.
+               </p>
+             </>
+           ) : (
+-            <p className="text-win95-12 mb-3">
+-              You&apos;ve used your 10 free generations.
+-            </p>
++            <>
++              <p className="text-win95-12 mb-2">
++                You&apos;ve used your 10 free anonymous generations.
++              </p>
++              <p className="text-win95-11 text-muted-foreground mb-3">
++                Create an account for 10 free generations each month, or upgrade
++                to Pro for unlimited volume.
++              </p>
++            </>
+           )}
+ 
+           <div className="win95-inset bg-input p-2 mb-4">
+             <p className="text-win95-12 font-bold mb-2">Pro includes:</p>
+             <ul className="text-win95-11 space-y-1">
+               <li>* Unlimited generations</li>
+-              <li>* All 9 property types</li>
++              <li>* Unlimited Pro-tier property types</li>
+               <li>* Listing history &amp; portfolio</li>
+               <li>* Real property research</li>
+               <li>* FHA compliance checks</li>
+             </ul>
+           </div>
+ 
++          {!isSignedIn && (
++            <p className="text-win95-11 text-muted-foreground text-center mb-3">
++              Sign in or create an account before checkout.
++            </p>
++          )}
++
+           <div className="space-y-2 mb-4">
+             <div className="flex gap-2 justify-center">
+               <RetroButton
+@@ -624,7 +808,7 @@ function Win95PaywallModal({
+                 onClick={() => handleCheckout("month")}
+                 disabled={loading !== null}
+               >
+-                {loading === "month" ? "Loading..." : "Pro $49/mo — 7 days free"}
++                {loading === "month" ? "Loading..." : "Pro $49/mo"}
+               </RetroButton>
+             </div>
+             <div className="flex gap-2 justify-center">
+@@ -643,11 +827,11 @@ function Win95PaywallModal({
+                 className="text-win95-11 underline cursor-pointer bg-transparent border-none text-muted-foreground"
+                 onClick={onSignIn}
+               >
+-                Already have an account? Sign in
++                Sign in / create account
+               </button>
+             ) : (
+               <span className="text-win95-11 text-muted-foreground">
+-                7-day free trial, cancel anytime
++                Cancel anytime
+               </span>
+             )}
+             <RetroButton onClick={onClose}>Cancel</RetroButton>
+@@ -668,7 +852,7 @@ function HowItWorks() {
+     {
+       n: "2.",
+       title: "Pick property type",
+-      body: "SFR, FSBO, Multi-Family, STR, MTR, LTR, Estate, Commercial, or Lease. Free tier includes SFR + FSBO.",
++      body: "SFR and FSBO are free-tier. One Pro-tier property generation is included; Pro unlocks unlimited MF, STR, MTR, LTR, Estate/Luxury, Commercial, and Lease.",
+     },
+     {
+       n: "3.",
+@@ -677,8 +861,8 @@ function HowItWorks() {
+     },
+     {
+       n: "4.",
+-      title: "One-click copy & paste",
+-      body: "Copy your MLS description, social post, or email individually — or grab all three at once.",
++      title: "Use 10 free, then go Pro",
++      body: "Anonymous users get 10 generations total. Signed-in free accounts get 10 per month. Each free allowance includes 1 Pro-tier generation.",
+     },
+   ];
+   return (
+diff --git a/src/routes/__root.tsx b/src/routes/__root.tsx
+index c1d93d2..24fb917 100644
+--- a/src/routes/__root.tsx
++++ b/src/routes/__root.tsx
+@@ -89,7 +89,6 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
+       { property: "og:type", content: "website" },
+       { property: "og:site_name", content: "PLG" },
+       { name: "twitter:card", content: "summary_large_image" },
+-      { name: "twitter:site", content: "@plaboratory" },
+       { name: "twitter:title", content: "PLG — Property Listing Generator" },
+       { name: "twitter:description", content: "The fastest way to generate FHA-compliant MLS, social, and email listing copy. Used by thousands of agents." },
+       { property: "og:image", content: "https://pub-bb2e103a32db4e198524a2e9ed8f35b4.r2.dev/fd9b0118-ec7e-4e79-b5e2-def916e87676/id-preview-47622f33--c76353e6-e57a-4f26-aef0-767e3a4734d3.lovable.app-1782271456544.png" },
+@@ -125,7 +124,7 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
+               name: "Free",
+               price: "0",
+               priceCurrency: "USD",
+-              description: "10 free generations per month, all property types",
++              description: "10 free generations with 1 Pro-tier property sample; signed-in free accounts reset monthly",
+             },
+             {
+               "@type": "Offer",
+@@ -133,7 +132,7 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
+               price: "49",
+               priceCurrency: "USD",
+               billingDuration: "P1M",
+-              description: "Unlimited generations, all 9 property types, listing history",
++              description: "Unlimited generations, unlimited Pro-tier property types, listing history",
+             },
+             {
+               "@type": "Offer",
+diff --git a/src/routes/compare/dealmachine.tsx b/src/routes/compare/dealmachine.tsx
+index d58d141..f7bf69b 100644
+--- a/src/routes/compare/dealmachine.tsx
++++ b/src/routes/compare/dealmachine.tsx
+@@ -44,7 +44,7 @@ const FEATURES = [
+   },
+   {
+     feature: "Property types supported",
+-    plg: "9 (SFR, FSBO, MF, STR, MTR, LTR, Estate, Commercial, Lease)",
++    plg: "SFR/FSBO free; Pro-tier sample included",
+     rival: "Residential focus (lead gen only)",
+   },
+   {
+@@ -69,7 +69,7 @@ const FEATURES = [
+   },
+   {
+     feature: "Free tier",
+-    plg: "10 generations/month",
++    plg: "10 free generations + 1 Pro-tier sample",
+     rival: "No free tier",
+   },
+   {
+diff --git a/src/routes/compare/listingai.tsx b/src/routes/compare/listingai.tsx
+index 4f9f6e7..4f6ac14 100644
+--- a/src/routes/compare/listingai.tsx
++++ b/src/routes/compare/listingai.tsx
+@@ -44,7 +44,7 @@ const FEATURES = [
+   },
+   {
+     feature: "Property types",
+-    plg: "9 specialized types",
++    plg: "SFR/FSBO free; Pro-tier sample included",
+     rival: "Generic residential only",
+   },
+   {
+@@ -74,7 +74,7 @@ const FEATURES = [
+   },
+   {
+     feature: "Free tier",
+-    plg: "10 generations/month",
++    plg: "10 free generations + 1 Pro-tier sample",
+     rival: "Varies (often limited)",
+   },
+   {
+diff --git a/src/routes/pricing.tsx b/src/routes/pricing.tsx
+index 89bda04..de6c758 100644
+--- a/src/routes/pricing.tsx
++++ b/src/routes/pricing.tsx
+@@ -7,13 +7,13 @@ export const Route = createFileRoute("/pricing")({
+       {
+         name: "description",
+         content:
+-          "PropertyListingGenerator.com pricing: Free tier with 10 generations/month, or Pro at $49/mo for unlimited generations, all 9 property types, listing history, and priority support. 7-day free trial.",
++          "PropertyListingGenerator.com pricing: 10 free generations with 1 Pro-tier property sample, or Pro at $49/mo for unlimited generations and all Pro-tier property types.",
+       },
+       { property: "og:title", content: "PLG Pricing — Free & Pro Plans" },
+       {
+         property: "og:description",
+         content:
+-          "Free: 10 generations/month. Pro: $49/mo for unlimited. 7-day free trial included.",
++          "Free: 10 generations with 1 Pro-tier sample. Pro: $49/mo for unlimited listing copy generation.",
+       },
+     ],
+   }),
+@@ -41,8 +41,9 @@ function Pricing() {
+               Simple pricing. No surprises.
+             </h1>
+             <p className="text-win95-12">
+-              Start free. Upgrade when you need more. Every plan includes
+-              FHA-compliant copy and real property research.
++              Start free. Upgrade when you need unlimited volume and unlimited
++              Pro-tier property types. Every plan includes FHA-compliant copy
++              and real property research.
+             </p>
+           </div>
+         </div>
+@@ -68,11 +69,19 @@ function Pricing() {
+                 <ul className="space-y-1.5 text-win95-11">
+                   <li className="flex gap-2">
+                     <span className="font-bold text-[var(--win95-blue)]">+</span>
+-                    <span>10 generations per month</span>
++                    <span>10 free generations</span>
+                   </li>
+                   <li className="flex gap-2">
+                     <span className="font-bold text-[var(--win95-blue)]">+</span>
+-                    <span>SFR + FSBO property types</span>
++                    <span>Signed-in accounts reset monthly</span>
++                  </li>
++                  <li className="flex gap-2">
++                    <span className="font-bold text-[var(--win95-blue)]">+</span>
++                    <span>SFR + FSBO included</span>
++                  </li>
++                  <li className="flex gap-2">
++                    <span className="font-bold text-[var(--win95-blue)]">+</span>
++                    <span>1 Pro-tier property generation included</span>
+                   </li>
+                   <li className="flex gap-2">
+                     <span className="font-bold text-[var(--win95-blue)]">+</span>
+@@ -88,15 +97,15 @@ function Pricing() {
+                   </li>
+                   <li className="flex gap-2 text-muted-foreground">
+                     <span className="font-bold">-</span>
+-                    <span>7 pro property types locked</span>
++                    <span>Unlimited generation volume</span>
+                   </li>
+                   <li className="flex gap-2 text-muted-foreground">
+                     <span className="font-bold">-</span>
+-                    <span>No listing history</span>
++                    <span>Unlimited Pro-tier property types</span>
+                   </li>
+                   <li className="flex gap-2 text-muted-foreground">
+                     <span className="font-bold">-</span>
+-                    <span>Standard support</span>
++                    <span>Priority support</span>
+                   </li>
+                 </ul>
+               </div>
+@@ -124,7 +133,7 @@ function Pricing() {
+               <span className="font-bold text-win95-12 truncate pl-1">
+                 Pro Plan
+               </span>
+-              <span className="text-win95-11 opacity-90">7-day free trial</span>
++              <span className="text-win95-11 opacity-90">unlimited</span>
+             </div>
+             <div className="p-4 space-y-3">
+               <div className="text-center">
+@@ -150,7 +159,7 @@ function Pricing() {
+                   <li className="flex gap-2">
+                     <span className="font-bold text-[var(--win95-blue)]">+</span>
+                     <span>
+-                      All <strong>9 property types</strong>
++                      Unlimited <strong>Pro-tier property types</strong>
+                     </span>
+                   </li>
+                   <li className="flex gap-2">
+@@ -177,12 +186,6 @@ function Pricing() {
+                       <strong>Priority support</strong>
+                     </span>
+                   </li>
+-                  <li className="flex gap-2">
+-                    <span className="font-bold text-[var(--win95-blue)]">+</span>
+-                    <span>
+-                      <strong>7-day free trial</strong> — cancel anytime
+-                    </span>
+-                  </li>
+                 </ul>
+               </div>
+               <div className="text-center pt-1">
+@@ -192,7 +195,7 @@ function Pricing() {
+                     className="win95-raised px-4 py-1 text-win95-12 font-bold cursor-pointer active:win95-pressed"
+                     style={{ color: "var(--win95-blue)" }}
+                   >
+-                    Go Pro — 7 Days Free
++                    Go Pro
+                   </button>
+                 </a>
+               </div>
+@@ -213,18 +216,18 @@ function Pricing() {
+                 What property types are included in each plan?
+               </p>
+               <p className="text-win95-11 text-muted-foreground">
+-                Free: Single Family Residential (SFR) and For Sale By Owner
+-                (FSBO). Pro: adds Multi-Family, Short Term Rental, Mid Term
+-                Rental, Long Term Rental, Estate/Luxury, Commercial, and Lease.
++                Free includes SFR and FSBO, plus 1 Pro-tier property generation
++                from MF, STR, MTR, LTR, Estate/Luxury, Commercial, or Lease.
++                Pro removes both the generation cap and the Pro-tier cap.
+               </p>
+             </div>
+             <div>
+               <p className="text-win95-12 font-bold">
+-                Can I cancel the Pro trial?
++                Can I cancel Pro?
+               </p>
+               <p className="text-win95-11 text-muted-foreground">
+-                Yes. Cancel anytime during the 7-day trial and you will not be
+-                charged. Your account reverts to the Free plan.
++                Yes. Cancel anytime from the Stripe customer portal. Your account
++                returns to the Free plan after the paid period ends.
+               </p>
+             </div>
+             <div>
+@@ -243,8 +246,9 @@ function Pricing() {
+                 Do I need to sign up to use the free tier?
+               </p>
+               <p className="text-win95-11 text-muted-foreground">
+-                You can try PLG without an account. Sign up to track your
+-                generation count and unlock listing history with Pro.
++                No. You can generate 10 listings without an account, including
++                1 Pro-tier property type. Sign up to get 10 free generations per
++                month with 1 monthly Pro-tier sample and keep your listing history.
+               </p>
+             </div>
+           </div>
+diff --git a/supabase/functions/create-checkout/index.ts b/supabase/functions/create-checkout/index.ts
+index 50805f3..1e95bdd 100644
+--- a/supabase/functions/create-checkout/index.ts
++++ b/supabase/functions/create-checkout/index.ts
+@@ -61,8 +61,16 @@ serve(async (req) => {
+ 
+     const priceId =
+       interval === "year"
+-        ? Deno.env.get("STRIPE_PRICE_ANNUAL")!
+-        : Deno.env.get("STRIPE_PRICE_MONTHLY")!;
++        ? Deno.env.get("STRIPE_PRICE_ANNUAL")
++        : Deno.env.get("STRIPE_PRICE_MONTHLY");
++
++    if (!priceId) {
++      log("missing_price_id", { interval });
++      return new Response(
++        JSON.stringify({ error: "Payment plan not configured" }),
++        { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } },
++      );
++    }
+ 
+     const siteUrl = Deno.env.get("SITE_URL") || "https://propertylistinggenerator.com";
+ 
+@@ -73,7 +81,8 @@ serve(async (req) => {
+     params.set("cancel_url", `${siteUrl}?checkout=cancel`);
+     params.set("line_items[0][price]", priceId);
+     params.set("line_items[0][quantity]", "1");
+-    params.set("subscription_data[trial_period_days]", "7");
++    params.set("metadata[user_id]", userId);
++    params.set("subscription_data[metadata][user_id]", userId);
+     if (userEmail) {
+       params.set("customer_email", userEmail);
+     }
+diff --git a/supabase/functions/receive-property/index.ts b/supabase/functions/receive-property/index.ts
+index d709578..94de9f5 100644
+--- a/supabase/functions/receive-property/index.ts
++++ b/supabase/functions/receive-property/index.ts
+@@ -1,4 +1,4 @@
+-// receive-property: validates input, enforces server-side free-generation cap,
++// receive-property: validates input, enforces server-side free-generation caps,
+ // dedupes recent identical requests (idempotency), creates the property row,
+ // and dispatches process-property. Captures invoke failures on the property row.
+ import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
+@@ -13,9 +13,10 @@ const corsHeaders = {
+ 
+ const FREE_LIMIT = 10;
+ const FREE_WINDOW_DAYS = 30;
+-const FREE_PREMIUM_LIMIT = 1;
++const FREE_PRO_TIER_LIMIT = 1;
+ const DEDUPE_WINDOW_SECONDS = 60;
+ const FREE_PROPERTY_TYPES = ["sfr", "fsbo"];
++const TURNSTILE_VERIFY_URL = "https://challenges.cloudflare.com/turnstile/v0/siteverify";
+ 
+ const propertyInputSchema = z
+   .object({
+@@ -23,11 +24,23 @@ const propertyInputSchema = z
+     address: z.string().trim().min(1).max(500).optional(),
+     propertyType: z.string().trim().max(100).optional(),
+     source: z.string().trim().max(100).optional(),
++    anonymousId: z.string().trim().min(16).max(128).optional(),
++    turnstileToken: z.string().trim().max(4096).optional(),
+   })
+   .refine((d) => d.url || d.address, {
+     message: "Either 'url' or 'address' must be provided",
+   });
+ 
++function normalizePropertyType(value?: string): string {
++  const type = (value || "sfr").toLowerCase().trim();
++  if (type === "lux" || type === "luxury") return "estate";
++  return type;
++}
++
++function isProTierPropertyType(type: string): boolean {
++  return !FREE_PROPERTY_TYPES.includes(type);
++}
++
+ async function sha256(input: string): Promise<string> {
+   const buf = await crypto.subtle.digest(
+     "SHA-256",
+@@ -38,6 +51,31 @@ async function sha256(input: string): Promise<string> {
+     .join("");
+ }
+ 
++async function hmacSha256(input: string, secret: string): Promise<string> {
++  const key = await crypto.subtle.importKey(
++    "raw",
++    new TextEncoder().encode(secret),
++    { name: "HMAC", hash: "SHA-256" },
++    false,
++    ["sign"],
++  );
++  const signature = await crypto.subtle.sign(
++    "HMAC",
++    key,
++    new TextEncoder().encode(input),
++  );
++  return Array.from(new Uint8Array(signature))
++    .map((b) => b.toString(16).padStart(2, "0"))
++    .join("");
++}
++
++function jsonResponse(body: Record<string, unknown>, status: number) {
++  return new Response(JSON.stringify(body), {
++    status,
++    headers: { ...corsHeaders, "Content-Type": "application/json" },
++  });
++}
++
+ function log(step: string, data?: Record<string, unknown>) {
+   console.log(
+     JSON.stringify({
+@@ -49,14 +87,167 @@ function log(step: string, data?: Record<string, unknown>) {
+   );
+ }
+ 
++function usageCheckUnavailableResponse() {
++  return jsonResponse(
++    {
++      success: false,
++      error: "usage_check_unavailable",
++      message: "Usage limit verification is temporarily unavailable. Please try again.",
++    },
++    503,
++  );
++}
++
++function gateResponse(errorCode: string, userId: string | null) {
++  if (errorCode === "pro_required") {
++    return jsonResponse(
++      {
++        success: false,
++        error: "pro_required",
++        message: userId
++          ? "Free accounts include 1 Pro-tier property generation per month. Upgrade to Pro for unlimited Pro-tier generations."
++          : "Anonymous users include 1 Pro-tier property generation. Sign in for a monthly Pro-tier sample or upgrade to Pro.",
++      },
++      403,
++    );
++  }
++
++  if (errorCode === "free_limit_exceeded") {
++    return jsonResponse(
++      {
++        success: false,
++        error: "free_limit_exceeded",
++        message: userId
++          ? `Free monthly limit reached (${FREE_LIMIT} per ${FREE_WINDOW_DAYS} days). Upgrade to Pro for unlimited generations.`
++          : `Free anonymous limit reached (${FREE_LIMIT} generations). Sign in for ${FREE_LIMIT} monthly generations or upgrade to Pro.`,
++      },
++      429,
++    );
++  }
++
++  if (errorCode === "anonymous_id_required") {
++    return jsonResponse(
++      {
++        success: false,
++        error: "anonymous_id_required",
++        message: "Anonymous usage identity is required. Refresh and try again.",
++      },
++      400,
++    );
++  }
++
++  return usageCheckUnavailableResponse();
++}
++
++async function verifyAnonymousTurnstile(
++  token: string | undefined,
++  ipRaw: string,
++): Promise<{ ok: true } | { ok: false; response: Response }> {
++  if (!token) {
++    return {
++      ok: false,
++      response: jsonResponse(
++        {
++          success: false,
++          error: "turnstile_required",
++          message: "Security check required. Please try again.",
++        },
++        400,
++      ),
++    };
++  }
++
++  const secret = Deno.env.get("TURNSTILE_SECRET_KEY");
++  if (!secret) {
++    log("missing_turnstile_secret");
++    return {
++      ok: false,
++      response: jsonResponse(
++        {
++          success: false,
++          error: "security_check_unavailable",
++          message: "Security check unavailable. Please try again.",
++        },
++        503,
++      ),
++    };
++  }
++
++  const body = new URLSearchParams({ secret, response: token });
++  if (ipRaw && ipRaw !== "unknown") body.set("remoteip", ipRaw);
++
++  try {
++    const res = await fetch(TURNSTILE_VERIFY_URL, {
++      method: "POST",
++      headers: { "Content-Type": "application/x-www-form-urlencoded" },
++      body: body.toString(),
++    });
++
++    if (!res.ok) {
++      log("turnstile_http_error", { status: res.status });
++      return {
++        ok: false,
++        response: jsonResponse(
++          {
++            success: false,
++            error: "security_check_unavailable",
++            message: "Security check unavailable. Please try again.",
++          },
++          503,
++        ),
++      };
++    }
++
++    const result = await res.json();
++    if (!result?.success) {
++      log("turnstile_failed", { codes: result?.["error-codes"] });
++      return {
++        ok: false,
++        response: jsonResponse(
++          {
++            success: false,
++            error: "turnstile_failed",
++            message: "Security check failed. Please try again.",
++          },
++          403,
++        ),
++      };
++    }
++
++    return { ok: true };
++  } catch (error) {
++    log("turnstile_verify_error", {
++      error: error instanceof Error ? error.message : "Unknown",
++    });
++    return {
++      ok: false,
++      response: jsonResponse(
++        {
++          success: false,
++          error: "security_check_unavailable",
++          message: "Security check unavailable. Please try again.",
++        },
++        503,
++      ),
++    };
++  }
++}
++
+ serve(async (req) => {
+   if (req.method === "OPTIONS")
+     return new Response(null, { headers: corsHeaders });
+ 
++  let anonymousUsageKey: string | null = null;
++  let anonymousUsageReserved = false;
++  let proTierRequest = false;
++  let supabase: ReturnType<typeof createClient> | null = null;
++
+   try {
+     const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
+     const supabaseServiceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
+-    const supabase = createClient(supabaseUrl, supabaseServiceKey);
++    const anonymousUsageSecret =
++      Deno.env.get("ANON_USAGE_SECRET") || supabaseServiceKey;
++    supabase = createClient(supabaseUrl, supabaseServiceKey);
+ 
+     // Identify caller
+     const authHeader = req.headers.get("Authorization");
+@@ -69,34 +260,52 @@ serve(async (req) => {
+         userId = claimsData.claims.sub as string;
+     }
+ 
+-    // Best-effort IP for anonymous rate-limit + dedupe
+     const ipRaw =
+       req.headers.get("x-forwarded-for")?.split(",")[0].trim() ||
+       req.headers.get("cf-connecting-ip") ||
+       "unknown";
+-    const ipHash = await sha256(ipRaw + "|plg-salt");
++    const userAgentRaw = req.headers.get("user-agent") || "unknown";
++    const ipHash = await hmacSha256(`ip:${ipRaw}`, anonymousUsageSecret);
++    const userAgentHash = await hmacSha256(
++      `ua:${userAgentRaw}`,
++      anonymousUsageSecret,
++    );
++    const networkKey = await hmacSha256(
++      `network:${ipRaw}|${userAgentRaw}`,
++      anonymousUsageSecret,
++    );
+ 
+     const rawBody = await req.json();
+     const parsed = propertyInputSchema.safeParse(rawBody);
+     if (!parsed.success) {
+-      return new Response(
+-        JSON.stringify({
++      return jsonResponse(
++        {
+           success: false,
+           error: "Invalid input",
+           details: parsed.error.errors,
+-        }),
+-        {
+-          status: 400,
+-          headers: { ...corsHeaders, "Content-Type": "application/json" },
+         },
++        400,
+       );
+     }
+     const validatedInput = parsed.data;
++    const requestedType = normalizePropertyType(validatedInput.propertyType);
++    proTierRequest = isProTierPropertyType(requestedType);
++
++    if (!userId && !validatedInput.anonymousId) {
++      return gateResponse("anonymous_id_required", null);
++    }
++
++    if (!userId && validatedInput.anonymousId) {
++      anonymousUsageKey = await hmacSha256(
++        `anon-key:v1:${validatedInput.anonymousId}`,
++        anonymousUsageSecret,
++      );
++    }
+ 
+     // 1) Idempotency: same (caller, address|url) within window returns existing propertyId
+     const dedupeKey = await sha256(
+       [
+-        userId ?? `ip:${ipHash}`,
++        userId ?? `anon:${anonymousUsageKey ?? ipHash}`,
+         (validatedInput.url || validatedInput.address || "")
+           .toLowerCase()
+           .trim(),
+@@ -115,126 +324,139 @@ serve(async (req) => {
+     const { data: dedupeMatch } = await dedupeQuery;
+     if (dedupeMatch && dedupeMatch.length > 0) {
+       log("dedupe_hit", { propertyId: dedupeMatch[0].id });
+-      return new Response(
+-        JSON.stringify({
++      return jsonResponse(
++        {
+           success: true,
+           propertyId: dedupeMatch[0].id,
+           message: "Existing in-flight generation reused",
+           deduped: true,
+-        }),
+-        {
+-          status: 200,
+-          headers: { ...corsHeaders, "Content-Type": "application/json" },
+-        },
+-      );
+-    }
+-
+-    // 2) Server-side free-generation cap (skip for unknown column gracefully)
+-    const sinceWindow = new Date(
+-      Date.now() - FREE_WINDOW_DAYS * 86400_000,
+-    ).toISOString();
+-    const countQuery = supabase
+-      .from("properties")
+-      .select("id", { count: "exact", head: true })
+-      .gte("created_at", sinceWindow);
+-    if (userId) countQuery.eq("user_id", userId);
+-    else countQuery.eq("ip_hash", ipHash).is("user_id", null);
+-    const { count, error: countErr } = await countQuery;
+-    if (countErr) log("cap_count_error", { error: countErr.message });
+-
+-    if ((count ?? 0) >= FREE_LIMIT && !userId) {
+-      log("cap_exceeded", { count, ipHashPrefix: ipHash.slice(0, 8) });
+-      return new Response(
+-        JSON.stringify({
+-          success: false,
+-          error: "free_limit_exceeded",
+-          message: `Free limit reached (${FREE_LIMIT} per ${FREE_WINDOW_DAYS} days). Sign in or upgrade.`,
+-        }),
+-        {
+-          status: 429,
+-          headers: { ...corsHeaders, "Content-Type": "application/json" },
+         },
++        200,
+       );
+     }
+ 
+-    // 2b) Plan enforcement for signed-in users
+-    const requestedType = (validatedInput.propertyType || "sfr").toLowerCase();
+-    const isPremiumType = !FREE_PROPERTY_TYPES.includes(requestedType);
++    // 2) Subscription check. Active Pro users are unlimited.
+     let hasProPlan = false;
+-
+-    // Count premium-type generations for free-premium allowance
+-    let premiumCount = 0;
+-    if (isPremiumType) {
+-      const premiumQuery = supabase
+-        .from("properties")
+-        .select("id", { count: "exact", head: true })
+-        .gte("created_at", sinceWindow)
+-        .not("property_type", "in", `("${FREE_PROPERTY_TYPES.join('","')}")`);
+-      if (userId) premiumQuery.eq("user_id", userId);
+-      else premiumQuery.eq("ip_hash", ipHash).is("user_id", null);
+-      const { count: pc } = await premiumQuery;
+-      premiumCount = pc ?? 0;
+-    }
+-
+     if (userId) {
+       const { data: sub } = await supabase
+         .from("subscriptions")
+-        .select("status")
++        .select("plan, status")
+         .eq("user_id", userId)
+-        .in("status", ["active", "trialing"])
++        .eq("plan", "pro")
++        .eq("status", "active")
+         .limit(1);
+       hasProPlan = (sub && sub.length > 0) ?? false;
++    }
+ 
+-      if (isPremiumType && !hasProPlan && premiumCount >= FREE_PREMIUM_LIMIT) {
+-        log("premium_type_blocked", { userId, requestedType, premiumCount });
+-        return new Response(
+-          JSON.stringify({
+-            success: false,
+-            error: "pro_required",
+-            message: `You've used your free premium generation. Upgrade to Pro for all 9 property types.`,
+-          }),
+-          {
+-            status: 403,
+-            headers: { ...corsHeaders, "Content-Type": "application/json" },
+-          },
++    const sinceWindow = new Date(
++      Date.now() - FREE_WINDOW_DAYS * 86400_000,
++    ).toISOString();
++
++    // 3) Server-side free-generation caps.
++    // Anonymous users are reserved by a server-HMACed first-party anon cookie;
++    // IP, user-agent, and network hashes are stored as metadata. Signed-in free
++    // users keep the monthly property-row cap. Pro users skip caps.
++    if (!hasProPlan) {
++      if (!userId) {
++        const turnstileResult = await verifyAnonymousTurnstile(
++          validatedInput.turnstileToken,
++          ipRaw,
+         );
+-      }
++        if (!turnstileResult.ok) return turnstileResult.response;
+ 
+-      if (!hasProPlan && (count ?? 0) >= FREE_LIMIT) {
+-        log("free_user_cap_exceeded", { userId, count });
+-        return new Response(
+-          JSON.stringify({
+-            success: false,
+-            error: "free_limit_exceeded",
+-            message: `Free limit reached (${FREE_LIMIT} per ${FREE_WINDOW_DAYS} days). Upgrade to Pro for unlimited.`,
+-          }),
+-          {
+-            status: 429,
+-            headers: { ...corsHeaders, "Content-Type": "application/json" },
+-          },
++        if (!anonymousUsageKey || !validatedInput.anonymousId) {
++          return gateResponse("anonymous_id_required", null);
++        }
++
++        const anonCookieHash = await hmacSha256(
++          `anon-cookie:${validatedInput.anonymousId}`,
++          anonymousUsageSecret,
+         );
++
++        const { data: reservation, error: reservationErr } = await supabase
++          .rpc("reserve_anonymous_generation", {
++            p_anon_key: anonymousUsageKey,
++            p_anon_cookie_hash: anonCookieHash,
++            p_ip_hash: ipHash,
++            p_user_agent_hash: userAgentHash,
++            p_network_key: networkKey,
++            p_is_pro_tier: proTierRequest,
++            p_total_limit: FREE_LIMIT,
++            p_pro_tier_limit: FREE_PRO_TIER_LIMIT,
++          })
++          .single();
++
++        if (reservationErr) {
++          log("anonymous_usage_reservation_error", {
++            error: reservationErr.message,
++          });
++          return usageCheckUnavailableResponse();
++        }
++
++        const allowed = (reservation as { allowed?: boolean } | null)?.allowed;
++        const errorCode = (reservation as { error_code?: string } | null)
++          ?.error_code;
++
++        if (!allowed) {
++          log("anonymous_usage_blocked", {
++            errorCode,
++            proTierRequest,
++            anonKeyPrefix: anonymousUsageKey.slice(0, 8),
++          });
++          return gateResponse(errorCode || "usage_check_unavailable", null);
++        }
++
++        anonymousUsageReserved = true;
++      } else {
++        if (proTierRequest) {
++          const proTierQuery = supabase
++            .from("properties")
++            .select("id", { count: "exact", head: true })
++            .not("property_type", "in", `("${FREE_PROPERTY_TYPES.join('","')}")`)
++            .eq("user_id", userId)
++            .gte("created_at", sinceWindow);
++
++          const { count: proTierCount, error: proTierCountErr } = await proTierQuery;
++          if (proTierCountErr) {
++            log("pro_tier_count_error", { error: proTierCountErr.message });
++            return usageCheckUnavailableResponse();
++          }
++
++          if ((proTierCount ?? 0) >= FREE_PRO_TIER_LIMIT) {
++            log("free_user_pro_tier_exceeded", {
++              userId,
++              requestedType,
++              proTierCount,
++            });
++            return gateResponse("pro_required", userId);
++          }
++        }
++
++        const countQuery = supabase
++          .from("properties")
++          .select("id", { count: "exact", head: true })
++          .eq("user_id", userId)
++          .gte("created_at", sinceWindow);
++
++        const { count, error: countErr } = await countQuery;
++        if (countErr) {
++          log("cap_count_error", { error: countErr.message });
++          return usageCheckUnavailableResponse();
++        }
++
++        if ((count ?? 0) >= FREE_LIMIT) {
++          log("free_user_cap_exceeded", { userId, count });
++          return gateResponse("free_limit_exceeded", userId);
++        }
+       }
+-    } else if (isPremiumType && premiumCount >= FREE_PREMIUM_LIMIT) {
+-      log("anon_premium_type_blocked", { requestedType, premiumCount });
+-      return new Response(
+-        JSON.stringify({
+-          success: false,
+-          error: "pro_required",
+-          message: `You've used your free premium generation. Sign in and upgrade for all 9 property types.`,
+-        }),
+-        {
+-          status: 403,
+-          headers: { ...corsHeaders, "Content-Type": "application/json" },
+-        },
+-      );
+     }
+ 
+-    // 3) Create property row
++    // 4) Create property row
+     const { data: property, error: insertError } = await supabase
+       .from("properties")
+       .insert({
+         address: validatedInput.address || validatedInput.url || "Unknown",
+-        property_type: validatedInput.propertyType || null,
++        property_type: requestedType,
+         user_id: userId,
+         source: validatedInput.source || "generator",
+         source_url: validatedInput.url || null,
+@@ -248,16 +470,19 @@ serve(async (req) => {
+ 
+     if (insertError) {
+       log("insert_error", { error: insertError.message });
+-      return new Response(
+-        JSON.stringify({
++      if (anonymousUsageReserved && anonymousUsageKey) {
++        await supabase.rpc("refund_anonymous_generation", {
++          p_anon_key: anonymousUsageKey,
++          p_is_pro_tier: proTierRequest,
++        });
++      }
++      return jsonResponse(
++        {
+           success: false,
+           error: "Failed to create property record",
+           details: insertError.message,
+-        }),
+-        {
+-          status: 500,
+-          headers: { ...corsHeaders, "Content-Type": "application/json" },
+         },
++        500,
+       );
+     }
+ 
+@@ -267,7 +492,7 @@ serve(async (req) => {
+       anonymous: !userId,
+     });
+ 
+-    // 4) Dispatch processing — capture invoke failures so the row doesn't get stuck
++    // 5) Dispatch processing — capture invoke failures so the row doesn't get stuck
+     supabase.functions
+       .invoke("process-property", {
+         body: { propertyId: property.id },
+@@ -292,30 +517,32 @@ serve(async (req) => {
+         }
+       });
+ 
+-    return new Response(
+-      JSON.stringify({
++    return jsonResponse(
++      {
+         success: true,
+         propertyId: property.id,
+         message: "Property processing started",
+-      }),
+-      {
+-        status: 200,
+-        headers: { ...corsHeaders, "Content-Type": "application/json" },
+       },
++      200,
+     );
+   } catch (error) {
+     log("unhandled_error", {
+       error: error instanceof Error ? error.message : "Unknown",
+     });
+-    return new Response(
+-      JSON.stringify({
++
++    if (anonymousUsageReserved && anonymousUsageKey && supabase) {
++      await supabase.rpc("refund_anonymous_generation", {
++        p_anon_key: anonymousUsageKey,
++        p_is_pro_tier: proTierRequest,
++      });
++    }
++
++    return jsonResponse(
++      {
+         success: false,
+         error: error instanceof Error ? error.message : "Unknown error",
+-      }),
+-      {
+-        status: 500,
+-        headers: { ...corsHeaders, "Content-Type": "application/json" },
+       },
++      500,
+     );
+   }
+ });
+diff --git a/supabase/functions/stripe-webhook/index.ts b/supabase/functions/stripe-webhook/index.ts
+index 069cf98..48e9d5d 100644
+--- a/supabase/functions/stripe-webhook/index.ts
++++ b/supabase/functions/stripe-webhook/index.ts
+@@ -138,6 +138,7 @@ async function handleSubscriptionChange(
+   const subscriptionId = subscription.id;
+   const customerId = subscription.customer;
+   const status = subscription.status;
++  const userId = subscription.metadata?.user_id;
+ 
+   log("subscription_change", { eventType, subscriptionId, status });
+ 
+@@ -154,6 +155,19 @@ async function handleSubscriptionChange(
+     ? new Date(subscription.trial_end * 1000).toISOString()
+     : null;
+ 
++  const payload = {
++    stripe_customer_id: customerId,
++    stripe_subscription_id: subscriptionId,
++    plan: "pro",
++    status,
++    current_period_start: periodStart,
++    current_period_end: periodEnd,
++    cancel_at_period_end: subscription.cancel_at_period_end ?? false,
++    trial_start: trialStart,
++    trial_end: trialEnd,
++    updated_at: new Date().toISOString(),
++  };
++
+   const { data: existing } = await supabase
+     .from("subscriptions")
+     .select("id, user_id")
+@@ -161,23 +175,26 @@ async function handleSubscriptionChange(
+     .limit(1);
+ 
+   if (!existing || existing.length === 0) {
+-    // Subscription not yet in our DB — look up user by Stripe customer ID metadata
+-    // This handles subscriptions created outside checkout flow
+-    log("subscription_not_found", { subscriptionId, customerId });
++    if (!userId) {
++      log("subscription_not_found", { subscriptionId, customerId });
++      return;
++    }
++
++    const { error } = await supabase.from("subscriptions").upsert(
++      {
++        ...payload,
++        user_id: userId,
++      },
++      { onConflict: "stripe_subscription_id" },
++    );
++
++    if (error) log("subscription_insert_error", { error: error.message });
+     return;
+   }
+ 
+   const { error } = await supabase
+     .from("subscriptions")
+-    .update({
+-      status,
+-      current_period_start: periodStart,
+-      current_period_end: periodEnd,
+-      cancel_at_period_end: subscription.cancel_at_period_end ?? false,
+-      trial_start: trialStart,
+-      trial_end: trialEnd,
+-      updated_at: new Date().toISOString(),
+-    })
++    .update(payload)
+     .eq("stripe_subscription_id", subscriptionId);
+ 
+   if (error) log("subscription_update_error", { error: error.message });
+diff --git a/supabase/functions/verify-turnstile/index.ts b/supabase/functions/verify-turnstile/index.ts
+index 4ce021f..dfcf800 100644
+--- a/supabase/functions/verify-turnstile/index.ts
++++ b/supabase/functions/verify-turnstile/index.ts
+@@ -32,8 +32,9 @@ serve(async (req) => {
+ 
+     const secret = Deno.env.get("TURNSTILE_SECRET_KEY");
+     if (!secret) {
+-      log("no_secret_skip_verification");
+-      return new Response(JSON.stringify({ success: true }), {
++      log("missing_secret");
++      return new Response(JSON.stringify({ success: false, error: "TURNSTILE_SECRET_KEY not configured" }), {
++        status: 500,
+         headers: { ...corsHeaders, "Content-Type": "application/json" },
+       });
+     }
+@@ -47,6 +48,15 @@ serve(async (req) => {
+         body: body.toString(),
+       },
+     );
++
++    if (!res.ok) {
++      log("siteverify_http_error", { status: res.status });
++      return new Response(JSON.stringify({ success: false }), {
++        status: 502,
++        headers: { ...corsHeaders, "Content-Type": "application/json" },
++      });
++    }
++
+     const result = await res.json();
+ 
+     log("result", { success: result.success });
+diff --git a/supabase/migrations/20260706183500_anonymous_usage.sql b/supabase/migrations/20260706183500_anonymous_usage.sql
+new file mode 100644
+index 0000000..39cbc5b
+--- /dev/null
++++ b/supabase/migrations/20260706183500_anonymous_usage.sql
+@@ -0,0 +1,135 @@
++create table if not exists public.anonymous_usage (
++  anon_key text primary key,
++  anon_cookie_hash text not null,
++  ip_hash text not null,
++  user_agent_hash text not null,
++  network_key text not null,
++  total_generations integer not null default 0 check (total_generations >= 0),
++  pro_tier_generations integer not null default 0 check (pro_tier_generations >= 0),
++  first_seen_at timestamptz not null default timezone('utc', now()),
++  last_seen_at timestamptz not null default timezone('utc', now()),
++  last_generation_at timestamptz
++);
++
++create index if not exists anonymous_usage_network_key_idx
++  on public.anonymous_usage (network_key);
++
++create index if not exists anonymous_usage_last_seen_at_idx
++  on public.anonymous_usage (last_seen_at desc);
++
++alter table public.anonymous_usage enable row level security;
++
++create or replace function public.reserve_anonymous_generation(
++  p_anon_key text,
++  p_anon_cookie_hash text,
++  p_ip_hash text,
++  p_user_agent_hash text,
++  p_network_key text,
++  p_is_pro_tier boolean,
++  p_total_limit integer default 10,
++  p_pro_tier_limit integer default 1
++)
++returns table(
++  allowed boolean,
++  error_code text,
++  total_generations integer,
++  pro_tier_generations integer
++)
++language plpgsql
++security definer
++set search_path = public
++as $$
++declare
++  usage_row public.anonymous_usage%rowtype;
++  did_update boolean;
++begin
++  if p_anon_key is null or length(p_anon_key) = 0 then
++    return query select false, 'anonymous_id_required', 0, 0;
++    return;
++  end if;
++
++  insert into public.anonymous_usage (
++    anon_key,
++    anon_cookie_hash,
++    ip_hash,
++    user_agent_hash,
++    network_key
++  ) values (
++    p_anon_key,
++    p_anon_cookie_hash,
++    p_ip_hash,
++    p_user_agent_hash,
++    p_network_key
++  )
++  on conflict (anon_key) do update set
++    anon_cookie_hash = excluded.anon_cookie_hash,
++    ip_hash = excluded.ip_hash,
++    user_agent_hash = excluded.user_agent_hash,
++    network_key = excluded.network_key,
++    last_seen_at = timezone('utc', now())
++  returning * into usage_row;
++
++  update public.anonymous_usage as au
++  set
++    total_generations = au.total_generations + 1,
++    pro_tier_generations = au.pro_tier_generations + case when p_is_pro_tier then 1 else 0 end,
++    last_generation_at = timezone('utc', now()),
++    last_seen_at = timezone('utc', now())
++  where au.anon_key = p_anon_key
++    and au.total_generations < p_total_limit
++    and (not p_is_pro_tier or au.pro_tier_generations < p_pro_tier_limit)
++  returning * into usage_row;
++
++  did_update := found;
++
++  if did_update then
++    return query select true, null::text, usage_row.total_generations, usage_row.pro_tier_generations;
++    return;
++  end if;
++
++  select * into usage_row
++  from public.anonymous_usage as au
++  where au.anon_key = p_anon_key;
++
++  if usage_row.total_generations >= p_total_limit then
++    return query select false, 'free_limit_exceeded', usage_row.total_generations, usage_row.pro_tier_generations;
++    return;
++  end if;
++
++  if p_is_pro_tier and usage_row.pro_tier_generations >= p_pro_tier_limit then
++    return query select false, 'pro_required', usage_row.total_generations, usage_row.pro_tier_generations;
++    return;
++  end if;
++
++  return query select false, 'usage_check_unavailable', usage_row.total_generations, usage_row.pro_tier_generations;
++end;
++$$;
++
++create or replace function public.refund_anonymous_generation(
++  p_anon_key text,
++  p_is_pro_tier boolean
++)
++returns void
++language plpgsql
++security definer
++set search_path = public
++as $$
++begin
++  update public.anonymous_usage as au
++  set
++    total_generations = greatest(au.total_generations - 1, 0),
++    pro_tier_generations = case
++      when p_is_pro_tier then greatest(au.pro_tier_generations - 1, 0)
++      else au.pro_tier_generations
++    end,
++    last_seen_at = timezone('utc', now())
++  where au.anon_key = p_anon_key;
++end;
++$$;
++
++revoke all on table public.anonymous_usage from public, anon, authenticated;
++revoke all on function public.reserve_anonymous_generation(text, text, text, text, text, boolean, integer, integer) from public, anon, authenticated;
++revoke all on function public.refund_anonymous_generation(text, boolean) from public, anon, authenticated;
++
++grant execute on function public.reserve_anonymous_generation(text, text, text, text, text, boolean, integer, integer) to service_role;
++grant execute on function public.refund_anonymous_generation(text, boolean) to service_role;
