@@ -69,15 +69,15 @@ begin
     last_seen_at = timezone('utc', now())
   returning * into usage_row;
 
-  update public.anonymous_usage
+  update public.anonymous_usage as au
   set
-    total_generations = total_generations + 1,
-    pro_tier_generations = pro_tier_generations + case when p_is_pro_tier then 1 else 0 end,
+    total_generations = au.total_generations + 1,
+    pro_tier_generations = au.pro_tier_generations + case when p_is_pro_tier then 1 else 0 end,
     last_generation_at = timezone('utc', now()),
     last_seen_at = timezone('utc', now())
-  where anon_key = p_anon_key
-    and total_generations < p_total_limit
-    and (not p_is_pro_tier or pro_tier_generations < p_pro_tier_limit)
+  where au.anon_key = p_anon_key
+    and au.total_generations < p_total_limit
+    and (not p_is_pro_tier or au.pro_tier_generations < p_pro_tier_limit)
   returning * into usage_row;
 
   did_update := found;
@@ -88,8 +88,8 @@ begin
   end if;
 
   select * into usage_row
-  from public.anonymous_usage
-  where anon_key = p_anon_key;
+  from public.anonymous_usage as au
+  where au.anon_key = p_anon_key;
 
   if usage_row.total_generations >= p_total_limit then
     return query select false, 'free_limit_exceeded', usage_row.total_generations, usage_row.pro_tier_generations;
@@ -115,15 +115,15 @@ security definer
 set search_path = public
 as $$
 begin
-  update public.anonymous_usage
+  update public.anonymous_usage as au
   set
-    total_generations = greatest(total_generations - 1, 0),
+    total_generations = greatest(au.total_generations - 1, 0),
     pro_tier_generations = case
-      when p_is_pro_tier then greatest(pro_tier_generations - 1, 0)
-      else pro_tier_generations
+      when p_is_pro_tier then greatest(au.pro_tier_generations - 1, 0)
+      else au.pro_tier_generations
     end,
     last_seen_at = timezone('utc', now())
-  where anon_key = p_anon_key;
+  where au.anon_key = p_anon_key;
 end;
 $$;
 
