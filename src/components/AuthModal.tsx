@@ -70,6 +70,15 @@ export default function AuthModal({ onClose, onAuth }: AuthModalProps) {
     }
   };
 
+  const handleGoogleSignIn = async () => {
+    setError(null);
+    const { error: oauthError } = await supabase.auth.signInWithOAuth({
+      provider: "google",
+      options: { redirectTo: window.location.origin },
+    });
+    if (oauthError) setError(oauthError.message);
+  };
+
   return (
     <div className="fixed inset-0 bg-black/50 flex items-center justify-center p-4 z-50">
       <div className="win95-window w-full max-w-sm">
@@ -82,6 +91,14 @@ export default function AuthModal({ onClose, onAuth }: AuthModalProps) {
           </button>
         </div>
         <div className="p-4 bg-card space-y-3">
+          <RetroButton onClick={handleGoogleSignIn} disabled={submitting}>
+            Continue with Google
+          </RetroButton>
+          <div className="flex items-center gap-2">
+            <div className="flex-1 h-px bg-[var(--win95-gray-dark)]" />
+            <span className="text-win95-11 text-muted-foreground">or</span>
+            <div className="flex-1 h-px bg-[var(--win95-gray-dark)]" />
+          </div>
           <div className="space-y-2">
             <label className="text-win95-11 block">Email:</label>
             <RetroInput
