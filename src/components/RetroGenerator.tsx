@@ -50,6 +50,23 @@ const isDevHost = () => {
   );
 };
 
+async function readFunctionInvokeErrorBody(
+  error: unknown,
+): Promise<Record<string, unknown> | null> {
+  if (!error || typeof error !== "object") return null;
+  const err = error as { context?: { json?: () => Promise<unknown> } };
+  if (!err.context?.json) return null;
+
+  try {
+    const body = await err.context.json();
+    return body && typeof body === "object"
+      ? (body as Record<string, unknown>)
+      : null;
+  } catch {
+    return null;
+  }
+}
+
 export default function RetroGenerator() {
   const { user, signIn, signUp, loading: authLoading } = useAuth();
 
@@ -260,7 +277,25 @@ export default function RetroGenerator() {
     } catch (err) {
       console.error("Error starting generation:", err);
       setShowProgress(false);
-      const description = await describeFunctionInvokeError(err);
+      const errorBody = await readFunctionInvokeErrorBody(err);
+      const errorCode =
+        typeof errorBody?.error === "string" ? errorBody.error : null;
+
+      if (errorCode === "pro_required" || errorCode === "free_limit_exceeded") {
+        setPaywallReason(
+          errorCode === "pro_required" ? "pro_tier_limit" : "free_limit",
+        );
+        setShowPaywall(true);
+        track("paywall_shown", { reason: errorCode, property_type: propertyType });
+        return;
+      }
+
+      const description =
+        typeof errorBody?.message === "string" && errorBody.message
+          ? errorBody.message
+          : typeof errorBody?.error === "string" && errorBody.error
+            ? errorBody.error
+            : await describeFunctionInvokeError(err);
       sonnerToast.error("Failed to start generation", {
         description,
       });
