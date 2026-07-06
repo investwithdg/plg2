@@ -44,7 +44,7 @@ const FEATURES = [
   },
   {
     feature: "Property types supported",
-    plg: "9 (SFR, FSBO, MF, STR, MTR, LTR, Estate, Commercial, Lease)",
+    plg: "SFR/FSBO free; Pro-tier sample included",
     rival: "Residential focus (lead gen only)",
   },
   {
@@ -69,7 +69,7 @@ const FEATURES = [
   },
   {
     feature: "Free tier",
-    plg: "10 free generations",
+    plg: "10 free generations + 1 Pro-tier sample",
     rival: "No free tier",
   },
   {
