@@ -1,4 +1,4 @@
-// receive-property: validates input, enforces server-side free-generation cap,
+// receive-property: validates input, enforces server-side free-generation caps,
 // dedupes recent identical requests (idempotency), creates the property row,
 // and dispatches process-property. Captures invoke failures on the property row.
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
@@ -13,9 +13,7 @@ const corsHeaders = {
 
 const FREE_LIMIT = 10;
 const FREE_WINDOW_DAYS = 30;
-const FREE_PREMIUM_LIMIT = 1;
 const DEDUPE_WINDOW_SECONDS = 60;
-const FREE_PROPERTY_TYPES = ["sfr", "fsbo"];
 
 const propertyInputSchema = z
   .object({
@@ -129,84 +127,54 @@ serve(async (req) => {
       );
     }
 
-    // 2) Server-side free-generation cap (skip for unknown column gracefully)
-    const sinceWindow = new Date(
-      Date.now() - FREE_WINDOW_DAYS * 86400_000,
-    ).toISOString();
-    const countQuery = supabase
-      .from("properties")
-      .select("id", { count: "exact", head: true })
-      .gte("created_at", sinceWindow);
-    if (userId) countQuery.eq("user_id", userId);
-    else countQuery.eq("ip_hash", ipHash).is("user_id", null);
-    const { count, error: countErr } = await countQuery;
-    if (countErr) log("cap_count_error", { error: countErr.message });
-
-    if ((count ?? 0) >= FREE_LIMIT && !userId) {
-      log("cap_exceeded", { count, ipHashPrefix: ipHash.slice(0, 8) });
-      return new Response(
-        JSON.stringify({
-          success: false,
-          error: "free_limit_exceeded",
-          message: `Free limit reached (${FREE_LIMIT} per ${FREE_WINDOW_DAYS} days). Sign in or upgrade.`,
-        }),
-        {
-          status: 429,
-          headers: { ...corsHeaders, "Content-Type": "application/json" },
-        },
-      );
-    }
-
-    // 2b) Plan enforcement for signed-in users
-    const requestedType = (validatedInput.propertyType || "sfr").toLowerCase();
-    const isPremiumType = !FREE_PROPERTY_TYPES.includes(requestedType);
+    // 2) Subscription check. Active Pro users are unlimited.
     let hasProPlan = false;
-
-    // Count premium-type generations for free-premium allowance
-    let premiumCount = 0;
-    if (isPremiumType) {
-      const premiumQuery = supabase
-        .from("properties")
-        .select("id", { count: "exact", head: true })
-        .gte("created_at", sinceWindow)
-        .not("property_type", "in", `("${FREE_PROPERTY_TYPES.join('","')}")`);
-      if (userId) premiumQuery.eq("user_id", userId);
-      else premiumQuery.eq("ip_hash", ipHash).is("user_id", null);
-      const { count: pc } = await premiumQuery;
-      premiumCount = pc ?? 0;
-    }
-
     if (userId) {
       const { data: sub } = await supabase
         .from("subscriptions")
         .select("status")
         .eq("user_id", userId)
-        .in("status", ["active", "trialing"])
+        .eq("status", "active")
         .limit(1);
       hasProPlan = (sub && sub.length > 0) ?? false;
+    }
 
-      if (isPremiumType && !hasProPlan && premiumCount >= FREE_PREMIUM_LIMIT) {
-        log("premium_type_blocked", { userId, requestedType, premiumCount });
-        return new Response(
-          JSON.stringify({
-            success: false,
-            error: "pro_required",
-            message: `You've used your free premium generation. Upgrade to Pro for all 9 property types.`,
-          }),
-          {
-            status: 403,
-            headers: { ...corsHeaders, "Content-Type": "application/json" },
-          },
-        );
+    // 3) Server-side free-generation cap.
+    // Anonymous users get 10 total generations by IP hash. Signed-in free users
+    // get 10 generations per 30-day window. Pro users skip this cap entirely.
+    if (!hasProPlan) {
+      const countQuery = supabase
+        .from("properties")
+        .select("id", { count: "exact", head: true });
+
+      if (userId) {
+        const sinceWindow = new Date(
+          Date.now() - FREE_WINDOW_DAYS * 86400_000,
+        ).toISOString();
+        countQuery.eq("user_id", userId).gte("created_at", sinceWindow);
+      } else {
+        countQuery.eq("ip_hash", ipHash).is("user_id", null);
       }
 
-      if (!hasProPlan && (count ?? 0) >= FREE_LIMIT) {
-        log("free_user_cap_exceeded", { userId, count });
+      const { count, error: countErr } = await countQuery;
+      if (countErr) log("cap_count_error", { error: countErr.message });
+
+      if ((count ?? 0) >= FREE_LIMIT) {
+        log(userId ? "free_user_cap_exceeded" : "anon_cap_exceeded", {
+          userId,
+          count,
+          ipHashPrefix: userId ? undefined : ipHash.slice(0, 8),
+        });
+
+        const message = userId
+          ? `Free monthly limit reached (${FREE_LIMIT} per ${FREE_WINDOW_DAYS} days). Upgrade to Pro for unlimited generations.`
+          : `Free anonymous limit reached (${FREE_LIMIT} generations). Sign in for ${FREE_LIMIT} monthly generations or upgrade to Pro.`;
+
         return new Response(
           JSON.stringify({
             success: false,
             error: "free_limit_exceeded",
-            message: `Free limit reached (${FREE_LIMIT} per ${FREE_WINDOW_DAYS} days). Upgrade to Pro for unlimited.`,
+            message,
           }),
           {
             status: 429,
@@ -214,22 +182,9 @@ serve(async (req) => {
           },
         );
       }
-    } else if (isPremiumType && premiumCount >= FREE_PREMIUM_LIMIT) {
-      log("anon_premium_type_blocked", { requestedType, premiumCount });
-      return new Response(
-        JSON.stringify({
-          success: false,
-          error: "pro_required",
-          message: `You've used your free premium generation. Sign in and upgrade for all 9 property types.`,
-        }),
-        {
-          status: 403,
-          headers: { ...corsHeaders, "Content-Type": "application/json" },
-        },
-      );
     }
 
-    // 3) Create property row
+    // 4) Create property row
     const { data: property, error: insertError } = await supabase
       .from("properties")
       .insert({
@@ -267,7 +222,7 @@ serve(async (req) => {
       anonymous: !userId,
     });
 
-    // 4) Dispatch processing — capture invoke failures so the row doesn't get stuck
+    // 5) Dispatch processing — capture invoke failures so the row doesn't get stuck
     supabase.functions
       .invoke("process-property", { body: { propertyId: property.id } })
       .then(async ({ error }) => {
