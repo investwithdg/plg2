@@ -269,7 +269,10 @@ serve(async (req) => {
 
     // 4) Dispatch processing — capture invoke failures so the row doesn't get stuck
     supabase.functions
-      .invoke("process-property", { body: { propertyId: property.id } })
+      .invoke("process-property", {
+        body: { propertyId: property.id },
+        headers: { "x-internal-secret": Deno.env.get("PROCESS_PROPERTY_SECRET") ?? "" },
+      })
       .then(async ({ error }) => {
         if (error) {
           log("invoke_failed", {
