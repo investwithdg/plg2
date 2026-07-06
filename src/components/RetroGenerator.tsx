@@ -29,8 +29,15 @@ type PropertyType =
   | "commercial"
   | "lease";
 
+type PaywallReason = "free_limit" | "pro_tier_limit";
+
 const MAX_GENERATIONS = 10;
+const FREE_PRO_TIER_LIMIT = 1;
 const STORAGE_KEY = "plg_generations_used";
+const PRO_TIER_STORAGE_KEY = "plg_pro_tier_generations_used";
+const FREE_PROPERTY_TYPES: PropertyType[] = ["sfr", "fsbo"];
+const isProTierPropertyType = (type: PropertyType) =>
+  !FREE_PROPERTY_TYPES.includes(type);
 
 const isDevHost = () => {
   if (typeof window === "undefined") return false;
@@ -51,10 +58,16 @@ export default function RetroGenerator() {
   const [propertyId, setPropertyId] = useState<string | null>(null);
   const [showProgress, setShowProgress] = useState(false);
   const [showPaywall, setShowPaywall] = useState(false);
+  const [paywallReason, setPaywallReason] = useState<PaywallReason>("free_limit");
   const [showAuthModal, setShowAuthModal] = useState(false);
   const [generationsUsed, setGenerationsUsed] = useState<number>(() => {
     if (typeof window === "undefined") return 0;
     const raw = window.localStorage.getItem(STORAGE_KEY);
+    return raw ? Number(raw) || 0 : 0;
+  });
+  const [proTierGenerationsUsed, setProTierGenerationsUsed] = useState<number>(() => {
+    if (typeof window === "undefined") return 0;
+    const raw = window.localStorage.getItem(PRO_TIER_STORAGE_KEY);
     return raw ? Number(raw) || 0 : 0;
   });
   const [outputs, setOutputs] = useState<Record<OutputTabKey, string> | null>(
@@ -70,6 +83,11 @@ export default function RetroGenerator() {
 
   const devBypassActive = isDevHost();
   const generationsLeft = Math.max(0, MAX_GENERATIONS - generationsUsed);
+  const proTierGenerationsLeft = Math.max(
+    0,
+    FREE_PRO_TIER_LIMIT - proTierGenerationsUsed,
+  );
+  const selectedProTier = isProTierPropertyType(propertyType);
   const generationCountLabel = devBypassActive
     ? "dev"
     : isProUser
@@ -93,6 +111,7 @@ export default function RetroGenerator() {
       sonnerToast("Checkout cancelled. You can upgrade anytime.");
       window.history.replaceState({}, "", window.location.pathname);
     } else if (params.get("upgrade") === "true") {
+      setPaywallReason("free_limit");
       setShowPaywall(true);
       window.history.replaceState({}, "", window.location.pathname);
     }
@@ -140,6 +159,11 @@ export default function RetroGenerator() {
   }, [generationsUsed]);
 
   useEffect(() => {
+    if (typeof window === "undefined") return;
+    window.localStorage.setItem(PRO_TIER_STORAGE_KEY, String(proTierGenerationsUsed));
+  }, [proTierGenerationsUsed]);
+
+  useEffect(() => {
     if (status === "complete" && copies.length > 0) {
       const outputMap: Record<OutputTabKey, string> = {
         mls: "",
@@ -161,8 +185,21 @@ export default function RetroGenerator() {
     if (!query.trim()) return;
 
     if (!devBypassActive && generationsUsed >= MAX_GENERATIONS && !user) {
+      setPaywallReason("free_limit");
       setShowPaywall(true);
       track("paywall_shown", { reason: "free_limit_exceeded_local", property_type: propertyType });
+      return;
+    }
+
+    if (
+      !devBypassActive &&
+      !user &&
+      selectedProTier &&
+      proTierGenerationsUsed >= FREE_PRO_TIER_LIMIT
+    ) {
+      setPaywallReason("pro_tier_limit");
+      setShowPaywall(true);
+      track("paywall_shown", { reason: "pro_tier_limit_local", property_type: propertyType });
       return;
     }
 
@@ -197,6 +234,9 @@ export default function RetroGenerator() {
           data.error === "free_limit_exceeded"
         ) {
           setShowProgress(false);
+          setPaywallReason(
+            data.error === "pro_required" ? "pro_tier_limit" : "free_limit",
+          );
           setShowPaywall(true);
           track("paywall_shown", { reason: data.error, property_type: propertyType });
           return;
@@ -210,7 +250,10 @@ export default function RetroGenerator() {
 
       if (data?.propertyId) {
         setPropertyId(data.propertyId);
-        if (!user) setGenerationsUsed((prev) => prev + 1);
+        if (!user) {
+          setGenerationsUsed((prev) => prev + 1);
+          if (selectedProTier) setProTierGenerationsUsed((prev) => prev + 1);
+        }
       } else {
         throw new Error("No property ID returned");
       }
@@ -336,7 +379,14 @@ export default function RetroGenerator() {
             <div className="flex gap-3 text-win95-11 justify-center text-muted-foreground flex-wrap items-center">
               <span>fha trained</span>
               <span>real property research</span>
-              <span>{isProUser ? "unlimited generations" : "10 free generations"}</span>
+              <span>
+                {isProUser
+                  ? "unlimited generations"
+                  : "10 free generations, 1 Pro-tier included"}
+              </span>
+              {!user && !isProUser && selectedProTier && (
+                <span>{proTierGenerationsLeft} Pro-tier left</span>
+              )}
               {isProUser && (
                 <RetroButton
                   onClick={handleManageSubscription}
@@ -405,6 +455,7 @@ export default function RetroGenerator() {
 
         {showPaywall && (
           <Win95PaywallModal
+            reason={paywallReason}
             isSignedIn={!!user}
             onClose={() => setShowPaywall(false)}
             onSignIn={() => {
@@ -498,15 +549,22 @@ function PropertyTypeToggle({
     <div className="flex flex-wrap gap-1">
       {options.map((opt) => {
         const isActive = value === opt.key;
+        const isProTier = isProTierPropertyType(opt.key);
         return (
           <button
             key={opt.key}
             onClick={() => onChange(opt.key)}
+            title={isProTier ? "Pro tier: 1 included free, then Pro" : "Free tier"}
             className={`px-2 py-1 text-win95-11 font-bold cursor-pointer relative ${
               isActive ? "win95-pressed bg-input" : "win95-raised bg-card"
             }`}
           >
             {opt.label}
+            {isProTier && (
+              <span className="absolute -top-1 -right-1 text-[color:var(--destructive)] text-xs">
+                *
+              </span>
+            )}
           </button>
         );
       })}
@@ -515,10 +573,12 @@ function PropertyTypeToggle({
 }
 
 function Win95PaywallModal({
+  reason,
   onClose,
   onSignIn,
   isSignedIn,
 }: {
+  reason: PaywallReason;
   onClose: () => void;
   onSignIn: () => void;
   isSignedIn: boolean;
@@ -550,19 +610,32 @@ function Win95PaywallModal({
     }
   };
 
+  const proTierLimit = reason === "pro_tier_limit";
+
   return (
     <div className="fixed inset-0 bg-black/50 flex items-center justify-center p-4 z-50">
       <div className="win95-window w-full max-w-md">
         <div className="win95-titlebar">
           <span className="font-bold text-win95-12">
-            Free Generations Used
+            {proTierLimit ? "Pro-Tier Limit Used" : "Free Generations Used"}
           </span>
           <button className="win95-control-btn" onClick={onClose}>
             x
           </button>
         </div>
         <div className="p-4 bg-card">
-          {isSignedIn ? (
+          {proTierLimit ? (
+            <>
+              <p className="text-win95-12 mb-2">
+                You&apos;ve used your included Pro-tier property generation.
+              </p>
+              <p className="text-win95-11 text-muted-foreground mb-3">
+                Free users can use 1 of their 10 generations on MF, STR, MTR,
+                LTR, Estate/Luxury, Commercial, or Lease. Pro makes those
+                unlimited.
+              </p>
+            </>
+          ) : isSignedIn ? (
             <>
               <p className="text-win95-12 mb-2">
                 You&apos;ve used your 10 free monthly generations.
@@ -587,7 +660,7 @@ function Win95PaywallModal({
             <p className="text-win95-12 font-bold mb-2">Pro includes:</p>
             <ul className="text-win95-11 space-y-1">
               <li>* Unlimited generations</li>
-              <li>* All 9 property types</li>
+              <li>* Unlimited Pro-tier property types</li>
               <li>* Listing history &amp; portfolio</li>
               <li>* Real property research</li>
               <li>* FHA compliance checks</li>
@@ -651,7 +724,7 @@ function HowItWorks() {
     {
       n: "2.",
       title: "Pick property type",
-      body: "SFR, FSBO, Multi-Family, STR, MTR, LTR, Estate, Commercial, or Lease. All property types are included.",
+      body: "SFR and FSBO are free-tier. One Pro-tier property generation is included; Pro unlocks unlimited MF, STR, MTR, LTR, Estate/Luxury, Commercial, and Lease.",
     },
     {
       n: "3.",
@@ -661,7 +734,7 @@ function HowItWorks() {
     {
       n: "4.",
       title: "Use 10 free, then go Pro",
-      body: "Anonymous users get 10 generations. Signed-in free accounts get 10 per month. Pro is unlimited.",
+      body: "Anonymous users get 10 generations total. Signed-in free accounts get 10 per month. Each free allowance includes 1 Pro-tier generation.",
     },
   ];
   return (
