@@ -89,7 +89,6 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
       { property: "og:type", content: "website" },
       { property: "og:site_name", content: "PLG" },
       { name: "twitter:card", content: "summary_large_image" },
-      { name: "twitter:site", content: "@plaboratory" },
       { name: "twitter:title", content: "PLG — Property Listing Generator" },
       { name: "twitter:description", content: "The fastest way to generate FHA-compliant MLS, social, and email listing copy. Used by thousands of agents." },
       { property: "og:image", content: "https://pub-bb2e103a32db4e198524a2e9ed8f35b4.r2.dev/fd9b0118-ec7e-4e79-b5e2-def916e87676/id-preview-47622f33--c76353e6-e57a-4f26-aef0-767e3a4734d3.lovable.app-1782271456544.png" },
@@ -122,7 +121,7 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
               name: "Free",
               price: "0",
               priceCurrency: "USD",
-              description: "10 free generations per month, all property types",
+              description: "10 free generations; signed-in free accounts reset monthly",
             },
             {
               "@type": "Offer",
