@@ -121,7 +121,7 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
               name: "Free",
               price: "0",
               priceCurrency: "USD",
-              description: "10 free generations; signed-in free accounts reset monthly",
+              description: "10 free generations with 1 Pro-tier property sample; signed-in free accounts reset monthly",
             },
             {
               "@type": "Offer",
@@ -129,7 +129,7 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
               price: "49",
               priceCurrency: "USD",
               billingDuration: "P1M",
-              description: "Unlimited generations, all 9 property types, listing history",
+              description: "Unlimited generations, unlimited Pro-tier property types, listing history",
             },
             {
               "@type": "Offer",
