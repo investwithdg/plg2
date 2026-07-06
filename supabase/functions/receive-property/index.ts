@@ -297,7 +297,7 @@ serve(async (req) => {
 
     if (!userId && validatedInput.anonymousId) {
       anonymousUsageKey = await hmacSha256(
-        `anon:v1:${validatedInput.anonymousId}|${ipRaw}|${userAgentRaw}`,
+        `anon-key:v1:${validatedInput.anonymousId}`,
         anonymousUsageSecret,
       );
     }
@@ -353,8 +353,9 @@ serve(async (req) => {
     ).toISOString();
 
     // 3) Server-side free-generation caps.
-    // Anonymous users are reserved in anonymous_usage by HMAC(IP + UA + anon cookie).
-    // Signed-in free users keep the monthly property-row cap. Pro users skip caps.
+    // Anonymous users are reserved by a server-HMACed first-party anon cookie;
+    // IP, user-agent, and network hashes are stored as metadata. Signed-in free
+    // users keep the monthly property-row cap. Pro users skip caps.
     if (!hasProPlan) {
       if (!userId) {
         const turnstileResult = await verifyAnonymousTurnstile(
