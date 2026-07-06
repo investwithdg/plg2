@@ -32,8 +32,9 @@ serve(async (req) => {
 
     const secret = Deno.env.get("TURNSTILE_SECRET_KEY");
     if (!secret) {
-      log("no_secret_skip_verification");
-      return new Response(JSON.stringify({ success: true }), {
+      log("missing_secret");
+      return new Response(JSON.stringify({ success: false, error: "TURNSTILE_SECRET_KEY not configured" }), {
+        status: 500,
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
@@ -47,6 +48,15 @@ serve(async (req) => {
         body: body.toString(),
       },
     );
+
+    if (!res.ok) {
+      log("siteverify_http_error", { status: res.status });
+      return new Response(JSON.stringify({ success: false }), {
+        status: 502,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+
     const result = await res.json();
 
     log("result", { success: result.success });
