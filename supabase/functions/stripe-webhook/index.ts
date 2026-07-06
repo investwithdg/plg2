@@ -138,6 +138,7 @@ async function handleSubscriptionChange(
   const subscriptionId = subscription.id;
   const customerId = subscription.customer;
   const status = subscription.status;
+  const userId = subscription.metadata?.user_id;
 
   log("subscription_change", { eventType, subscriptionId, status });
 
@@ -154,6 +155,19 @@ async function handleSubscriptionChange(
     ? new Date(subscription.trial_end * 1000).toISOString()
     : null;
 
+  const payload = {
+    stripe_customer_id: customerId,
+    stripe_subscription_id: subscriptionId,
+    plan: "pro",
+    status,
+    current_period_start: periodStart,
+    current_period_end: periodEnd,
+    cancel_at_period_end: subscription.cancel_at_period_end ?? false,
+    trial_start: trialStart,
+    trial_end: trialEnd,
+    updated_at: new Date().toISOString(),
+  };
+
   const { data: existing } = await supabase
     .from("subscriptions")
     .select("id, user_id")
@@ -161,23 +175,26 @@ async function handleSubscriptionChange(
     .limit(1);
 
   if (!existing || existing.length === 0) {
-    // Subscription not yet in our DB — look up user by Stripe customer ID metadata
-    // This handles subscriptions created outside checkout flow
-    log("subscription_not_found", { subscriptionId, customerId });
+    if (!userId) {
+      log("subscription_not_found", { subscriptionId, customerId });
+      return;
+    }
+
+    const { error } = await supabase.from("subscriptions").upsert(
+      {
+        ...payload,
+        user_id: userId,
+      },
+      { onConflict: "stripe_subscription_id" },
+    );
+
+    if (error) log("subscription_insert_error", { error: error.message });
     return;
   }
 
   const { error } = await supabase
     .from("subscriptions")
-    .update({
-      status,
-      current_period_start: periodStart,
-      current_period_end: periodEnd,
-      cancel_at_period_end: subscription.cancel_at_period_end ?? false,
-      trial_start: trialStart,
-      trial_end: trialEnd,
-      updated_at: new Date().toISOString(),
-    })
+    .update(payload)
     .eq("stripe_subscription_id", subscriptionId);
 
   if (error) log("subscription_update_error", { error: error.message });
