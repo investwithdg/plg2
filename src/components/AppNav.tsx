@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef } from "react";
 import { Link } from "@tanstack/react-router";
 import { supabase } from "@/integrations/supabase/client";
+import { useAuth } from "@/hooks/useAuth";
 import AuthModal from "@/components/AuthModal";
 import RetroLegend from "@/components/RetroLegend";
 
@@ -13,20 +14,11 @@ const NAV_LINKS = [
 ] as const;
 
 export function AppNav() {
-  const [userEmail, setUserEmail] = useState<string | null>(null);
+  const { user, signIn, signUp, signOut } = useAuth();
   const [menuOpen, setMenuOpen] = useState(false);
   const [showAuthModal, setShowAuthModal] = useState(false);
   const menuRef = useRef<HTMLDivElement>(null);
-
-  useEffect(() => {
-    supabase.auth.getSession().then(({ data: { session } }) => {
-      setUserEmail(session?.user?.email ?? null);
-    });
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((_e, session) => {
-      setUserEmail(session?.user?.email ?? null);
-    });
-    return () => subscription.unsubscribe();
-  }, []);
+  const userEmail = user?.email ?? null;
 
   // Close mobile menu on outside click
   useEffect(() => {
@@ -48,8 +40,24 @@ export function AppNav() {
   }, [menuOpen]);
 
   const handleSignOut = async () => {
-    await supabase.auth.signOut();
+    await signOut();
     setMenuOpen(false);
+  };
+
+  const handleAuth = async (
+    email: string,
+    password: string,
+    mode: "signin" | "signup",
+  ) => {
+    if (mode === "signin") return signIn(email, password);
+
+    const { error, isNewUser } = await signUp(email, password);
+    if (isNewUser) {
+      supabase.functions
+        .invoke("send-welcome-email", { body: { email } })
+        .catch(console.error);
+    }
+    return error;
   };
 
   return (
@@ -176,7 +184,7 @@ export function AppNav() {
       {showAuthModal && (
         <AuthModal
           onClose={() => setShowAuthModal(false)}
-          onAuth={async () => { setShowAuthModal(false); return null; }}
+          onAuth={handleAuth}
         />
       )}
     </>

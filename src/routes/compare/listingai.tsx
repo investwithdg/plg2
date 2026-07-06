@@ -44,7 +44,7 @@ const FEATURES = [
   },
   {
     feature: "Property types",
-    plg: "9 specialized types",
+    plg: "SFR/FSBO free; Pro-tier sample included",
     rival: "Generic residential only",
   },
   {
@@ -74,7 +74,7 @@ const FEATURES = [
   },
   {
     feature: "Free tier",
-    plg: "10 generations/month",
+    plg: "10 free generations + 1 Pro-tier sample",
     rival: "Varies (often limited)",
   },
   {

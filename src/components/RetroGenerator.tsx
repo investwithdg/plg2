@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { Link } from "@tanstack/react-router";
 import { toast as sonnerToast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
@@ -11,12 +11,7 @@ import OutputTabsWindow, {
 import GenerationProgressModal from "@/components/GenerationProgressModal";
 import AuthModal from "@/components/AuthModal";
 import ListingHistory from "@/components/ListingHistory";
-import {
-  Tooltip,
-  TooltipContent,
-  TooltipProvider,
-  TooltipTrigger,
-} from "@/components/ui/tooltip";
+import TurnstileWidget from "@/components/TurnstileWidget";
 import { RetroButton, RetroInput, RetroWindow } from "@/components/retro";
 import {
   describeFunctionInvokeError,
@@ -35,12 +30,20 @@ type PropertyType =
   | "commercial"
   | "lease";
 
-const MAX_GENERATIONS = 10;
-const STORAGE_KEY = "plg_generations_used";
+type PaywallReason = "free_limit" | "pro_tier_limit";
 
+const MAX_GENERATIONS = 10;
+const FREE_PRO_TIER_LIMIT = 1;
+const STORAGE_KEY = "plg_generations_used";
+const PRO_TIER_STORAGE_KEY = "plg_pro_tier_generations_used";
+const ANON_ID_COOKIE = "plg_anon_id";
 const FREE_PROPERTY_TYPES: PropertyType[] = ["sfr", "fsbo"];
-const isPropertyTypeFree = (type: PropertyType) =>
-  FREE_PROPERTY_TYPES.includes(type);
+const TURNSTILE_SITE_KEY = import.meta.env.VITE_TURNSTILE_SITE_KEY as
+  | string
+  | undefined;
+
+const isProTierPropertyType = (type: PropertyType) =>
+  !FREE_PROPERTY_TYPES.includes(type);
 
 const isDevHost = () => {
   if (typeof window === "undefined") return false;
@@ -53,18 +56,83 @@ const isDevHost = () => {
   );
 };
 
+function getCookieValue(name: string): string | null {
+  if (typeof document === "undefined") return null;
+  const prefix = `${name}=`;
+  return (
+    document.cookie
+      .split(";")
+      .map((part) => part.trim())
+      .find((part) => part.startsWith(prefix))
+      ?.slice(prefix.length) || null
+  );
+}
+
+function setCookieValue(name: string, value: string) {
+  if (typeof document === "undefined") return;
+  const secure = window.location.protocol === "https:" ? "; Secure" : "";
+  document.cookie = `${name}=${value}; Max-Age=31536000; Path=/; SameSite=Lax${secure}`;
+}
+
+function createAnonymousId(): string {
+  if (typeof window !== "undefined" && window.crypto?.randomUUID) {
+    return window.crypto.randomUUID();
+  }
+  const bytes = new Uint8Array(16);
+  crypto.getRandomValues(bytes);
+  return Array.from(bytes)
+    .map((byte) => byte.toString(16).padStart(2, "0"))
+    .join("");
+}
+
+function getOrCreateAnonymousId(): string {
+  if (typeof window === "undefined") return "";
+  const existing = getCookieValue(ANON_ID_COOKIE);
+  if (existing) return existing;
+
+  const next = createAnonymousId();
+  setCookieValue(ANON_ID_COOKIE, next);
+  return next;
+}
+
+async function readFunctionInvokeErrorBody(
+  error: unknown,
+): Promise<Record<string, unknown> | null> {
+  if (!error || typeof error !== "object") return null;
+  const err = error as { context?: { json?: () => Promise<unknown> } };
+  if (!err.context?.json) return null;
+
+  try {
+    const body = await err.context.json();
+    return body && typeof body === "object"
+      ? (body as Record<string, unknown>)
+      : null;
+  } catch {
+    return null;
+  }
+}
+
 export default function RetroGenerator() {
-  const { user, signIn, signUp, signOut, loading: authLoading } = useAuth();
+  const { user, signIn, signUp, loading: authLoading } = useAuth();
 
   const [query, setQuery] = useState("");
   const [propertyType, setPropertyType] = useState<PropertyType>("sfr");
   const [propertyId, setPropertyId] = useState<string | null>(null);
   const [showProgress, setShowProgress] = useState(false);
   const [showPaywall, setShowPaywall] = useState(false);
+  const [paywallReason, setPaywallReason] = useState<PaywallReason>("free_limit");
   const [showAuthModal, setShowAuthModal] = useState(false);
+  const [anonymousId] = useState(() => getOrCreateAnonymousId());
+  const [turnstileToken, setTurnstileToken] = useState<string | null>(null);
+  const [turnstileWidgetKey, setTurnstileWidgetKey] = useState(0);
   const [generationsUsed, setGenerationsUsed] = useState<number>(() => {
     if (typeof window === "undefined") return 0;
     const raw = window.localStorage.getItem(STORAGE_KEY);
+    return raw ? Number(raw) || 0 : 0;
+  });
+  const [proTierGenerationsUsed, setProTierGenerationsUsed] = useState<number>(() => {
+    if (typeof window === "undefined") return 0;
+    const raw = window.localStorage.getItem(PRO_TIER_STORAGE_KEY);
     return raw ? Number(raw) || 0 : 0;
   });
   const [outputs, setOutputs] = useState<Record<OutputTabKey, string> | null>(
@@ -80,7 +148,38 @@ export default function RetroGenerator() {
 
   const devBypassActive = isDevHost();
   const generationsLeft = Math.max(0, MAX_GENERATIONS - generationsUsed);
-  const generationCountLabel = devBypassActive ? "dev" : generationsLeft;
+  const proTierGenerationsLeft = Math.max(
+    0,
+    FREE_PRO_TIER_LIMIT - proTierGenerationsUsed,
+  );
+  const selectedProTier = isProTierPropertyType(propertyType);
+  const anonymousTurnstileRequired =
+    !devBypassActive && !user && !!TURNSTILE_SITE_KEY;
+  const generateDisabled =
+    showProgress ||
+    !query.trim() ||
+    (anonymousTurnstileRequired && !turnstileToken);
+  const generationCountLabel = devBypassActive
+    ? "dev"
+    : isProUser
+      ? "pro"
+      : user
+        ? "10/mo"
+        : generationsLeft;
+
+  const resetAnonymousTurnstile = useCallback(() => {
+    if (!anonymousTurnstileRequired) return;
+    setTurnstileToken(null);
+    setTurnstileWidgetKey((key) => key + 1);
+  }, [anonymousTurnstileRequired]);
+
+  const handleTurnstileVerify = useCallback((token: string) => {
+    setTurnstileToken(token);
+  }, []);
+
+  const handleTurnstileExpire = useCallback(() => {
+    setTurnstileToken(null);
+  }, []);
 
   // --- Checkout success/cancel toast handling ---
   const checkoutToastShown = useRef(false);
@@ -90,13 +189,14 @@ export default function RetroGenerator() {
     const checkoutStatus = params.get("checkout");
     if (checkoutStatus === "success") {
       checkoutToastShown.current = true;
-      sonnerToast.success("Welcome to PLG Pro! Your 7-day trial has started.");
+      sonnerToast.success("Welcome to PLG Pro! Your subscription is active.");
       window.history.replaceState({}, "", window.location.pathname);
     } else if (checkoutStatus === "cancel") {
       checkoutToastShown.current = true;
       sonnerToast("Checkout cancelled. You can upgrade anytime.");
       window.history.replaceState({}, "", window.location.pathname);
     } else if (params.get("upgrade") === "true") {
+      setPaywallReason("free_limit");
       setShowPaywall(true);
       window.history.replaceState({}, "", window.location.pathname);
     }
@@ -113,11 +213,13 @@ export default function RetroGenerator() {
       const { data } = await (supabase.from("subscriptions" as never) as any)
         .select("plan, status")
         .eq("user_id", user.id)
-        .in("status", ["active", "trialing"])
+        .eq("status", "active")
         .limit(1);
-      if (!cancelled && data && data.length > 0 && data[0].plan === "pro") {
-        setIsProUser(true);
-      }
+      const active = !!data?.some(
+        (row: { plan?: string; status?: string }) =>
+          row.plan === "pro" && row.status === "active",
+      );
+      if (!cancelled) setIsProUser(active);
     })();
     return () => { cancelled = true; };
   }, [user]);
@@ -142,6 +244,11 @@ export default function RetroGenerator() {
   }, [generationsUsed]);
 
   useEffect(() => {
+    if (typeof window === "undefined") return;
+    window.localStorage.setItem(PRO_TIER_STORAGE_KEY, String(proTierGenerationsUsed));
+  }, [proTierGenerationsUsed]);
+
+  useEffect(() => {
     if (status === "complete" && copies.length > 0) {
       const outputMap: Record<OutputTabKey, string> = {
         mls: "",
@@ -162,15 +269,27 @@ export default function RetroGenerator() {
   const handleGenerate = async () => {
     if (!query.trim()) return;
 
+    if (anonymousTurnstileRequired && !turnstileToken) {
+      sonnerToast.error("Complete the security check to generate.");
+      return;
+    }
+
     if (!devBypassActive && generationsUsed >= MAX_GENERATIONS && !user) {
+      setPaywallReason("free_limit");
       setShowPaywall(true);
       track("paywall_shown", { reason: "free_limit_exceeded_local", property_type: propertyType });
       return;
     }
 
-    if (!devBypassActive && !isPropertyTypeFree(propertyType) && !user) {
+    if (
+      !devBypassActive &&
+      !user &&
+      selectedProTier &&
+      proTierGenerationsUsed >= FREE_PRO_TIER_LIMIT
+    ) {
+      setPaywallReason("pro_tier_limit");
       setShowPaywall(true);
-      track("paywall_shown", { reason: "premium_type_anon", property_type: propertyType });
+      track("paywall_shown", { reason: "pro_tier_limit_local", property_type: propertyType });
       return;
     }
 
@@ -193,6 +312,12 @@ export default function RetroGenerator() {
             ...parsed,
             propertyType,
             source: "generator",
+            ...(!user
+              ? {
+                  anonymousId,
+                  turnstileToken,
+                }
+              : {}),
           },
         },
       );
@@ -205,6 +330,10 @@ export default function RetroGenerator() {
           data.error === "free_limit_exceeded"
         ) {
           setShowProgress(false);
+          if (!user) resetAnonymousTurnstile();
+          setPaywallReason(
+            data.error === "pro_required" ? "pro_tier_limit" : "free_limit",
+          );
           setShowPaywall(true);
           track("paywall_shown", { reason: data.error, property_type: propertyType });
           return;
@@ -218,14 +347,37 @@ export default function RetroGenerator() {
 
       if (data?.propertyId) {
         setPropertyId(data.propertyId);
-        if (!user) setGenerationsUsed((prev) => prev + 1);
+        if (!user) {
+          setGenerationsUsed((prev) => prev + 1);
+          if (selectedProTier) setProTierGenerationsUsed((prev) => prev + 1);
+          resetAnonymousTurnstile();
+        }
       } else {
         throw new Error("No property ID returned");
       }
     } catch (err) {
       console.error("Error starting generation:", err);
       setShowProgress(false);
-      const description = await describeFunctionInvokeError(err);
+      if (!user) resetAnonymousTurnstile();
+      const errorBody = await readFunctionInvokeErrorBody(err);
+      const errorCode =
+        typeof errorBody?.error === "string" ? errorBody.error : null;
+
+      if (errorCode === "pro_required" || errorCode === "free_limit_exceeded") {
+        setPaywallReason(
+          errorCode === "pro_required" ? "pro_tier_limit" : "free_limit",
+        );
+        setShowPaywall(true);
+        track("paywall_shown", { reason: errorCode, property_type: propertyType });
+        return;
+      }
+
+      const description =
+        typeof errorBody?.message === "string" && errorBody.message
+          ? errorBody.message
+          : typeof errorBody?.error === "string" && errorBody.error
+            ? errorBody.error
+            : await describeFunctionInvokeError(err);
       sonnerToast.error("Failed to start generation", {
         description,
       });
@@ -330,7 +482,7 @@ export default function RetroGenerator() {
               <RetroButton
                 variant="primary"
                 onClick={handleGenerate}
-                disabled={showProgress || !query.trim()}
+                disabled={generateDisabled}
               >
                 {outputs ? `regenerate (${generationCountLabel})` : "generate"}
               </RetroButton>
@@ -341,10 +493,28 @@ export default function RetroGenerator() {
               onChange={setPropertyType}
             />
 
+            {anonymousTurnstileRequired && (
+              <div className="flex justify-center">
+                <TurnstileWidget
+                  key={turnstileWidgetKey}
+                  siteKey={TURNSTILE_SITE_KEY!}
+                  onVerify={handleTurnstileVerify}
+                  onExpire={handleTurnstileExpire}
+                />
+              </div>
+            )}
+
             <div className="flex gap-3 text-win95-11 justify-center text-muted-foreground flex-wrap items-center">
               <span>fha trained</span>
               <span>real property research</span>
-              <span>10 free generations</span>
+              <span>
+                {isProUser
+                  ? "unlimited generations"
+                  : "10 free generations, 1 Pro-tier included"}
+              </span>
+              {!user && !isProUser && selectedProTier && (
+                <span>{proTierGenerationsLeft} Pro-tier left</span>
+              )}
               {isProUser && (
                 <RetroButton
                   onClick={handleManageSubscription}
@@ -388,8 +558,8 @@ export default function RetroGenerator() {
                     variant="primary"
                     onClick={handleGenerate}
                     disabled={
-                      (!devBypassActive && !user && generationsLeft <= 0) ||
-                      showProgress
+                      generateDisabled ||
+                      (!devBypassActive && !user && generationsLeft <= 0)
                     }
                   >
                     regenerate ({generationCountLabel})
@@ -413,7 +583,7 @@ export default function RetroGenerator() {
 
         {showPaywall && (
           <Win95PaywallModal
-            isPremiumType={!isPropertyTypeFree(propertyType)}
+            reason={paywallReason}
             isSignedIn={!!user}
             onClose={() => setShowPaywall(false)}
             onSignIn={() => {
@@ -504,50 +674,39 @@ function PropertyTypeToggle({
   ];
 
   return (
-    <TooltipProvider>
-      <div className="flex flex-wrap gap-1">
-        {options.map((opt) => {
-          const isPremium = !isPropertyTypeFree(opt.key);
-          const isActive = value === opt.key;
-          return (
-            <Tooltip key={opt.key}>
-              <TooltipTrigger asChild>
-                <button
-                  onClick={() => onChange(opt.key)}
-                  className={`px-2 py-1 text-win95-11 font-bold cursor-pointer relative ${
-                    isActive ? "win95-pressed bg-input" : "win95-raised bg-card"
-                  }`}
-                >
-                  {opt.label}
-                  {isPremium && (
-                    <span className="absolute -top-1 -right-1 text-[color:var(--destructive)] text-xs">
-                      *
-                    </span>
-                  )}
-                </button>
-              </TooltipTrigger>
-              {isPremium && (
-                <TooltipContent className="bg-card win95-raised text-foreground">
-                  <p className="text-win95-11">
-                    Premium property type. Upgrade to Pro.
-                  </p>
-                </TooltipContent>
-              )}
-            </Tooltip>
-          );
-        })}
-      </div>
-    </TooltipProvider>
+    <div className="flex flex-wrap gap-1">
+      {options.map((opt) => {
+        const isActive = value === opt.key;
+        const isProTier = isProTierPropertyType(opt.key);
+        return (
+          <button
+            key={opt.key}
+            onClick={() => onChange(opt.key)}
+            title={isProTier ? "Pro tier: 1 included free, then Pro" : "Free tier"}
+            className={`px-2 py-1 text-win95-11 font-bold cursor-pointer relative ${
+              isActive ? "win95-pressed bg-input" : "win95-raised bg-card"
+            }`}
+          >
+            {opt.label}
+            {isProTier && (
+              <span className="absolute -top-1 -right-1 text-[color:var(--destructive)] text-xs">
+                *
+              </span>
+            )}
+          </button>
+        );
+      })}
+    </div>
   );
 }
 
 function Win95PaywallModal({
-  isPremiumType,
+  reason,
   onClose,
   onSignIn,
   isSignedIn,
 }: {
-  isPremiumType: boolean;
+  reason: PaywallReason;
   onClose: () => void;
   onSignIn: () => void;
   isSignedIn: boolean;
@@ -579,43 +738,68 @@ function Win95PaywallModal({
     }
   };
 
+  const proTierLimit = reason === "pro_tier_limit";
+
   return (
     <div className="fixed inset-0 bg-black/50 flex items-center justify-center p-4 z-50">
       <div className="win95-window w-full max-w-md">
         <div className="win95-titlebar">
           <span className="font-bold text-win95-12">
-            {isPremiumType ? "Premium Property Type" : "Free Generations Used"}
+            {proTierLimit ? "Pro-Tier Limit Used" : "Free Generations Used"}
           </span>
           <button className="win95-control-btn" onClick={onClose}>
             x
           </button>
         </div>
         <div className="p-4 bg-card">
-          {isPremiumType ? (
+          {proTierLimit ? (
             <>
               <p className="text-win95-12 mb-2">
-                You&apos;ve used your free premium generation.
+                You&apos;ve used your included Pro-tier property generation.
               </p>
               <p className="text-win95-11 text-muted-foreground mb-3">
-                Pro unlocks all 9 property types, unlimited.
+                Free users can use 1 of their 10 generations on MF, STR, MTR,
+                LTR, Estate/Luxury, Commercial, or Lease. Pro makes those
+                unlimited.
+              </p>
+            </>
+          ) : isSignedIn ? (
+            <>
+              <p className="text-win95-12 mb-2">
+                You&apos;ve used your 10 free monthly generations.
+              </p>
+              <p className="text-win95-11 text-muted-foreground mb-3">
+                Pro removes the cap and keeps generation unlimited.
               </p>
             </>
           ) : (
-            <p className="text-win95-12 mb-3">
-              You&apos;ve used your 10 free generations.
-            </p>
+            <>
+              <p className="text-win95-12 mb-2">
+                You&apos;ve used your 10 free anonymous generations.
+              </p>
+              <p className="text-win95-11 text-muted-foreground mb-3">
+                Create an account for 10 free generations each month, or upgrade
+                to Pro for unlimited volume.
+              </p>
+            </>
           )}
 
           <div className="win95-inset bg-input p-2 mb-4">
             <p className="text-win95-12 font-bold mb-2">Pro includes:</p>
             <ul className="text-win95-11 space-y-1">
               <li>* Unlimited generations</li>
-              <li>* All 9 property types</li>
+              <li>* Unlimited Pro-tier property types</li>
               <li>* Listing history &amp; portfolio</li>
               <li>* Real property research</li>
               <li>* FHA compliance checks</li>
             </ul>
           </div>
+
+          {!isSignedIn && (
+            <p className="text-win95-11 text-muted-foreground text-center mb-3">
+              Sign in or create an account before checkout.
+            </p>
+          )}
 
           <div className="space-y-2 mb-4">
             <div className="flex gap-2 justify-center">
@@ -624,7 +808,7 @@ function Win95PaywallModal({
                 onClick={() => handleCheckout("month")}
                 disabled={loading !== null}
               >
-                {loading === "month" ? "Loading..." : "Pro $49/mo — 7 days free"}
+                {loading === "month" ? "Loading..." : "Pro $49/mo"}
               </RetroButton>
             </div>
             <div className="flex gap-2 justify-center">
@@ -643,11 +827,11 @@ function Win95PaywallModal({
                 className="text-win95-11 underline cursor-pointer bg-transparent border-none text-muted-foreground"
                 onClick={onSignIn}
               >
-                Already have an account? Sign in
+                Sign in / create account
               </button>
             ) : (
               <span className="text-win95-11 text-muted-foreground">
-                7-day free trial, cancel anytime
+                Cancel anytime
               </span>
             )}
             <RetroButton onClick={onClose}>Cancel</RetroButton>
@@ -668,7 +852,7 @@ function HowItWorks() {
     {
       n: "2.",
       title: "Pick property type",
-      body: "SFR, FSBO, Multi-Family, STR, MTR, LTR, Estate, Commercial, or Lease. Free tier includes SFR + FSBO.",
+      body: "SFR and FSBO are free-tier. One Pro-tier property generation is included; Pro unlocks unlimited MF, STR, MTR, LTR, Estate/Luxury, Commercial, and Lease.",
     },
     {
       n: "3.",
@@ -677,8 +861,8 @@ function HowItWorks() {
     },
     {
       n: "4.",
-      title: "One-click copy & paste",
-      body: "Copy your MLS description, social post, or email individually — or grab all three at once.",
+      title: "Use 10 free, then go Pro",
+      body: "Anonymous users get 10 generations total. Signed-in free accounts get 10 per month. Each free allowance includes 1 Pro-tier generation.",
     },
   ];
   return (
