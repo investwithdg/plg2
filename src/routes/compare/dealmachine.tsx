@@ -69,7 +69,7 @@ const FEATURES = [
   },
   {
     feature: "Free tier",
-    plg: "10 generations/month",
+    plg: "10 free generations",
     rival: "No free tier",
   },
   {
