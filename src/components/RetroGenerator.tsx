@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { Link } from "@tanstack/react-router";
 import { toast as sonnerToast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
@@ -11,6 +11,7 @@ import OutputTabsWindow, {
 import GenerationProgressModal from "@/components/GenerationProgressModal";
 import AuthModal from "@/components/AuthModal";
 import ListingHistory from "@/components/ListingHistory";
+import TurnstileWidget from "@/components/TurnstileWidget";
 import { RetroButton, RetroInput, RetroWindow } from "@/components/retro";
 import {
   describeFunctionInvokeError,
@@ -35,7 +36,12 @@ const MAX_GENERATIONS = 10;
 const FREE_PRO_TIER_LIMIT = 1;
 const STORAGE_KEY = "plg_generations_used";
 const PRO_TIER_STORAGE_KEY = "plg_pro_tier_generations_used";
+const ANON_ID_COOKIE = "plg_anon_id";
 const FREE_PROPERTY_TYPES: PropertyType[] = ["sfr", "fsbo"];
+const TURNSTILE_SITE_KEY = import.meta.env.VITE_TURNSTILE_SITE_KEY as
+  | string
+  | undefined;
+
 const isProTierPropertyType = (type: PropertyType) =>
   !FREE_PROPERTY_TYPES.includes(type);
 
@@ -49,6 +55,45 @@ const isDevHost = () => {
     h.endsWith(".lovableproject.com")
   );
 };
+
+function getCookieValue(name: string): string | null {
+  if (typeof document === "undefined") return null;
+  const prefix = `${name}=`;
+  return (
+    document.cookie
+      .split(";")
+      .map((part) => part.trim())
+      .find((part) => part.startsWith(prefix))
+      ?.slice(prefix.length) || null
+  );
+}
+
+function setCookieValue(name: string, value: string) {
+  if (typeof document === "undefined") return;
+  const secure = window.location.protocol === "https:" ? "; Secure" : "";
+  document.cookie = `${name}=${value}; Max-Age=31536000; Path=/; SameSite=Lax${secure}`;
+}
+
+function createAnonymousId(): string {
+  if (typeof window !== "undefined" && window.crypto?.randomUUID) {
+    return window.crypto.randomUUID();
+  }
+  const bytes = new Uint8Array(16);
+  crypto.getRandomValues(bytes);
+  return Array.from(bytes)
+    .map((byte) => byte.toString(16).padStart(2, "0"))
+    .join("");
+}
+
+function getOrCreateAnonymousId(): string {
+  if (typeof window === "undefined") return "";
+  const existing = getCookieValue(ANON_ID_COOKIE);
+  if (existing) return existing;
+
+  const next = createAnonymousId();
+  setCookieValue(ANON_ID_COOKIE, next);
+  return next;
+}
 
 async function readFunctionInvokeErrorBody(
   error: unknown,
@@ -77,6 +122,9 @@ export default function RetroGenerator() {
   const [showPaywall, setShowPaywall] = useState(false);
   const [paywallReason, setPaywallReason] = useState<PaywallReason>("free_limit");
   const [showAuthModal, setShowAuthModal] = useState(false);
+  const [anonymousId] = useState(() => getOrCreateAnonymousId());
+  const [turnstileToken, setTurnstileToken] = useState<string | null>(null);
+  const [turnstileWidgetKey, setTurnstileWidgetKey] = useState(0);
   const [generationsUsed, setGenerationsUsed] = useState<number>(() => {
     if (typeof window === "undefined") return 0;
     const raw = window.localStorage.getItem(STORAGE_KEY);
@@ -105,6 +153,12 @@ export default function RetroGenerator() {
     FREE_PRO_TIER_LIMIT - proTierGenerationsUsed,
   );
   const selectedProTier = isProTierPropertyType(propertyType);
+  const anonymousTurnstileRequired =
+    !devBypassActive && !user && !!TURNSTILE_SITE_KEY;
+  const generateDisabled =
+    showProgress ||
+    !query.trim() ||
+    (anonymousTurnstileRequired && !turnstileToken);
   const generationCountLabel = devBypassActive
     ? "dev"
     : isProUser
@@ -112,6 +166,20 @@ export default function RetroGenerator() {
       : user
         ? "10/mo"
         : generationsLeft;
+
+  const resetAnonymousTurnstile = useCallback(() => {
+    if (!anonymousTurnstileRequired) return;
+    setTurnstileToken(null);
+    setTurnstileWidgetKey((key) => key + 1);
+  }, [anonymousTurnstileRequired]);
+
+  const handleTurnstileVerify = useCallback((token: string) => {
+    setTurnstileToken(token);
+  }, []);
+
+  const handleTurnstileExpire = useCallback(() => {
+    setTurnstileToken(null);
+  }, []);
 
   // --- Checkout success/cancel toast handling ---
   const checkoutToastShown = useRef(false);
@@ -201,6 +269,11 @@ export default function RetroGenerator() {
   const handleGenerate = async () => {
     if (!query.trim()) return;
 
+    if (anonymousTurnstileRequired && !turnstileToken) {
+      sonnerToast.error("Complete the security check to generate.");
+      return;
+    }
+
     if (!devBypassActive && generationsUsed >= MAX_GENERATIONS && !user) {
       setPaywallReason("free_limit");
       setShowPaywall(true);
@@ -239,6 +312,12 @@ export default function RetroGenerator() {
             ...parsed,
             propertyType,
             source: "generator",
+            ...(!user
+              ? {
+                  anonymousId,
+                  turnstileToken,
+                }
+              : {}),
           },
         },
       );
@@ -251,6 +330,7 @@ export default function RetroGenerator() {
           data.error === "free_limit_exceeded"
         ) {
           setShowProgress(false);
+          if (!user) resetAnonymousTurnstile();
           setPaywallReason(
             data.error === "pro_required" ? "pro_tier_limit" : "free_limit",
           );
@@ -270,6 +350,7 @@ export default function RetroGenerator() {
         if (!user) {
           setGenerationsUsed((prev) => prev + 1);
           if (selectedProTier) setProTierGenerationsUsed((prev) => prev + 1);
+          resetAnonymousTurnstile();
         }
       } else {
         throw new Error("No property ID returned");
@@ -277,6 +358,7 @@ export default function RetroGenerator() {
     } catch (err) {
       console.error("Error starting generation:", err);
       setShowProgress(false);
+      if (!user) resetAnonymousTurnstile();
       const errorBody = await readFunctionInvokeErrorBody(err);
       const errorCode =
         typeof errorBody?.error === "string" ? errorBody.error : null;
@@ -400,7 +482,7 @@ export default function RetroGenerator() {
               <RetroButton
                 variant="primary"
                 onClick={handleGenerate}
-                disabled={showProgress || !query.trim()}
+                disabled={generateDisabled}
               >
                 {outputs ? `regenerate (${generationCountLabel})` : "generate"}
               </RetroButton>
@@ -410,6 +492,17 @@ export default function RetroGenerator() {
               value={propertyType}
               onChange={setPropertyType}
             />
+
+            {anonymousTurnstileRequired && (
+              <div className="flex justify-center">
+                <TurnstileWidget
+                  key={turnstileWidgetKey}
+                  siteKey={TURNSTILE_SITE_KEY!}
+                  onVerify={handleTurnstileVerify}
+                  onExpire={handleTurnstileExpire}
+                />
+              </div>
+            )}
 
             <div className="flex gap-3 text-win95-11 justify-center text-muted-foreground flex-wrap items-center">
               <span>fha trained</span>
@@ -465,8 +558,8 @@ export default function RetroGenerator() {
                     variant="primary"
                     onClick={handleGenerate}
                     disabled={
-                      (!devBypassActive && !user && generationsLeft <= 0) ||
-                      showProgress
+                      generateDisabled ||
+                      (!devBypassActive && !user && generationsLeft <= 0)
                     }
                   >
                     regenerate ({generationCountLabel})
