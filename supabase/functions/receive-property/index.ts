@@ -59,6 +59,20 @@ function log(step: string, data?: Record<string, unknown>) {
   );
 }
 
+function usageCheckUnavailableResponse() {
+  return new Response(
+    JSON.stringify({
+      success: false,
+      error: "usage_check_unavailable",
+      message: "Usage limit verification is temporarily unavailable. Please try again.",
+    }),
+    {
+      status: 503,
+      headers: { ...corsHeaders, "Content-Type": "application/json" },
+    },
+  );
+}
+
 serve(async (req) => {
   if (req.method === "OPTIONS")
     return new Response(null, { headers: corsHeaders });
@@ -146,8 +160,9 @@ serve(async (req) => {
     if (userId) {
       const { data: sub } = await supabase
         .from("subscriptions")
-        .select("status")
+        .select("plan, status")
         .eq("user_id", userId)
+        .eq("plan", "pro")
         .eq("status", "active")
         .limit(1);
       hasProPlan = (sub && sub.length > 0) ?? false;
@@ -175,7 +190,10 @@ serve(async (req) => {
         }
 
         const { count: proTierCount, error: proTierCountErr } = await proTierQuery;
-        if (proTierCountErr) log("pro_tier_count_error", { error: proTierCountErr.message });
+        if (proTierCountErr) {
+          log("pro_tier_count_error", { error: proTierCountErr.message });
+          return usageCheckUnavailableResponse();
+        }
 
         if ((proTierCount ?? 0) >= FREE_PRO_TIER_LIMIT) {
           log(userId ? "free_user_pro_tier_exceeded" : "anon_pro_tier_exceeded", {
@@ -214,7 +232,10 @@ serve(async (req) => {
       }
 
       const { count, error: countErr } = await countQuery;
-      if (countErr) log("cap_count_error", { error: countErr.message });
+      if (countErr) {
+        log("cap_count_error", { error: countErr.message });
+        return usageCheckUnavailableResponse();
+      }
 
       if ((count ?? 0) >= FREE_LIMIT) {
         log(userId ? "free_user_cap_exceeded" : "anon_cap_exceeded", {
