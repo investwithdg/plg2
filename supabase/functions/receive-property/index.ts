@@ -13,7 +13,9 @@ const corsHeaders = {
 
 const FREE_LIMIT = 10;
 const FREE_WINDOW_DAYS = 30;
+const FREE_PRO_TIER_LIMIT = 1;
 const DEDUPE_WINDOW_SECONDS = 60;
+const FREE_PROPERTY_TYPES = ["sfr", "fsbo"];
 
 const propertyInputSchema = z
   .object({
@@ -25,6 +27,16 @@ const propertyInputSchema = z
   .refine((d) => d.url || d.address, {
     message: "Either 'url' or 'address' must be provided",
   });
+
+function normalizePropertyType(value?: string): string {
+  const type = (value || "sfr").toLowerCase().trim();
+  if (type === "lux" || type === "luxury") return "estate";
+  return type;
+}
+
+function isProTierPropertyType(type: string): boolean {
+  return !FREE_PROPERTY_TYPES.includes(type);
+}
 
 async function sha256(input: string): Promise<string> {
   const buf = await crypto.subtle.digest(
@@ -90,6 +102,8 @@ serve(async (req) => {
       );
     }
     const validatedInput = parsed.data;
+    const requestedType = normalizePropertyType(validatedInput.propertyType);
+    const proTierRequest = isProTierPropertyType(requestedType);
 
     // 1) Idempotency: same (caller, address|url) within window returns existing propertyId
     const dedupeKey = await sha256(
@@ -139,18 +153,61 @@ serve(async (req) => {
       hasProPlan = (sub && sub.length > 0) ?? false;
     }
 
-    // 3) Server-side free-generation cap.
-    // Anonymous users get 10 total generations by IP hash. Signed-in free users
-    // get 10 generations per 30-day window. Pro users skip this cap entirely.
+    const sinceWindow = new Date(
+      Date.now() - FREE_WINDOW_DAYS * 86400_000,
+    ).toISOString();
+
+    // 3) Server-side free-generation caps.
+    // Anonymous users get 10 total generations by IP hash, including 1 Pro-tier
+    // generation. Signed-in free users get 10 generations per 30-day window,
+    // including 1 Pro-tier generation per window. Pro users skip these caps.
     if (!hasProPlan) {
+      if (proTierRequest) {
+        const proTierQuery = supabase
+          .from("properties")
+          .select("id", { count: "exact", head: true })
+          .not("property_type", "in", `("${FREE_PROPERTY_TYPES.join('","')}")`);
+
+        if (userId) {
+          proTierQuery.eq("user_id", userId).gte("created_at", sinceWindow);
+        } else {
+          proTierQuery.eq("ip_hash", ipHash).is("user_id", null);
+        }
+
+        const { count: proTierCount, error: proTierCountErr } = await proTierQuery;
+        if (proTierCountErr) log("pro_tier_count_error", { error: proTierCountErr.message });
+
+        if ((proTierCount ?? 0) >= FREE_PRO_TIER_LIMIT) {
+          log(userId ? "free_user_pro_tier_exceeded" : "anon_pro_tier_exceeded", {
+            userId,
+            requestedType,
+            proTierCount,
+            ipHashPrefix: userId ? undefined : ipHash.slice(0, 8),
+          });
+
+          const message = userId
+            ? "Free accounts include 1 Pro-tier property generation per month. Upgrade to Pro for unlimited Pro-tier generations."
+            : "Anonymous users include 1 Pro-tier property generation. Sign in for a monthly Pro-tier sample or upgrade to Pro.";
+
+          return new Response(
+            JSON.stringify({
+              success: false,
+              error: "pro_required",
+              message,
+            }),
+            {
+              status: 403,
+              headers: { ...corsHeaders, "Content-Type": "application/json" },
+            },
+          );
+        }
+      }
+
       const countQuery = supabase
         .from("properties")
         .select("id", { count: "exact", head: true });
 
       if (userId) {
-        const sinceWindow = new Date(
-          Date.now() - FREE_WINDOW_DAYS * 86400_000,
-        ).toISOString();
         countQuery.eq("user_id", userId).gte("created_at", sinceWindow);
       } else {
         countQuery.eq("ip_hash", ipHash).is("user_id", null);
@@ -189,7 +246,7 @@ serve(async (req) => {
       .from("properties")
       .insert({
         address: validatedInput.address || validatedInput.url || "Unknown",
-        property_type: validatedInput.propertyType || null,
+        property_type: requestedType,
         user_id: userId,
         source: validatedInput.source || "generator",
         source_url: validatedInput.url || null,
