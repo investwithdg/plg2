@@ -7,13 +7,13 @@ export const Route = createFileRoute("/pricing")({
       {
         name: "description",
         content:
-          "PropertyListingGenerator.com pricing: Free tier with 10 generations/month, or Pro at $49/mo for unlimited generations, all 9 property types, listing history, and priority support. 7-day free trial.",
+          "PropertyListingGenerator.com pricing: 10 free generations, or Pro at $49/mo for unlimited generations, all 9 property types, listing history, and priority support.",
       },
       { property: "og:title", content: "PLG Pricing — Free & Pro Plans" },
       {
         property: "og:description",
         content:
-          "Free: 10 generations/month. Pro: $49/mo for unlimited. 7-day free trial included.",
+          "Free: 10 generations. Pro: $49/mo for unlimited listing copy generation.",
       },
     ],
   }),
@@ -41,8 +41,8 @@ function Pricing() {
               Simple pricing. No surprises.
             </h1>
             <p className="text-win95-12">
-              Start free. Upgrade when you need more. Every plan includes
-              FHA-compliant copy and real property research.
+              Start free. Upgrade when you need unlimited volume. Every plan
+              includes FHA-compliant copy and real property research.
             </p>
           </div>
         </div>
@@ -68,11 +68,15 @@ function Pricing() {
                 <ul className="space-y-1.5 text-win95-11">
                   <li className="flex gap-2">
                     <span className="font-bold text-[var(--win95-blue)]">+</span>
-                    <span>10 generations per month</span>
+                    <span>10 free generations</span>
                   </li>
                   <li className="flex gap-2">
                     <span className="font-bold text-[var(--win95-blue)]">+</span>
-                    <span>SFR + FSBO property types</span>
+                    <span>Signed-in accounts reset monthly</span>
+                  </li>
+                  <li className="flex gap-2">
+                    <span className="font-bold text-[var(--win95-blue)]">+</span>
+                    <span>All 9 property types</span>
                   </li>
                   <li className="flex gap-2">
                     <span className="font-bold text-[var(--win95-blue)]">+</span>
@@ -88,15 +92,11 @@ function Pricing() {
                   </li>
                   <li className="flex gap-2 text-muted-foreground">
                     <span className="font-bold">-</span>
-                    <span>7 pro property types locked</span>
+                    <span>Unlimited generation volume</span>
                   </li>
                   <li className="flex gap-2 text-muted-foreground">
                     <span className="font-bold">-</span>
-                    <span>No listing history</span>
-                  </li>
-                  <li className="flex gap-2 text-muted-foreground">
-                    <span className="font-bold">-</span>
-                    <span>Standard support</span>
+                    <span>Priority support</span>
                   </li>
                 </ul>
               </div>
@@ -124,7 +124,7 @@ function Pricing() {
               <span className="font-bold text-win95-12 truncate pl-1">
                 Pro Plan
               </span>
-              <span className="text-win95-11 opacity-90">7-day free trial</span>
+              <span className="text-win95-11 opacity-90">unlimited</span>
             </div>
             <div className="p-4 space-y-3">
               <div className="text-center">
@@ -177,12 +177,6 @@ function Pricing() {
                       <strong>Priority support</strong>
                     </span>
                   </li>
-                  <li className="flex gap-2">
-                    <span className="font-bold text-[var(--win95-blue)]">+</span>
-                    <span>
-                      <strong>7-day free trial</strong> — cancel anytime
-                    </span>
-                  </li>
                 </ul>
               </div>
               <div className="text-center pt-1">
@@ -192,7 +186,7 @@ function Pricing() {
                     className="win95-raised px-4 py-1 text-win95-12 font-bold cursor-pointer active:win95-pressed"
                     style={{ color: "var(--win95-blue)" }}
                   >
-                    Go Pro — 7 Days Free
+                    Go Pro
                   </button>
                 </a>
               </div>
@@ -213,18 +207,19 @@ function Pricing() {
                 What property types are included in each plan?
               </p>
               <p className="text-win95-11 text-muted-foreground">
-                Free: Single Family Residential (SFR) and For Sale By Owner
-                (FSBO). Pro: adds Multi-Family, Short Term Rental, Mid Term
-                Rental, Long Term Rental, Estate/Luxury, Commercial, and Lease.
+                All plans can generate Single Family Residential, For Sale By
+                Owner, Multi-Family, Short Term Rental, Mid Term Rental, Long
+                Term Rental, Estate/Luxury, Commercial, and Lease copy. Pro
+                removes the generation cap.
               </p>
             </div>
             <div>
               <p className="text-win95-12 font-bold">
-                Can I cancel the Pro trial?
+                Can I cancel Pro?
               </p>
               <p className="text-win95-11 text-muted-foreground">
-                Yes. Cancel anytime during the 7-day trial and you will not be
-                charged. Your account reverts to the Free plan.
+                Yes. Cancel anytime from the Stripe customer portal. Your account
+                returns to the Free plan after the paid period ends.
               </p>
             </div>
             <div>
@@ -243,8 +238,8 @@ function Pricing() {
                 Do I need to sign up to use the free tier?
               </p>
               <p className="text-win95-11 text-muted-foreground">
-                You can try PLG without an account. Sign up to track your
-                generation count and unlock listing history with Pro.
+                No. You can generate 10 listings without an account. Sign up to
+                get 10 free generations per month and keep your listing history.
               </p>
             </div>
           </div>
