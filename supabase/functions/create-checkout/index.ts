@@ -61,8 +61,16 @@ serve(async (req) => {
 
     const priceId =
       interval === "year"
-        ? Deno.env.get("STRIPE_PRICE_ANNUAL")!
-        : Deno.env.get("STRIPE_PRICE_MONTHLY")!;
+        ? Deno.env.get("STRIPE_PRICE_ANNUAL")
+        : Deno.env.get("STRIPE_PRICE_MONTHLY");
+
+    if (!priceId) {
+      log("missing_price_id", { interval });
+      return new Response(
+        JSON.stringify({ error: "Payment plan not configured" }),
+        { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } },
+      );
+    }
 
     const siteUrl = Deno.env.get("SITE_URL") || "https://propertylistinggenerator.com";
 
@@ -73,7 +81,8 @@ serve(async (req) => {
     params.set("cancel_url", `${siteUrl}?checkout=cancel`);
     params.set("line_items[0][price]", priceId);
     params.set("line_items[0][quantity]", "1");
-    params.set("subscription_data[trial_period_days]", "7");
+    params.set("metadata[user_id]", userId);
+    params.set("subscription_data[metadata][user_id]", userId);
     if (userEmail) {
       params.set("customer_email", userEmail);
     }
