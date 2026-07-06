@@ -57,7 +57,10 @@ export default function AuthModal({ onClose, onAuth }: AuthModalProps) {
           return;
         }
       } catch {
-        // Fail open — don't block signup if the verification call errors
+        setError("Security check unavailable. Please try again.");
+        setTurnstileToken(null);
+        setSubmitting(false);
+        return;
       }
     }
 
