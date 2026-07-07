@@ -1,4 +1,4 @@
-import { createFileRoute } from "@tanstack/react-router";
+import { createFileRoute, Link } from "@tanstack/react-router";
 
 export const Route = createFileRoute("/terms")({
   head: () => ({
@@ -29,6 +29,11 @@ function TermsPage() {
             <span className="font-bold text-win95-12">
               Terms of Service — PropertyListingGenerator.com
             </span>
+            <div className="flex gap-[2px]">
+              <Link to="/" className="win95-control-btn no-underline" aria-label="Close">
+                x
+              </Link>
+            </div>
           </div>
           <div className="p-4 bg-card text-win95-12 space-y-4 leading-relaxed">
             <p className="text-win95-11 text-muted-foreground">
@@ -192,9 +197,10 @@ function TermsPage() {
             <Section title="10. Governing Law">
               <p>
                 These Terms are governed by and construed in accordance with the
-                laws of the State of Texas, United States, without regard to
+                laws of the State of Indiana, United States, without regard to
                 conflict of law principles. Any disputes arising from these
-                Terms shall be resolved in the courts located in Texas.
+                Terms shall be resolved in the courts located in Marion County,
+                Indiana.
               </p>
             </Section>
 

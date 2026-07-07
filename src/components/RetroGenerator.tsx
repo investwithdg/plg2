@@ -27,6 +27,7 @@ type PropertyType =
   | "ltr"
   | "fsbo"
   | "estate"
+  | "lux"
   | "commercial"
   | "lease";
 
@@ -500,6 +501,8 @@ export default function RetroGenerator() {
             <PropertyTypeToggle
               value={propertyType}
               onChange={setPropertyType}
+              proTierUsed={proTierGenerationsUsed >= FREE_PRO_TIER_LIMIT}
+              isProUser={isProUser}
             />
 
             {anonymousTurnstileRequired && (
@@ -616,7 +619,6 @@ export default function RetroGenerator() {
           <>
             <HowItWorks />
             <SampleOutput />
-            <WhyPLG />
           </>
         )}
       </main>
@@ -666,9 +668,13 @@ export default function RetroGenerator() {
 function PropertyTypeToggle({
   value,
   onChange,
+  proTierUsed,
+  isProUser,
 }: {
   value: PropertyType;
   onChange: (v: PropertyType) => void;
+  proTierUsed: boolean;
+  isProUser: boolean;
 }) {
   const options: { key: PropertyType; label: string }[] = [
     { key: "sfr", label: "SFR" },
@@ -677,7 +683,8 @@ function PropertyTypeToggle({
     { key: "str", label: "STR" },
     { key: "mtr", label: "MTR" },
     { key: "ltr", label: "LTR" },
-    { key: "estate", label: "ESTATE" },
+    { key: "estate", label: "ESTATE SALE" },
+    { key: "lux", label: "LUX" },
     { key: "commercial", label: "COMM" },
     { key: "lease", label: "LEASE" },
   ];
@@ -691,15 +698,21 @@ function PropertyTypeToggle({
           <button
             key={opt.key}
             onClick={() => onChange(opt.key)}
-            title={isProTier ? "Pro tier: 1 included free, then Pro" : "Free tier"}
+            title={isProTier ? (isProUser ? "Pro tier (included)" : proTierUsed ? "Pro tier — upgrade to unlock" : "Pro tier: 1 included free, then Pro") : "Free tier"}
             className={`px-2 py-1 text-win95-11 font-bold cursor-pointer relative ${
               isActive ? "win95-pressed bg-input" : "win95-raised bg-card"
             }`}
           >
             {opt.label}
-            {isProTier && (
-              <span className="absolute -top-1 -right-1 text-[color:var(--destructive)] text-xs">
-                *
+            {isProTier && !isProUser && (
+              <span
+                className={`absolute -top-2.5 -right-1 text-[9px] font-bold leading-none ${
+                  proTierUsed
+                    ? "text-muted-foreground"
+                    : "text-[color:var(--destructive)]"
+                }`}
+              >
+                {proTierUsed ? "🔒" : "★"}
               </span>
             )}
           </button>
@@ -768,8 +781,8 @@ function Win95PaywallModal({
               </p>
               <p className="text-win95-11 text-muted-foreground mb-3">
                 Free users can use 1 of their 10 generations on MF, STR, MTR,
-                LTR, Estate/Luxury, Commercial, or Lease. Pro makes those
-                unlimited.
+                LTR, Estate Sale, Luxury, Commercial, or Lease. Pro makes
+                those unlimited.
               </p>
             </>
           ) : isSignedIn ? (
@@ -861,7 +874,7 @@ function HowItWorks() {
     {
       n: "2.",
       title: "Pick property type",
-      body: "SFR and FSBO are free-tier. One Pro-tier property generation is included; Pro unlocks unlimited MF, STR, MTR, LTR, Estate/Luxury, Commercial, and Lease.",
+      body: "SFR and FSBO are free-tier. One Pro-tier property generation is included; Pro unlocks unlimited MF, STR, MTR, LTR, Estate Sale, Luxury, Commercial, and Lease.",
     },
     {
       n: "3.",

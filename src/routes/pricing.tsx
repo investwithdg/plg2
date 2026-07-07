@@ -217,8 +217,8 @@ function Pricing() {
               </p>
               <p className="text-win95-11 text-muted-foreground">
                 Free includes SFR and FSBO, plus 1 Pro-tier property generation
-                from MF, STR, MTR, LTR, Estate/Luxury, Commercial, or Lease.
-                Pro removes both the generation cap and the Pro-tier cap.
+                from MF, STR, MTR, LTR, Estate Sale, Luxury, Commercial, or
+                Lease. Pro removes both the generation cap and the Pro-tier cap.
               </p>
             </div>
             <div>

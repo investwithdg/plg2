@@ -1,4 +1,4 @@
-import { createFileRoute } from "@tanstack/react-router";
+import { createFileRoute, Link } from "@tanstack/react-router";
 
 export const Route = createFileRoute("/privacy")({
   head: () => ({
@@ -29,6 +29,11 @@ function PrivacyPage() {
             <span className="font-bold text-win95-12">
               Privacy Policy — PropertyListingGenerator.com
             </span>
+            <div className="flex gap-[2px]">
+              <Link to="/" className="win95-control-btn no-underline" aria-label="Close">
+                x
+              </Link>
+            </div>
           </div>
           <div className="p-4 bg-card text-win95-12 space-y-4 leading-relaxed">
             <p className="text-win95-11 text-muted-foreground">

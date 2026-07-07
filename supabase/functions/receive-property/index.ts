@@ -33,7 +33,7 @@ const propertyInputSchema = z
 
 function normalizePropertyType(value?: string): string {
   const type = (value || "sfr").toLowerCase().trim();
-  if (type === "lux" || type === "luxury") return "estate";
+  if (type === "luxury") return "lux";
   return type;
 }
 
