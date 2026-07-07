@@ -263,6 +263,7 @@ export default function RetroGenerator() {
       setShowProgress(false);
       setHistoryKey((k) => k + 1);
       track("generation_completed", { property_type: propertyType, property_id: propertyId });
+      fireLoopsEvent("generation_created", { property_type: propertyType });
     }
   }, [status, copies, propertyType, propertyId]);
 
@@ -336,6 +337,7 @@ export default function RetroGenerator() {
           );
           setShowPaywall(true);
           track("paywall_shown", { reason: data.error, property_type: propertyType });
+          fireLoopsEvent("limit_reached", { reason: data.error, property_type: propertyType });
           return;
         }
         throw new Error(
@@ -406,6 +408,13 @@ export default function RetroGenerator() {
     if (!outputs) return;
     const allText = `MLS Description:\n${outputs.mls}\n\nSocial Post:\n${outputs.social}\n\nEmail:\n${outputs.email}`;
     onCopy(allText, "all");
+  };
+
+  const fireLoopsEvent = (eventName: string, properties?: Record<string, unknown>) => {
+    if (!user?.email) return;
+    supabase.functions
+      .invoke("send-loops-event", { body: { email: user.email, eventName, properties } })
+      .catch(console.error);
   };
 
   const handleAuth = async (
