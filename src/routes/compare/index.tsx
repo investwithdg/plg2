@@ -27,119 +27,24 @@ export const Route = createFileRoute("/compare/")({
 });
 
 const DEEP_DIVE_COMPARISONS = [
-  {
-    slug: "/compare/dealmachine",
-    rival: "DealMachine",
-    tagline: "Lead gen tool vs. purpose-built listing copy generator",
-    verdict:
-      "DealMachine helps you find deals. PLG writes the listing copy once you have one.",
-  },
-  {
-    slug: "/compare/listingai",
-    rival: "Listing AI / Generic AI Tools",
-    tagline: "Generic AI output vs. FHA-compliant, research-backed copy",
-    verdict:
-      "Generic AI tools lack FHA compliance training and real property research. PLG is purpose-built.",
-  },
-];
-
-const MORE_COMPARISONS = [
-  {
-    rival: "ChatGPT / OpenAI",
-    category: "General AI",
-    verdict:
-      "ChatGPT can write text, but it has no FHA training, no property research, and no MLS formatting. You'll spend more time editing than you save.",
-  },
-  {
-    rival: "Jasper AI",
-    category: "Marketing AI",
-    verdict:
-      "Jasper is built for marketers, not real estate agents. No FHA guardrails, no property lookups, no MLS-specific output.",
-  },
-  {
-    rival: "Copy.ai",
-    category: "General Copywriting",
-    verdict:
-      "Copy.ai writes marketing copy for SaaS and e-commerce. It doesn't know what Fair Housing compliance is.",
-  },
-  {
-    rival: "Writesonic",
-    category: "General AI Writer",
-    verdict:
-      "Another general-purpose AI writer. No real estate domain expertise, no compliance checks, no property research.",
-  },
-  {
-    rival: "Canva Magic Write",
-    category: "Design + AI",
-    verdict:
-      "Great for graphics. The AI copy feature is generic and has zero real estate training.",
-  },
-  {
-    rival: "Homebot",
-    category: "Homeowner Engagement",
-    verdict:
-      "Homebot engages existing homeowners with equity updates. It doesn't generate listing copy at all.",
-  },
-  {
-    rival: "Listing Robot",
-    category: "MLS Description Tool",
-    verdict:
-      "Template-based MLS descriptions without AI research. No social or email copy, no FHA screening.",
-  },
-  {
-    rival: "Epique AI",
-    category: "Real Estate AI Suite",
-    verdict:
-      "Epique offers broad AI tools for agents but isn't purpose-built for listing copy. PLG's FHA compliance and property research are deeper.",
-  },
-  {
-    rival: "kvCORE",
-    category: "Real Estate CRM",
-    verdict:
-      "kvCORE is a CRM with basic AI features. Its copy tools are add-ons, not its core product.",
-  },
-  {
-    rival: "Follow Up Boss",
-    category: "Real Estate CRM",
-    verdict:
-      "A lead management CRM. No listing copy generation whatsoever.",
-  },
-  {
-    rival: "CuraytoR / Ylopo",
-    category: "Marketing Platform",
-    verdict:
-      "Full-service real estate marketing platforms focused on ads and lead gen. Not built for listing copy.",
-  },
-  {
-    rival: "REimagineHome",
-    category: "Virtual Staging",
-    verdict:
-      "AI-powered virtual staging and renovation visualization. Doesn't write a single word of copy.",
-  },
-  {
-    rival: "Virtual Staging AI",
-    category: "Virtual Staging",
-    verdict:
-      "Stages photos with AI. Different tool entirely — PLG writes the words that sell the property.",
-  },
-  {
-    rival: "Zillow AI Description",
-    category: "Portal Feature",
-    verdict:
-      "Locked inside Zillow's ecosystem. Generic, no FHA training, no social or email output. You can't use it on other platforms.",
-  },
-  {
-    rival: "Realtor.com AI",
-    category: "Portal Feature",
-    verdict:
-      "Embedded in Realtor.com only. Not a standalone tool you can use across MLS, social, and email.",
-  },
-  {
-    rival: "Grammarly",
-    category: "Writing Assistant",
-    verdict:
-      "Catches typos. Doesn't write listing copy, research properties, or check FHA compliance.",
-  },
+  { slug: "/compare/dealmachine", rival: "DealMachine", tagline: "Lead gen tool vs. purpose-built listing copy generator", verdict: "DealMachine helps you find deals. PLG writes the listing copy once you have one." },
+  { slug: "/compare/listingai", rival: "Listing AI / Generic AI Tools", tagline: "Generic AI output vs. FHA-compliant, research-backed copy", verdict: "Generic AI tools lack FHA compliance training and real property research. PLG is purpose-built." },
+  { slug: "/compare/chatgpt", rival: "ChatGPT / OpenAI", tagline: "General AI vs Listing Copy Engine", verdict: "ChatGPT can write text, but it has no FHA training, no property research, and no MLS formatting. You'll spend more time editing than you save." },
+  { slug: "/compare/jasper", rival: "Jasper AI", tagline: "Marketing AI vs Real Estate AI", verdict: "Jasper is built for marketers, not real estate agents. No FHA guardrails, no property lookups, no MLS-specific output." },
+  { slug: "/compare/copyai", rival: "Copy.ai", tagline: "General Copywriting vs Listing Copy", verdict: "Copy.ai writes marketing copy for SaaS and e-commerce. It doesn't know what Fair Housing compliance is." },
+  { slug: "/compare/writesonic", rival: "Writesonic", tagline: "General AI Writer vs Specialist", verdict: "Another general-purpose AI writer. No real estate domain expertise, no compliance checks, no property research." },
+  { slug: "/compare/canva", rival: "Canva Magic Write", tagline: "Design + AI vs Listing Copy Engine", verdict: "Great for graphics. The AI copy feature is generic and has zero real estate training." },
+  { slug: "/compare/homebot", rival: "Homebot", tagline: "Homeowner Engagement vs Listing Copy", verdict: "Homebot engages existing homeowners with equity updates. It doesn't generate listing copy at all." },
+  { slug: "/compare/listingrobot", rival: "Listing Robot", tagline: "MLS Description Tool vs AI Engine", verdict: "Template-based MLS descriptions without AI research. No social or email copy, no FHA screening." },
+  { slug: "/compare/epique", rival: "Epique AI", tagline: "Real Estate AI Suite vs Listing Copy Specialist", verdict: "Epique offers broad AI tools for agents but isn't purpose-built for listing copy. PLG's FHA compliance and property research are deeper." },
+  { slug: "/compare/kvcore", rival: "kvCORE", tagline: "Real Estate CRM vs Listing Copy Engine", verdict: "kvCORE is a CRM with basic AI features. Its copy tools are add-ons, not its core product." },
+  { slug: "/compare/followupboss", rival: "Follow Up Boss", tagline: "Real Estate CRM vs Listing Generator", verdict: "A lead management CRM. No listing copy generation whatsoever." },
+  { slug: "/compare/curaytor", rival: "CuraytoR / Ylopo", tagline: "Marketing Platform vs Copy Engine", verdict: "Full-service real estate marketing platforms focused on ads and lead gen. Not built for listing copy." },
+  { slug: "/compare/reimaginehome", rival: "REimagineHome", tagline: "Virtual Staging vs Listing Copy", verdict: "AI-powered virtual staging and renovation visualization. Doesn't write a single word of copy." },
+  { slug: "/compare/virtualstagingai", rival: "Virtual Staging AI", tagline: "Virtual Staging vs Text Generation", verdict: "Stages photos with AI. Different tool entirely — PLG writes the words that sell the property." },
+  { slug: "/compare/zillow", rival: "Zillow AI Description", tagline: "Portal Feature vs Independent Tool", verdict: "Locked inside Zillow's ecosystem. Generic, no FHA training, no social or email output. You can't use it on other platforms." },
+  { slug: "/compare/realtor", rival: "Realtor.com AI", tagline: "Portal Feature vs Independent Tool", verdict: "Embedded in Realtor.com only. Not a standalone tool you can use across MLS, social, and email." },
+  { slug: "/compare/grammarly", rival: "Grammarly", tagline: "Writing Assistant vs Writing Engine", verdict: "Catches typos. Doesn't write listing copy, research properties, or check FHA compliance." },
 ];
 
 const WHY_PLG_REASONS = [
@@ -229,41 +134,6 @@ function CompareIndex() {
                 </div>
               </Link>
             ))}
-          </div>
-        </div>
-
-        {/* Expanded competitor grid */}
-        <div className="win95-window">
-          <div className="win95-titlebar">
-            <span className="font-bold text-win95-12 truncate pl-1">
-              PLG vs {MORE_COMPARISONS.length} Other Tools
-            </span>
-          </div>
-          <div className="p-3">
-            <div className="space-y-1">
-              {MORE_COMPARISONS.map((c) => (
-                <div
-                  key={c.rival}
-                  className="win95-inset p-2"
-                >
-                  <div className="flex items-start gap-2">
-                    <div className="flex-1 min-w-0">
-                      <div className="flex items-center gap-2 flex-wrap">
-                        <span className="text-win95-12 font-bold">
-                          PLG vs {c.rival}
-                        </span>
-                        <span className="win95-raised px-1.5 py-0 text-[10px] text-muted-foreground">
-                          {c.category}
-                        </span>
-                      </div>
-                      <p className="text-win95-11 text-muted-foreground mt-0.5">
-                        {c.verdict}
-                      </p>
-                    </div>
-                  </div>
-                </div>
-              ))}
-            </div>
           </div>
         </div>
 
