@@ -17,8 +17,24 @@ import { Route as IndexRouteImport } from './routes/index'
 import { Route as CompareIndexRouteImport } from './routes/compare/index'
 import { Route as BlogIndexRouteImport } from './routes/blog/index'
 import { Route as ListingIdRouteImport } from './routes/listing/$id'
+import { Route as CompareZillowRouteImport } from './routes/compare/zillow'
+import { Route as CompareWritesonicRouteImport } from './routes/compare/writesonic'
+import { Route as CompareVirtualstagingaiRouteImport } from './routes/compare/virtualstagingai'
+import { Route as CompareReimaginehomeRouteImport } from './routes/compare/reimaginehome'
+import { Route as CompareRealtorRouteImport } from './routes/compare/realtor'
+import { Route as CompareListingrobotRouteImport } from './routes/compare/listingrobot'
 import { Route as CompareListingaiRouteImport } from './routes/compare/listingai'
+import { Route as CompareKvcoreRouteImport } from './routes/compare/kvcore'
+import { Route as CompareJasperRouteImport } from './routes/compare/jasper'
+import { Route as CompareHomebotRouteImport } from './routes/compare/homebot'
+import { Route as CompareGrammarlyRouteImport } from './routes/compare/grammarly'
+import { Route as CompareFollowupbossRouteImport } from './routes/compare/followupboss'
+import { Route as CompareEpiqueRouteImport } from './routes/compare/epique'
 import { Route as CompareDealmachineRouteImport } from './routes/compare/dealmachine'
+import { Route as CompareCuraytorRouteImport } from './routes/compare/curaytor'
+import { Route as CompareCopyaiRouteImport } from './routes/compare/copyai'
+import { Route as CompareChatgptRouteImport } from './routes/compare/chatgpt'
+import { Route as CompareCanvaRouteImport } from './routes/compare/canva'
 import { Route as BlogSlugRouteImport } from './routes/blog/$slug'
 
 const TermsRoute = TermsRouteImport.update({
@@ -61,14 +77,94 @@ const ListingIdRoute = ListingIdRouteImport.update({
   path: '/listing/$id',
   getParentRoute: () => rootRouteImport,
 } as any)
+const CompareZillowRoute = CompareZillowRouteImport.update({
+  id: '/compare/zillow',
+  path: '/compare/zillow',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const CompareWritesonicRoute = CompareWritesonicRouteImport.update({
+  id: '/compare/writesonic',
+  path: '/compare/writesonic',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const CompareVirtualstagingaiRoute = CompareVirtualstagingaiRouteImport.update({
+  id: '/compare/virtualstagingai',
+  path: '/compare/virtualstagingai',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const CompareReimaginehomeRoute = CompareReimaginehomeRouteImport.update({
+  id: '/compare/reimaginehome',
+  path: '/compare/reimaginehome',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const CompareRealtorRoute = CompareRealtorRouteImport.update({
+  id: '/compare/realtor',
+  path: '/compare/realtor',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const CompareListingrobotRoute = CompareListingrobotRouteImport.update({
+  id: '/compare/listingrobot',
+  path: '/compare/listingrobot',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const CompareListingaiRoute = CompareListingaiRouteImport.update({
   id: '/compare/listingai',
   path: '/compare/listingai',
   getParentRoute: () => rootRouteImport,
 } as any)
+const CompareKvcoreRoute = CompareKvcoreRouteImport.update({
+  id: '/compare/kvcore',
+  path: '/compare/kvcore',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const CompareJasperRoute = CompareJasperRouteImport.update({
+  id: '/compare/jasper',
+  path: '/compare/jasper',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const CompareHomebotRoute = CompareHomebotRouteImport.update({
+  id: '/compare/homebot',
+  path: '/compare/homebot',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const CompareGrammarlyRoute = CompareGrammarlyRouteImport.update({
+  id: '/compare/grammarly',
+  path: '/compare/grammarly',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const CompareFollowupbossRoute = CompareFollowupbossRouteImport.update({
+  id: '/compare/followupboss',
+  path: '/compare/followupboss',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const CompareEpiqueRoute = CompareEpiqueRouteImport.update({
+  id: '/compare/epique',
+  path: '/compare/epique',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const CompareDealmachineRoute = CompareDealmachineRouteImport.update({
   id: '/compare/dealmachine',
   path: '/compare/dealmachine',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const CompareCuraytorRoute = CompareCuraytorRouteImport.update({
+  id: '/compare/curaytor',
+  path: '/compare/curaytor',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const CompareCopyaiRoute = CompareCopyaiRouteImport.update({
+  id: '/compare/copyai',
+  path: '/compare/copyai',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const CompareChatgptRoute = CompareChatgptRouteImport.update({
+  id: '/compare/chatgpt',
+  path: '/compare/chatgpt',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const CompareCanvaRoute = CompareCanvaRouteImport.update({
+  id: '/compare/canva',
+  path: '/compare/canva',
   getParentRoute: () => rootRouteImport,
 } as any)
 const BlogSlugRoute = BlogSlugRouteImport.update({
@@ -84,8 +180,24 @@ export interface FileRoutesByFullPath {
   '/privacy': typeof PrivacyRoute
   '/terms': typeof TermsRoute
   '/blog/$slug': typeof BlogSlugRoute
+  '/compare/canva': typeof CompareCanvaRoute
+  '/compare/chatgpt': typeof CompareChatgptRoute
+  '/compare/copyai': typeof CompareCopyaiRoute
+  '/compare/curaytor': typeof CompareCuraytorRoute
   '/compare/dealmachine': typeof CompareDealmachineRoute
+  '/compare/epique': typeof CompareEpiqueRoute
+  '/compare/followupboss': typeof CompareFollowupbossRoute
+  '/compare/grammarly': typeof CompareGrammarlyRoute
+  '/compare/homebot': typeof CompareHomebotRoute
+  '/compare/jasper': typeof CompareJasperRoute
+  '/compare/kvcore': typeof CompareKvcoreRoute
   '/compare/listingai': typeof CompareListingaiRoute
+  '/compare/listingrobot': typeof CompareListingrobotRoute
+  '/compare/realtor': typeof CompareRealtorRoute
+  '/compare/reimaginehome': typeof CompareReimaginehomeRoute
+  '/compare/virtualstagingai': typeof CompareVirtualstagingaiRoute
+  '/compare/writesonic': typeof CompareWritesonicRoute
+  '/compare/zillow': typeof CompareZillowRoute
   '/listing/$id': typeof ListingIdRoute
   '/blog/': typeof BlogIndexRoute
   '/compare/': typeof CompareIndexRoute
@@ -97,8 +209,24 @@ export interface FileRoutesByTo {
   '/privacy': typeof PrivacyRoute
   '/terms': typeof TermsRoute
   '/blog/$slug': typeof BlogSlugRoute
+  '/compare/canva': typeof CompareCanvaRoute
+  '/compare/chatgpt': typeof CompareChatgptRoute
+  '/compare/copyai': typeof CompareCopyaiRoute
+  '/compare/curaytor': typeof CompareCuraytorRoute
   '/compare/dealmachine': typeof CompareDealmachineRoute
+  '/compare/epique': typeof CompareEpiqueRoute
+  '/compare/followupboss': typeof CompareFollowupbossRoute
+  '/compare/grammarly': typeof CompareGrammarlyRoute
+  '/compare/homebot': typeof CompareHomebotRoute
+  '/compare/jasper': typeof CompareJasperRoute
+  '/compare/kvcore': typeof CompareKvcoreRoute
   '/compare/listingai': typeof CompareListingaiRoute
+  '/compare/listingrobot': typeof CompareListingrobotRoute
+  '/compare/realtor': typeof CompareRealtorRoute
+  '/compare/reimaginehome': typeof CompareReimaginehomeRoute
+  '/compare/virtualstagingai': typeof CompareVirtualstagingaiRoute
+  '/compare/writesonic': typeof CompareWritesonicRoute
+  '/compare/zillow': typeof CompareZillowRoute
   '/listing/$id': typeof ListingIdRoute
   '/blog': typeof BlogIndexRoute
   '/compare': typeof CompareIndexRoute
@@ -111,8 +239,24 @@ export interface FileRoutesById {
   '/privacy': typeof PrivacyRoute
   '/terms': typeof TermsRoute
   '/blog/$slug': typeof BlogSlugRoute
+  '/compare/canva': typeof CompareCanvaRoute
+  '/compare/chatgpt': typeof CompareChatgptRoute
+  '/compare/copyai': typeof CompareCopyaiRoute
+  '/compare/curaytor': typeof CompareCuraytorRoute
   '/compare/dealmachine': typeof CompareDealmachineRoute
+  '/compare/epique': typeof CompareEpiqueRoute
+  '/compare/followupboss': typeof CompareFollowupbossRoute
+  '/compare/grammarly': typeof CompareGrammarlyRoute
+  '/compare/homebot': typeof CompareHomebotRoute
+  '/compare/jasper': typeof CompareJasperRoute
+  '/compare/kvcore': typeof CompareKvcoreRoute
   '/compare/listingai': typeof CompareListingaiRoute
+  '/compare/listingrobot': typeof CompareListingrobotRoute
+  '/compare/realtor': typeof CompareRealtorRoute
+  '/compare/reimaginehome': typeof CompareReimaginehomeRoute
+  '/compare/virtualstagingai': typeof CompareVirtualstagingaiRoute
+  '/compare/writesonic': typeof CompareWritesonicRoute
+  '/compare/zillow': typeof CompareZillowRoute
   '/listing/$id': typeof ListingIdRoute
   '/blog/': typeof BlogIndexRoute
   '/compare/': typeof CompareIndexRoute
@@ -126,8 +270,24 @@ export interface FileRouteTypes {
     | '/privacy'
     | '/terms'
     | '/blog/$slug'
+    | '/compare/canva'
+    | '/compare/chatgpt'
+    | '/compare/copyai'
+    | '/compare/curaytor'
     | '/compare/dealmachine'
+    | '/compare/epique'
+    | '/compare/followupboss'
+    | '/compare/grammarly'
+    | '/compare/homebot'
+    | '/compare/jasper'
+    | '/compare/kvcore'
     | '/compare/listingai'
+    | '/compare/listingrobot'
+    | '/compare/realtor'
+    | '/compare/reimaginehome'
+    | '/compare/virtualstagingai'
+    | '/compare/writesonic'
+    | '/compare/zillow'
     | '/listing/$id'
     | '/blog/'
     | '/compare/'
@@ -139,8 +299,24 @@ export interface FileRouteTypes {
     | '/privacy'
     | '/terms'
     | '/blog/$slug'
+    | '/compare/canva'
+    | '/compare/chatgpt'
+    | '/compare/copyai'
+    | '/compare/curaytor'
     | '/compare/dealmachine'
+    | '/compare/epique'
+    | '/compare/followupboss'
+    | '/compare/grammarly'
+    | '/compare/homebot'
+    | '/compare/jasper'
+    | '/compare/kvcore'
     | '/compare/listingai'
+    | '/compare/listingrobot'
+    | '/compare/realtor'
+    | '/compare/reimaginehome'
+    | '/compare/virtualstagingai'
+    | '/compare/writesonic'
+    | '/compare/zillow'
     | '/listing/$id'
     | '/blog'
     | '/compare'
@@ -152,8 +328,24 @@ export interface FileRouteTypes {
     | '/privacy'
     | '/terms'
     | '/blog/$slug'
+    | '/compare/canva'
+    | '/compare/chatgpt'
+    | '/compare/copyai'
+    | '/compare/curaytor'
     | '/compare/dealmachine'
+    | '/compare/epique'
+    | '/compare/followupboss'
+    | '/compare/grammarly'
+    | '/compare/homebot'
+    | '/compare/jasper'
+    | '/compare/kvcore'
     | '/compare/listingai'
+    | '/compare/listingrobot'
+    | '/compare/realtor'
+    | '/compare/reimaginehome'
+    | '/compare/virtualstagingai'
+    | '/compare/writesonic'
+    | '/compare/zillow'
     | '/listing/$id'
     | '/blog/'
     | '/compare/'
@@ -166,8 +358,24 @@ export interface RootRouteChildren {
   PrivacyRoute: typeof PrivacyRoute
   TermsRoute: typeof TermsRoute
   BlogSlugRoute: typeof BlogSlugRoute
+  CompareCanvaRoute: typeof CompareCanvaRoute
+  CompareChatgptRoute: typeof CompareChatgptRoute
+  CompareCopyaiRoute: typeof CompareCopyaiRoute
+  CompareCuraytorRoute: typeof CompareCuraytorRoute
   CompareDealmachineRoute: typeof CompareDealmachineRoute
+  CompareEpiqueRoute: typeof CompareEpiqueRoute
+  CompareFollowupbossRoute: typeof CompareFollowupbossRoute
+  CompareGrammarlyRoute: typeof CompareGrammarlyRoute
+  CompareHomebotRoute: typeof CompareHomebotRoute
+  CompareJasperRoute: typeof CompareJasperRoute
+  CompareKvcoreRoute: typeof CompareKvcoreRoute
   CompareListingaiRoute: typeof CompareListingaiRoute
+  CompareListingrobotRoute: typeof CompareListingrobotRoute
+  CompareRealtorRoute: typeof CompareRealtorRoute
+  CompareReimaginehomeRoute: typeof CompareReimaginehomeRoute
+  CompareVirtualstagingaiRoute: typeof CompareVirtualstagingaiRoute
+  CompareWritesonicRoute: typeof CompareWritesonicRoute
+  CompareZillowRoute: typeof CompareZillowRoute
   ListingIdRoute: typeof ListingIdRoute
   BlogIndexRoute: typeof BlogIndexRoute
   CompareIndexRoute: typeof CompareIndexRoute
@@ -231,6 +439,48 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ListingIdRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/compare/zillow': {
+      id: '/compare/zillow'
+      path: '/compare/zillow'
+      fullPath: '/compare/zillow'
+      preLoaderRoute: typeof CompareZillowRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/compare/writesonic': {
+      id: '/compare/writesonic'
+      path: '/compare/writesonic'
+      fullPath: '/compare/writesonic'
+      preLoaderRoute: typeof CompareWritesonicRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/compare/virtualstagingai': {
+      id: '/compare/virtualstagingai'
+      path: '/compare/virtualstagingai'
+      fullPath: '/compare/virtualstagingai'
+      preLoaderRoute: typeof CompareVirtualstagingaiRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/compare/reimaginehome': {
+      id: '/compare/reimaginehome'
+      path: '/compare/reimaginehome'
+      fullPath: '/compare/reimaginehome'
+      preLoaderRoute: typeof CompareReimaginehomeRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/compare/realtor': {
+      id: '/compare/realtor'
+      path: '/compare/realtor'
+      fullPath: '/compare/realtor'
+      preLoaderRoute: typeof CompareRealtorRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/compare/listingrobot': {
+      id: '/compare/listingrobot'
+      path: '/compare/listingrobot'
+      fullPath: '/compare/listingrobot'
+      preLoaderRoute: typeof CompareListingrobotRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/compare/listingai': {
       id: '/compare/listingai'
       path: '/compare/listingai'
@@ -238,11 +488,81 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof CompareListingaiRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/compare/kvcore': {
+      id: '/compare/kvcore'
+      path: '/compare/kvcore'
+      fullPath: '/compare/kvcore'
+      preLoaderRoute: typeof CompareKvcoreRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/compare/jasper': {
+      id: '/compare/jasper'
+      path: '/compare/jasper'
+      fullPath: '/compare/jasper'
+      preLoaderRoute: typeof CompareJasperRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/compare/homebot': {
+      id: '/compare/homebot'
+      path: '/compare/homebot'
+      fullPath: '/compare/homebot'
+      preLoaderRoute: typeof CompareHomebotRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/compare/grammarly': {
+      id: '/compare/grammarly'
+      path: '/compare/grammarly'
+      fullPath: '/compare/grammarly'
+      preLoaderRoute: typeof CompareGrammarlyRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/compare/followupboss': {
+      id: '/compare/followupboss'
+      path: '/compare/followupboss'
+      fullPath: '/compare/followupboss'
+      preLoaderRoute: typeof CompareFollowupbossRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/compare/epique': {
+      id: '/compare/epique'
+      path: '/compare/epique'
+      fullPath: '/compare/epique'
+      preLoaderRoute: typeof CompareEpiqueRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/compare/dealmachine': {
       id: '/compare/dealmachine'
       path: '/compare/dealmachine'
       fullPath: '/compare/dealmachine'
       preLoaderRoute: typeof CompareDealmachineRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/compare/curaytor': {
+      id: '/compare/curaytor'
+      path: '/compare/curaytor'
+      fullPath: '/compare/curaytor'
+      preLoaderRoute: typeof CompareCuraytorRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/compare/copyai': {
+      id: '/compare/copyai'
+      path: '/compare/copyai'
+      fullPath: '/compare/copyai'
+      preLoaderRoute: typeof CompareCopyaiRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/compare/chatgpt': {
+      id: '/compare/chatgpt'
+      path: '/compare/chatgpt'
+      fullPath: '/compare/chatgpt'
+      preLoaderRoute: typeof CompareChatgptRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/compare/canva': {
+      id: '/compare/canva'
+      path: '/compare/canva'
+      fullPath: '/compare/canva'
+      preLoaderRoute: typeof CompareCanvaRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/blog/$slug': {
@@ -262,8 +582,24 @@ const rootRouteChildren: RootRouteChildren = {
   PrivacyRoute: PrivacyRoute,
   TermsRoute: TermsRoute,
   BlogSlugRoute: BlogSlugRoute,
+  CompareCanvaRoute: CompareCanvaRoute,
+  CompareChatgptRoute: CompareChatgptRoute,
+  CompareCopyaiRoute: CompareCopyaiRoute,
+  CompareCuraytorRoute: CompareCuraytorRoute,
   CompareDealmachineRoute: CompareDealmachineRoute,
+  CompareEpiqueRoute: CompareEpiqueRoute,
+  CompareFollowupbossRoute: CompareFollowupbossRoute,
+  CompareGrammarlyRoute: CompareGrammarlyRoute,
+  CompareHomebotRoute: CompareHomebotRoute,
+  CompareJasperRoute: CompareJasperRoute,
+  CompareKvcoreRoute: CompareKvcoreRoute,
   CompareListingaiRoute: CompareListingaiRoute,
+  CompareListingrobotRoute: CompareListingrobotRoute,
+  CompareRealtorRoute: CompareRealtorRoute,
+  CompareReimaginehomeRoute: CompareReimaginehomeRoute,
+  CompareVirtualstagingaiRoute: CompareVirtualstagingaiRoute,
+  CompareWritesonicRoute: CompareWritesonicRoute,
+  CompareZillowRoute: CompareZillowRoute,
   ListingIdRoute: ListingIdRoute,
   BlogIndexRoute: BlogIndexRoute,
   CompareIndexRoute: CompareIndexRoute,
