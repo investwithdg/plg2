@@ -66,6 +66,7 @@ const WHY_PLG_REASONS = [
   },
 ];
 
+function CompareIndex() {
   const [featured, ...rest] = DEEP_DIVE_COMPARISONS;
 
   const ACCENT_COLORS = [
