@@ -706,10 +706,10 @@ function PropertyTypeToggle({
             {opt.label}
             {isProTier && !isProUser && (
               <span
-                className={`absolute -top-2.5 -right-1 text-[9px] font-bold leading-none ${
+                className={`absolute -top-2.5 -right-1 text-[10px] font-bold leading-none ${
                   proTierUsed
                     ? "text-muted-foreground"
-                    : "text-[color:var(--destructive)]"
+                    : "text-[#FFD700] [text-shadow:1px_1px_0_rgba(0,0,0,0.8)]"
                 }`}
               >
                 {proTierUsed ? "🔒" : "★"}
