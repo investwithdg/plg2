@@ -1,4 +1,5 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
+import { useState } from "react";
 import { ARTICLES } from "./_articles";
 
 export const Route = createFileRoute("/blog/")({
@@ -46,7 +47,11 @@ function deriveCategory(slug: string): string {
 }
 
 function BlogIndex() {
-  const [featured, ...rest] = ARTICLES;
+  const [featured, ...allRest] = ARTICLES;
+  const [visibleCount, setVisibleCount] = useState(6);
+  
+  const rest = allRest.slice(0, visibleCount);
+  const hasMore = visibleCount < allRest.length;
 
   return (
     <div className="min-h-screen bg-[var(--background)] p-4 flex flex-col items-center">
@@ -154,6 +159,18 @@ function BlogIndex() {
                 </div>
               </Link>
             ))}
+          </div>
+        )}
+
+        {/* Pagination / Load More */}
+        {hasMore && (
+          <div className="flex justify-center pt-2">
+            <button
+              onClick={() => setVisibleCount((prev) => prev + 6)}
+              className="win95-raised px-4 py-1.5 text-win95-12 font-bold cursor-pointer active:win95-pressed"
+            >
+              Load more articles...
+            </button>
           </div>
         )}
 

@@ -66,10 +66,20 @@ const WHY_PLG_REASONS = [
   },
 ];
 
-function CompareIndex() {
+  const [featured, ...rest] = DEEP_DIVE_COMPARISONS;
+
+  const ACCENT_COLORS = [
+    "var(--win95-blue)",
+    "#800000",
+    "#008080",
+    "#808000",
+    "#800080",
+    "#008000",
+  ];
+
   return (
     <div className="min-h-screen bg-[var(--background)] p-4 flex flex-col items-center">
-      <div className="w-full max-w-2xl space-y-4">
+      <div className="w-full max-w-3xl space-y-4">
         {/* Main window */}
         <div className="win95-window">
           <div className="win95-titlebar">
@@ -78,7 +88,7 @@ function CompareIndex() {
             </span>
             <div className="flex gap-[2px]">
               <Link to="/" className="win95-control-btn no-underline" aria-label="Close">
-                x
+                ×
               </Link>
             </div>
           </div>
@@ -106,36 +116,80 @@ function CompareIndex() {
           </div>
         </div>
 
-        {/* Deep-dive comparison cards */}
-        <div className="win95-window">
-          <div className="win95-titlebar">
-            <span className="font-bold text-win95-12 truncate pl-1">
-              In-Depth Comparisons
-            </span>
-          </div>
-          <div className="p-3 space-y-2">
-            {DEEP_DIVE_COMPARISONS.map((c) => (
+        {/* Featured comparison */}
+        {featured && (
+          <Link
+            to={featured.slug}
+            className="block no-underline"
+          >
+            <div className="win95-window group cursor-pointer">
+              <div
+                className="win95-titlebar"
+                style={{
+                  background: "linear-gradient(to right, #800000, #c04040)",
+                }}
+              >
+                <span className="font-bold text-win95-12 truncate pl-1">
+                  ★ Featured Comparison
+                </span>
+              </div>
+              <div className="p-4 group-hover:bg-[color:var(--win95-blue)] group-hover:text-white transition-colors">
+                <div className="flex items-center gap-2 mb-2">
+                  <span className="win95-raised px-1.5 py-0.5 text-[10px] font-bold text-black group-hover:text-black">
+                    PLG vs {featured.rival}
+                  </span>
+                </div>
+                <h2 className="text-win95-14 font-bold mb-2">
+                  {featured.tagline}
+                </h2>
+                <p className="text-win95-12 text-muted-foreground group-hover:text-white/90">
+                  {featured.verdict}
+                </p>
+                <div className="mt-3 text-win95-11 font-bold text-[var(--win95-blue)] group-hover:text-white">
+                  Read comparison →
+                </div>
+              </div>
+            </div>
+          </Link>
+        )}
+
+        {/* Comparison grid */}
+        {rest.length > 0 && (
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            {rest.map((c, i) => (
               <Link
                 key={c.slug}
                 to={c.slug}
-                className="block no-underline text-black"
+                className="block no-underline"
               >
-                <div className="win95-raised p-3 cursor-pointer hover:brightness-105">
-                  <div className="flex items-center gap-2 mb-1">
-                    <span className="font-bold text-win95-13">
-                      PLG vs {c.rival}
-                    </span>
-                    <span className="text-win95-11 text-[var(--win95-blue)]">→</span>
+                <div className="win95-window h-full group cursor-pointer">
+                  <div
+                    className="h-1.5"
+                    style={{
+                      background: ACCENT_COLORS[i % ACCENT_COLORS.length],
+                    }}
+                  />
+                  <div className="p-3 group-hover:bg-[color:var(--win95-blue)] group-hover:text-white transition-colors h-full">
+                    <div className="flex items-center gap-2 mb-1.5 flex-wrap">
+                      <span className="win95-raised px-1.5 py-0 text-[10px] font-bold text-black group-hover:text-black">
+                        PLG vs {c.rival}
+                      </span>
+                    </div>
+                    <h3 className="text-win95-12 font-bold mb-1 line-clamp-2">
+                      {c.tagline}
+                    </h3>
+                    <p className="text-win95-11 text-muted-foreground group-hover:text-white/80 line-clamp-3 mb-2">
+                      {c.verdict}
+                    </p>
+                    <div className="flex items-center justify-between text-win95-11 font-bold text-[var(--win95-blue)] group-hover:text-white/90 mt-auto">
+                      <span>Read →</span>
+                    </div>
                   </div>
-                  <p className="text-win95-11 text-muted-foreground mb-1">
-                    {c.tagline}
-                  </p>
-                  <p className="text-win95-11 font-bold">{c.verdict}</p>
                 </div>
               </Link>
             ))}
           </div>
-        </div>
+        )}
 
         {/* CTA */}
         <div className="text-center pt-2">
