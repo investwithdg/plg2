@@ -201,7 +201,7 @@ export default function ListingHistory({ userId, isProUser }: { userId: string, 
                       renderActions={(activeTab) => (
                         <div className="flex gap-2 mt-2">
                           <RetroButton
-                            onClick={() => onCopy(expandedCopies[activeTab])}
+                            onClick={() => onCopy(expandedCopies[activeTab] ?? "")}
                           >
                             copy {activeTab}
                           </RetroButton>
