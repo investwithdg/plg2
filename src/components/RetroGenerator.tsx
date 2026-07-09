@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from "react";
+import type { ReactNode } from "react";
 import { Link } from "@tanstack/react-router";
 import { toast as sonnerToast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
@@ -136,7 +137,7 @@ export default function RetroGenerator() {
     const raw = window.localStorage.getItem(PRO_TIER_STORAGE_KEY);
     return raw ? Number(raw) || 0 : 0;
   });
-  const [outputs, setOutputs] = useState<Partial<Record<OutputTabKey, string>> | null>(
+  const [outputs, setOutputs] = useState<Partial<Record<OutputTabKey, ReactNode>> | null>(
     null,
   );
   const [historyKey, setHistoryKey] = useState(0);
@@ -262,9 +263,51 @@ export default function RetroGenerator() {
       });
       
       if (isProUser && enrichmentData && enrichmentData.perplexity_raw_response) {
-        outputMap.research = typeof enrichmentData.perplexity_raw_response === "string" 
-          ? enrichmentData.perplexity_raw_response 
+        const rawString = typeof enrichmentData.perplexity_raw_response === "string"
+          ? enrichmentData.perplexity_raw_response
           : JSON.stringify(enrichmentData.perplexity_raw_response, null, 2);
+
+        outputMap.research = (
+          <div className="space-y-4">
+            {property?.fha_violations && property.fha_violations.length > 0 && (
+              <div className="win95-window mb-4">
+                <div className="win95-titlebar bg-red-700 text-white">
+                  <span className="font-bold text-win95-12 pl-1">FHA Compliance Alert</span>
+                </div>
+                <div className="p-3 bg-red-50 space-y-2 text-red-900 text-win95-12">
+                  <p className="font-bold">We found FHA violations in your existing listing.</p>
+                  <p>The following terms were flagged and removed before generating your new copy:</p>
+                  <ul className="list-disc pl-5">
+                    {property.fha_violations.map((v, i) => (
+                      <li key={i}>{v}</li>
+                    ))}
+                  </ul>
+                </div>
+              </div>
+            )}
+            {property?.fha_violations && property.fha_violations.length === 0 && property.existing_listing_raw && (
+              <div className="win95-window mb-4">
+                <div className="win95-titlebar bg-[var(--win95-blue)] text-white">
+                  <span className="font-bold text-win95-12 pl-1">FHA Compliance Report</span>
+                </div>
+                <div className="p-3 bg-[var(--win95-gray)] space-y-2 text-win95-12">
+                  <p className="font-bold">Good news!</p>
+                  <p>Your existing listing was analyzed and found to be fully FHA-compliant. We used it to enrich your new copy.</p>
+                </div>
+              </div>
+            )}
+            <div className="win95-window">
+              <div className="win95-titlebar">
+                <span className="font-bold text-win95-12 pl-1">Neighborhood Data</span>
+              </div>
+              <div className="p-3 bg-[var(--win95-gray)]">
+                <pre className="whitespace-pre-wrap text-win95-12 font-system m-0 leading-relaxed bg-input p-2 win95-inset">
+                  {rawString}
+                </pre>
+              </div>
+            </div>
+          </div>
+        );
       }
 
       setOutputs(outputMap);

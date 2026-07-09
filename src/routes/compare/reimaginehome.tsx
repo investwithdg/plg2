@@ -27,7 +27,7 @@ function VsReimagine() {
           <div className="p-4 space-y-3">
             <h1 className="text-win95-16 font-bold">Photos vs. Words</h1>
             <p className="text-win95-12"><strong>REimagineHome</strong> is an incredible AI tool for virtual staging. It lets you upload a photo of an empty room and use AI to add furniture, change flooring, and visualize renovations.</p>
-            <p className="text-win95-12"><strong>PLG</strong> is an incredible AI tool for copywriting. It researches the property and writes the FHA-compliant text for the MLS, social media, and email.</p>
+            <p className="text-win95-12"><strong>PLG</strong> is an incredible tool for copywriting. It researches the property and writes the FHA-compliant text for the MLS, social media, and email.</p>
             <p className="text-win95-12 font-bold">They don't compete. A great listing uses REimagineHome for the visuals and PLG for the words.</p>
             <div className="flex gap-2 pt-2">
               <Link to="/"><button type="button" className="win95-raised px-4 py-1 text-win95-12 font-bold cursor-pointer active:win95-pressed">Try PLG Free</button></Link>

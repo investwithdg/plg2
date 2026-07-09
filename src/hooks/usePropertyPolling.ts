@@ -21,6 +21,8 @@ export interface PropertyWithCopies {
   price: number | null;
   status: PropertyStatus;
   enrichment_step: EnrichmentStep;
+  fha_violations: string[] | null;
+  existing_listing_raw: string | null;
   created_at: string;
 }
 
@@ -125,7 +127,7 @@ export function usePropertyPolling(
           supabase.from("properties" as never) as any
         )
           .select(
-            "id, address, property_type, status, enrichment_step, extraction_status, failed_step, beds, baths, sqft, price, created_at",
+            "id, address, property_type, status, enrichment_step, extraction_status, failed_step, beds, baths, sqft, price, fha_violations, existing_listing_raw, created_at",
           )
           .eq("id", propId)
           .maybeSingle();

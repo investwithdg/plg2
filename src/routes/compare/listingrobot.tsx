@@ -4,7 +4,7 @@ export const Route = createFileRoute("/compare/listingrobot")({
   head: () => ({
     meta: [
       { title: "PLG vs Listing Robot — Property Listing Generator Comparison" },
-      { name: "description", content: "Listing Robot provides template-based MLS descriptions. PLG is an AI copy generator with Perplexity research, FHA compliance, and three format outputs." },
+      { name: "description", content: "Listing Robot provides template-based MLS descriptions. PLG is an copy generator with Perplexity research, FHA compliance, and three format outputs." },
       { property: "og:title", content: "PLG vs Listing Robot — Property Listing Generator Comparison" },
       { property: "og:description", content: "Template descriptions vs. researched AI copy. See why PLG is the better choice for agents." },
     ],
@@ -37,7 +37,7 @@ function VsListingRobot() {
           <div className="p-4 space-y-3">
             <h1 className="text-win95-16 font-bold">PLG vs Listing Robot: Templates vs. Intelligence</h1>
             <p className="text-win95-12"><strong>Listing Robot</strong> helps agents create MLS descriptions by plugging features into pre-written templates. It's a step up from starting with a blank page, but the results often sound formulaic and require you to manually gather and input every detail.</p>
-            <p className="text-win95-12"><strong>PLG</strong> is a modern AI listing generator. Instead of just filling in blanks, it uses Perplexity AI to research the property, neighborhood, and schools, and then writes unique, FHA-compliant copy for MLS, social media, and email simultaneously.</p>
+            <p className="text-win95-12"><strong>PLG</strong> is a modern listing generator. Instead of just filling in blanks, it uses Perplexity AI to research the property, neighborhood, and schools, and then writes unique, FHA-compliant copy for MLS, social media, and email simultaneously.</p>
           </div>
         </div>
 

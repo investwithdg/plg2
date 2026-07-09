@@ -9,7 +9,7 @@ export const Route = createFileRoute("/features")({
       {
         name: "description",
         content:
-          "Explore the features of PropertyListingGenerator.com. FHA-compliant, research-backed real estate listing copy in seconds, powered by advanced AI.",
+          "Explore the features of PropertyListingGenerator.com. FHA-compliant, research-backed real estate listing copy in seconds, perfectly formatted.",
       },
       {
         property: "og:title",
@@ -18,7 +18,7 @@ export const Route = createFileRoute("/features")({
       {
         property: "og:description",
         content:
-          "Explore the features of PropertyListingGenerator.com. FHA-compliant, research-backed real estate listing copy in seconds, powered by advanced AI.",
+          "Explore the features of PropertyListingGenerator.com. FHA-compliant, research-backed real estate listing copy in seconds, perfectly formatted.",
       },
     ],
   }),
@@ -28,11 +28,11 @@ export const Route = createFileRoute("/features")({
 const FEATURES = [
   {
     title: "Research Pro",
-    description: "Instead of hallucinating details like ChatGPT, our engine queries Perplexity AI in real-time to gather deep, factual insights about your property and its neighborhood before writing a single word. Access raw, copyable research data to augment your own workflows.",
+    description: "Instead of hallucinating details like ChatGPT, our engine queries property and neighborhood data in real-time to gather deep, factual insights about your property before writing a single word. Access raw, copyable research data to augment your own workflows.",
   },
   {
     title: "FHA Compliance Engine",
-    description: "Our proprietary AI guardrails scan and rewrite your listing copy to ensure 100% compliance with Fair Housing Act guidelines. Avoid discriminatory language and costly fines effortlessly.",
+    description: "Our proprietary compliance guardrails scan and rewrite your listing copy to ensure 100% compliance with Fair Housing Act guidelines. Avoid discriminatory language and costly fines effortlessly.",
   },
   {
     title: "Triple Format Output",
@@ -44,7 +44,7 @@ const FEATURES = [
   },
   {
     title: "Property Type Specialization",
-    description: "We don't use generic prompts. Whether it's a Single Family Residence, a Luxury Estate, or a Short Term Rental, our AI adapts its tone and structure perfectly.",
+    description: "We don't use generic prompts. Whether it's a Single Family Residence, a Luxury Estate, or a Short Term Rental, the system adapts its tone and structure perfectly.",
   },
   {
     title: "Secure & Simple History",

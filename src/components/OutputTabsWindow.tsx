@@ -4,7 +4,7 @@ import type { ReactNode } from "react";
 export type OutputTabKey = "mls" | "social" | "email" | "research";
 
 type OutputTabsWindowProps = {
-  outputs: Partial<Record<OutputTabKey, string>>;
+  outputs: Partial<Record<OutputTabKey, ReactNode>>;
   initialTab?: OutputTabKey;
   onTabChange?: (tab: OutputTabKey) => void;
   headerRight?: ReactNode;
@@ -67,9 +67,13 @@ export default function OutputTabsWindow({
 
       <div className="p-3 bg-card">
         <div className="win95-inset bg-input p-3">
-          <pre className="whitespace-pre-wrap text-win95-12 font-system m-0 leading-relaxed">
-            {outputs[activeTab]}
-          </pre>
+          {typeof outputs[activeTab] === "string" ? (
+            <pre className="whitespace-pre-wrap text-win95-12 font-system m-0 leading-relaxed">
+              {outputs[activeTab] as string}
+            </pre>
+          ) : (
+            outputs[activeTab]
+          )}
         </div>
         {renderActions?.(activeTab)}
       </div>

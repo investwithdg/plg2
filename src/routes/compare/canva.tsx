@@ -4,7 +4,7 @@ export const Route = createFileRoute("/compare/canva")({
   head: () => ({
     meta: [
       { title: "PLG vs Canva Magic Write — Property Listing Generator Comparison" },
-      { name: "description", content: "Canva Magic Write is a design tool with basic AI copy features. PLG is purpose-built for FHA-compliant real estate listing copy." },
+      { name: "description", content: "Canva Magic Write is a design tool with basic copy generation features. PLG is purpose-built for FHA-compliant real estate listing copy." },
       { property: "og:title", content: "PLG vs Canva Magic Write — Listing Generator Comparison" },
       { property: "og:description", content: "Canva designs graphics. PLG writes compliant listing copy." },
     ],
