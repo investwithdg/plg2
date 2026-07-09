@@ -49,7 +49,7 @@ function Pricing() {
         </div>
 
         {/* Pricing cards side by side */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
           {/* Free plan */}
           <div className="win95-window">
             <div className="win95-titlebar">
@@ -57,15 +57,18 @@ function Pricing() {
                 Free Plan
               </span>
             </div>
-            <div className="p-4 space-y-3">
+            <div className="p-4 space-y-3 flex flex-col h-full">
               <div className="text-center">
                 <span className="text-win95-16 font-bold">$0</span>
                 <span className="text-win95-11 text-muted-foreground">
                   {" "}
                   / month
                 </span>
+                <div className="text-[10px] text-transparent mt-0.5 pointer-events-none">
+                  spacer
+                </div>
               </div>
-              <div className="win95-inset p-3">
+              <div className="win95-inset p-3 flex-grow">
                 <ul className="space-y-1.5 text-win95-11">
                   <li className="flex gap-2">
                     <span className="font-bold text-[var(--win95-blue)]">+</span>
@@ -109,7 +112,7 @@ function Pricing() {
                   </li>
                 </ul>
               </div>
-              <div className="text-center pt-1">
+              <div className="text-center pt-1 mt-auto">
                 <Link to="/">
                   <button
                     type="button"
@@ -135,36 +138,30 @@ function Pricing() {
               </span>
               <span className="text-win95-11 opacity-90">unlimited</span>
             </div>
-            <div className="p-4 space-y-3">
+            <div className="p-4 space-y-3 flex flex-col h-full">
               <div className="text-center">
                 <span className="text-win95-16 font-bold">$49</span>
                 <span className="text-win95-11 text-muted-foreground">
                   {" "}
                   / month
                 </span>
+                <div className="text-[10px] text-muted-foreground mt-0.5">
+                  or $39/mo billed annually
+                </div>
               </div>
-              <div className="text-center">
-                <span className="win95-raised px-2 py-0.5 text-win95-11 inline-block">
-                  or $39/mo billed annually ($468/yr)
-                </span>
-              </div>
-              <div className="win95-inset p-3">
+              <div className="win95-inset p-3 flex-grow">
                 <ul className="space-y-1.5 text-win95-11">
                   <li className="flex gap-2">
                     <span className="font-bold text-[var(--win95-blue)]">+</span>
-                    <span>
-                      <strong>Unlimited</strong> generations
-                    </span>
+                    <span>Everything in Free, plus:</span>
                   </li>
                   <li className="flex gap-2">
                     <span className="font-bold text-[var(--win95-blue)]">+</span>
-                    <span>
-                      Unlimited <strong>Pro-tier property types</strong>
-                    </span>
+                    <span>Unlimited generation volume</span>
                   </li>
                   <li className="flex gap-2">
                     <span className="font-bold text-[var(--win95-blue)]">+</span>
-                    <span>MLS, Social, Email copy</span>
+                    <span>Unlimited Pro-tier property types</span>
                   </li>
                   <li className="flex gap-2">
                     <span className="font-bold text-[var(--win95-blue)]">+</span>
@@ -188,7 +185,7 @@ function Pricing() {
                   </li>
                 </ul>
               </div>
-              <div className="text-center pt-1">
+              <div className="text-center pt-1 mt-auto">
                 <a href="/?upgrade=true">
                   <button
                     type="button"
@@ -198,6 +195,60 @@ function Pricing() {
                     Go Pro
                   </button>
                 </a>
+              </div>
+            </div>
+          </div>
+
+          {/* Elite plan */}
+          <div className="win95-window opacity-80 filter grayscale-[20%]">
+            <div
+              className="win95-titlebar"
+              style={{
+                background: "linear-gradient(to right, #2b2b2b, #4a4a4a)",
+              }}
+            >
+              <span className="font-bold text-win95-12 truncate pl-1">
+                Elite Plan
+              </span>
+              <span className="text-win95-11 opacity-90">coming soon</span>
+            </div>
+            <div className="p-4 space-y-3 flex flex-col h-full">
+              <div className="text-center">
+                <span className="text-win95-16 font-bold text-muted-foreground">—</span>
+                <div className="text-[10px] text-muted-foreground mt-0.5">
+                  in development
+                </div>
+              </div>
+              <div className="win95-inset p-3 flex-grow bg-[var(--win95-gray)]">
+                <ul className="space-y-1.5 text-win95-11 text-muted-foreground">
+                  <li className="flex gap-2">
+                    <span className="font-bold">+</span>
+                    <span>Everything in Pro, plus:</span>
+                  </li>
+                  <li className="flex gap-2">
+                    <span className="font-bold">+</span>
+                    <span>
+                      <strong>Vision AI:</strong> Photo analysis & feature extraction
+                    </span>
+                  </li>
+                  <li className="flex gap-2">
+                    <span className="font-bold">+</span>
+                    <span>Custom brand voice training</span>
+                  </li>
+                  <li className="flex gap-2">
+                    <span className="font-bold">+</span>
+                    <span>Team collaboration</span>
+                  </li>
+                </ul>
+              </div>
+              <div className="text-center pt-1 mt-auto">
+                <button
+                  type="button"
+                  disabled
+                  className="win95-raised px-4 py-1 text-win95-12 font-bold cursor-not-allowed opacity-50"
+                >
+                  Coming Soon
+                </button>
               </div>
             </div>
           </div>

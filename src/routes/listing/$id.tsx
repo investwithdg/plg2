@@ -32,15 +32,25 @@ export const Route = createFileRoute("/listing/$id")({
       .eq("status", "complete")
       .maybeSingle();
 
-    if (propError || !property) throw notFound();
+    if (propError || !property) {
+      console.error("Listing route: Property fetch error or not found", propError);
+      throw notFound();
+    }
 
-    const { data: copies } = await supabase
+    const { data: copies, error: copiesError } = await supabase
       .from("copy_generations")
       .select("copy_type, content")
       .eq("property_id", params.id)
       .in("copy_type", ["mls", "social", "email"]);
 
-    if (!copies || copies.length === 0) throw notFound();
+    if (copiesError) {
+      console.error("Listing route: Copies fetch error", copiesError);
+    }
+
+    if (!copies || copies.length === 0) {
+      console.warn("Listing route: No copies found for property ID", params.id);
+      throw notFound();
+    }
 
     return {
       id: property.id,

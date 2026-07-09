@@ -31,7 +31,7 @@ type PropertyType =
   | "commercial"
   | "lease";
 
-type PaywallReason = "free_limit" | "pro_tier_limit";
+type PaywallReason = "free_limit" | "pro_tier_limit" | "upgrade_intent";
 
 const MAX_GENERATIONS = 10;
 const FREE_PRO_TIER_LIMIT = 1;
@@ -197,7 +197,7 @@ export default function RetroGenerator() {
       sonnerToast("Checkout cancelled. You can upgrade anytime.");
       window.history.replaceState({}, "", window.location.pathname);
     } else if (params.get("upgrade") === "true") {
-      setPaywallReason("free_limit");
+      setPaywallReason("upgrade_intent");
       setShowPaywall(true);
       window.history.replaceState({}, "", window.location.pathname);
     }
@@ -489,13 +489,18 @@ export default function RetroGenerator() {
             </div>
 
             <div className="flex gap-2 flex-wrap">
-              <RetroInput
-                placeholder="123 main st, austin, tx — or paste zillow url"
-                value={query}
-                onChange={(e) => setQuery(e.target.value)}
-                onKeyDown={(e) => e.key === "Enter" && handleGenerate()}
-                className="flex-1 min-w-[200px]"
-              />
+              <div className="flex-1 min-w-[200px] flex flex-col gap-1">
+                <RetroInput
+                  placeholder="123 main st, austin, tx — or paste zillow url"
+                  value={query}
+                  onChange={(e) => setQuery(e.target.value)}
+                  onKeyDown={(e) => e.key === "Enter" && handleGenerate()}
+                  className="w-full"
+                />
+                <span className="text-[10px] text-muted-foreground ml-1">
+                  Please be specific (e.g., 123 Main St, Austin TX) for best research results.
+                </span>
+              </div>
               <RetroButton
                 variant="primary"
                 onClick={handleGenerate}
@@ -625,7 +630,6 @@ export default function RetroGenerator() {
         ) : (
           <>
             <HowItWorks />
-            <SampleOutput />
           </>
         )}
       </main>
@@ -705,7 +709,7 @@ function PropertyTypeToggle({
           <button
             key={opt.key}
             onClick={() => onChange(opt.key)}
-            title={isProTier ? (isProUser ? "Pro tier (included)" : proTierUsed ? "Pro tier — upgrade to unlock" : "Pro tier: 1 included free, then Pro") : "Free tier"}
+            title={isProTier ? (isProUser ? "Pro tier (included)" : proTierUsed ? "0 Pro tier generations left — upgrade to unlock" : "Pro tier: 1 included free, then Pro") : "Free tier"}
             className={`px-2 py-1 text-win95-11 font-bold cursor-pointer relative ${
               isActive ? "win95-pressed bg-input" : "win95-raised bg-card"
             }`}
@@ -768,20 +772,35 @@ function Win95PaywallModal({
   };
 
   const proTierLimit = reason === "pro_tier_limit";
+  const upgradeIntent = reason === "upgrade_intent";
 
   return (
     <div className="fixed inset-0 bg-black/50 flex items-center justify-center p-4 z-50">
       <div className="win95-window w-full max-w-md">
         <div className="win95-titlebar">
           <span className="font-bold text-win95-12">
-            {proTierLimit ? "Pro-Tier Limit Used" : "Free Generations Used"}
+            {upgradeIntent
+              ? "Ready to Upgrade?"
+              : proTierLimit
+                ? "Pro-Tier Limit Used"
+                : "Free Generations Used"}
           </span>
           <button className="win95-control-btn" onClick={onClose}>
             x
           </button>
         </div>
         <div className="p-4 bg-card">
-          {proTierLimit ? (
+          {upgradeIntent ? (
+            <>
+              <p className="text-win95-12 mb-2">
+                Ready to take your real estate listings to the next level?
+              </p>
+              <p className="text-win95-11 text-muted-foreground mb-3">
+                Upgrade to Pro to unlock unlimited generations, all property types,
+                and advanced research features.
+              </p>
+            </>
+          ) : proTierLimit ? (
             <>
               <p className="text-win95-12 mb-2">
                 You&apos;ve used your included Pro-tier property generation.
@@ -906,57 +925,6 @@ function HowItWorks() {
               <p className="text-win95-12 text-muted-foreground">{s.body}</p>
             </div>
           ))}
-        </div>
-      </RetroWindow>
-    </div>
-  );
-}
-
-function SampleOutput() {
-  return (
-    <div className="w-full max-w-3xl">
-      <RetroWindow title="sample output — 742 Evergreen Terrace, Springfield" showControls={false}>
-        <div className="space-y-3">
-          <div className="win95-inset bg-input p-3">
-            <p className="text-win95-11 font-bold mb-1 text-[var(--win95-blue)]">
-              MLS Description
-            </p>
-            <p className="text-win95-11">
-              Meticulously maintained 3BR/2BA craftsman on a quiet tree-lined
-              street. Open-concept kitchen with granite countertops, stainless
-              appliances, and breakfast bar. Primary suite features walk-in
-              closet and ensuite with double vanity. Original hardwood floors
-              throughout. Spacious backyard with covered patio — ideal for
-              entertaining. New roof (2022), updated HVAC, 2-car garage. Walk to
-              top-rated Elmwood Elementary. Minutes to downtown. Equal housing
-              opportunity.
-            </p>
-          </div>
-          <div className="win95-inset bg-input p-3">
-            <p className="text-win95-11 font-bold mb-1 text-[var(--win95-blue)]">
-              Social Post (Instagram / Facebook)
-            </p>
-            <p className="text-win95-11">
-              Just listed — 742 Evergreen Terrace. A beautifully maintained
-              craftsman with 3 beds, 2 baths, and a kitchen that'll make you
-              want to cook. Hardwood floors, covered patio, and a backyard built
-              for summer. New roof + updated HVAC. Priced to move in a
-              neighborhood people are moving into. DM for a private showing.
-            </p>
-          </div>
-          <div className="win95-inset bg-input p-3">
-            <p className="text-win95-11 font-bold mb-1 text-[var(--win95-blue)]">
-              Email Subject + Opener
-            </p>
-            <p className="text-win95-11 whitespace-pre-line">{`Subject: Just Listed — 742 Evergreen Terrace (3/2, move-in ready)
-
-Hi [Name],
-
-A new listing just came to market that I think is worth a look. 742 Evergreen Terrace is a 3BR/2BA craftsman in one of Springfield's most sought-after pockets...`}</p>
-          </div>
-          <p className="text-win95-10 text-muted-foreground text-center italic">
-            Generated in 14 seconds from a street address. FHA-compliant. No editing required.
-          </p>
         </div>
       </RetroWindow>
     </div>

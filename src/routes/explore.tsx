@@ -29,6 +29,7 @@ interface PropertyRow {
   beds: number | null;
   baths: number | null;
   price: number | null;
+  mls_number: string | null;
 }
 
 interface CopyRow {
@@ -71,8 +72,9 @@ function Explore() {
       const { data: properties, error } = await (
         supabase.from("properties" as never) as any
       )
-        .select("id, address, property_type, created_at, beds, baths, price")
+        .select("id, address, property_type, created_at, beds, baths, price, mls_number")
         .eq("status", "complete")
+        .eq("is_public", true)
         .order("created_at", { ascending: false })
         .limit(30);
 
@@ -155,9 +157,9 @@ function Explore() {
               </div>
             ) : (
               <div className="space-y-1">
-                {/* Table header */}
                 <div className="flex gap-2 px-2 py-1 text-win95-11 font-bold text-muted-foreground border-b border-[var(--win95-gray-dark)]">
                   <span className="flex-1">Address</span>
+                  <span className="w-24 text-center hidden md:block">MLS #</span>
                   <span className="w-20 text-center hidden sm:block">Type</span>
                   <span className="w-24 text-right">Date</span>
                 </div>
@@ -175,6 +177,9 @@ function Explore() {
                       }
                     >
                       <span className="flex-1 truncate">{property.address}</span>
+                      <span className="w-24 text-center hidden md:block font-bold text-win95-11 opacity-80">
+                        {property.mls_number ?? "—"}
+                      </span>
                       <span className="w-20 text-center hidden sm:block font-bold text-win95-11">
                         {TYPE_LABELS[property.property_type ?? ""] ??
                           property.property_type ??

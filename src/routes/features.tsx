@@ -29,32 +29,26 @@ const FEATURES = [
   {
     title: "Research Pro",
     description: "Instead of hallucinating details like ChatGPT, our engine queries Perplexity AI in real-time to gather deep, factual insights about your property and its neighborhood before writing a single word. Access raw, copyable research data to augment your own workflows.",
-    icon: "🔍",
   },
   {
     title: "FHA Compliance Engine",
     description: "Our proprietary AI guardrails scan and rewrite your listing copy to ensure 100% compliance with Fair Housing Act guidelines. Avoid discriminatory language and costly fines effortlessly.",
-    icon: "⚖️",
   },
   {
     title: "Triple Format Output",
     description: "Generate copy optimized for your MLS, a punchy version for Instagram and Facebook, and a persuasive buyer-focused email—all simultaneously in just 15 seconds.",
-    icon: "⚡",
   },
   {
     title: "Unlimited Generation Architecture",
     description: "With our Pro Plan, you can generate as many listings as you need without counting tokens. Our infrastructure scales with your business.",
-    icon: "🚀",
   },
   {
     title: "Property Type Specialization",
     description: "We don't use generic prompts. Whether it's a Single Family Residence, a Luxury Estate, or a Short Term Rental, our AI adapts its tone and structure perfectly.",
-    icon: "🏡",
   },
   {
     title: "Secure & Simple History",
     description: "Your past listings and generated copies are securely saved to your account. Retrieve them instantly from any device with our blazing-fast, distraction-free interface.",
-    icon: "💾",
   },
 ];
 
@@ -75,7 +69,7 @@ function FeaturesPage() {
             </div>
           </div>
           <div className="p-4 space-y-4">
-            <div className="win95-inset bg-[var(--win95-blue)] text-white p-4">
+            <div className="win95-inset bg-[var(--win95-gray)] text-black p-4">
               <h1 className="text-xl font-bold mb-2">Why Property Listing Generator?</h1>
               <p className="text-win95-12">
                 We didn't just build another AI wrapper. We engineered a purpose-built 
@@ -89,7 +83,6 @@ function FeaturesPage() {
                 <div key={idx} className="win95-window">
                   <div className="win95-titlebar bg-[var(--win95-gray-dark)] text-white">
                     <span className="font-bold text-win95-12 truncate pl-1 flex items-center gap-2">
-                      <span>{feature.icon}</span>
                       {feature.title}
                     </span>
                   </div>
