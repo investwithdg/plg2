@@ -1,3 +1,4 @@
+import { CompareFeatureTable } from "@/components/CompareFeatureTable";
 import { createFileRoute, Link } from "@tanstack/react-router";
 
 export const Route = createFileRoute("/compare/virtualstagingai")({
@@ -34,7 +35,9 @@ function VsVirtualStaging() {
               <Link to="/compare"><button type="button" className="win95-raised px-3 py-1 text-win95-12 cursor-pointer active:win95-pressed">More Comparisons</button></Link>
             </div>
           </div>
-        </div>
+        
+        <CompareFeatureTable rival="Virtual Staging AI" category="visual" />
+      </div>
       </div>
     </div>
   );

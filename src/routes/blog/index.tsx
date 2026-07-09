@@ -174,6 +174,17 @@ function BlogIndex() {
           </div>
         )}
 
+        {hasMore && (
+          <div className="text-center pt-2 pb-4">
+            <button
+              onClick={() => setVisibleCount((prev) => prev + 6)}
+              className="win95-raised px-4 py-1 text-win95-12 font-bold cursor-pointer active:win95-pressed"
+            >
+              Load More Articles
+            </button>
+          </div>
+        )}
+
         {/* CTA */}
         <div className="win95-window">
           <div className="win95-titlebar">

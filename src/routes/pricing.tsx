@@ -174,6 +174,12 @@ function Pricing() {
                   <li className="flex gap-2">
                     <span className="font-bold text-[var(--win95-blue)]">+</span>
                     <span>
+                      <strong>Research Pro</strong> — property & neighborhood data
+                    </span>
+                  </li>
+                  <li className="flex gap-2">
+                    <span className="font-bold text-[var(--win95-blue)]">+</span>
+                    <span>
                       <strong>Listing history</strong> — access past generations
                     </span>
                   </li>
@@ -200,11 +206,12 @@ function Pricing() {
           </div>
 
           {/* Elite plan */}
-          <div className="win95-window opacity-80 filter grayscale-[20%]">
+          <div className="win95-window">
             <div
               className="win95-titlebar"
               style={{
-                background: "linear-gradient(to right, #2b2b2b, #4a4a4a)",
+                background: "linear-gradient(to right, #808080, #a9a9a9)",
+                color: "white"
               }}
             >
               <span className="font-bold text-win95-12 truncate pl-1">
@@ -219,7 +226,7 @@ function Pricing() {
                   in development
                 </div>
               </div>
-              <div className="win95-inset p-3 flex-grow bg-[var(--win95-gray)]">
+              <div className="win95-inset p-3 flex-grow">
                 <ul className="space-y-1.5 text-win95-11 text-muted-foreground">
                   <li className="flex gap-2">
                     <span className="font-bold">+</span>

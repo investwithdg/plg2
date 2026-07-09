@@ -1,4 +1,5 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
+import { useState } from "react";
 
 export const Route = createFileRoute("/compare/")({
   head: () => ({
@@ -67,7 +68,11 @@ const WHY_PLG_REASONS = [
 ];
 
 function CompareIndex() {
-  const [featured, ...rest] = DEEP_DIVE_COMPARISONS;
+  const [featured, ...allRest] = DEEP_DIVE_COMPARISONS;
+  const [visibleCount, setVisibleCount] = useState(8);
+
+  const rest = allRest.slice(0, visibleCount);
+  const hasMore = visibleCount < allRest.length;
 
   const ACCENT_COLORS = [
     "var(--win95-blue)",
@@ -189,6 +194,17 @@ function CompareIndex() {
                 </div>
               </Link>
             ))}
+          </div>
+        )}
+
+        {hasMore && (
+          <div className="text-center pt-2 pb-4">
+            <button
+              onClick={() => setVisibleCount((prev) => prev + 6)}
+              className="win95-raised px-4 py-1 text-win95-12 font-bold cursor-pointer active:win95-pressed"
+            >
+              Load More Comparisons
+            </button>
           </div>
         )}
 
