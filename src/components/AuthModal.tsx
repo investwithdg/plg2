@@ -77,7 +77,7 @@ export default function AuthModal({ onClose, onAuth }: AuthModalProps) {
     setError(null);
     const { error: oauthError } = await supabase.auth.signInWithOAuth({
       provider: "google",
-      options: { redirectTo: window.location.origin },
+      options: { redirectTo: window.location.origin + window.location.pathname },
     });
     if (oauthError) setError(oauthError.message);
   };
