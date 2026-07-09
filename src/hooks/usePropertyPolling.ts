@@ -36,6 +36,7 @@ interface UsePropertyPollingResult {
   enrichmentStep: EnrichmentStep;
   property: PropertyWithCopies | null;
   copies: CopyGeneration[];
+  enrichmentData: any | null;
   isPolling: boolean;
   error: string | null;
   stopPolling: () => void;
@@ -51,6 +52,7 @@ export function usePropertyPolling(
   const [enrichmentStep, setEnrichmentStep] = useState<EnrichmentStep>(null);
   const [property, setProperty] = useState<PropertyWithCopies | null>(null);
   const [copies, setCopies] = useState<CopyGeneration[]>([]);
+  const [enrichmentData, setEnrichmentData] = useState<any | null>(null);
   const [isPolling, setIsPolling] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -69,16 +71,27 @@ export function usePropertyPolling(
 
   const fetchCopies = useCallback(
     async (propId: string) => {
-      const { data, error: copiesError } = await (
-        supabase.from("copy_generations" as never) as any
-      )
-        .select("id, copy_type, content, created_at")
-        .eq("property_id", propId)
-        .order("created_at", { ascending: false });
-      if (copiesError) {
-        console.error("Error fetching copies:", copiesError);
+      const [copiesRes, enrichmentsRes] = await Promise.all([
+        (supabase.from("copy_generations" as never) as any)
+          .select("id, copy_type, content, created_at")
+          .eq("property_id", propId)
+          .order("created_at", { ascending: false }),
+        (supabase.from("enrichments" as never) as any)
+          .select("perplexity_raw_response")
+          .eq("property_id", propId)
+          .maybeSingle(),
+      ]);
+
+      if (copiesRes.error) {
+        console.error("Error fetching copies:", copiesRes.error);
       } else {
-        setCopies((data ?? []) as CopyGeneration[]);
+        setCopies((copiesRes.data ?? []) as CopyGeneration[]);
+      }
+
+      if (enrichmentsRes.error) {
+        console.error("Error fetching enrichments:", enrichmentsRes.error);
+      } else if (enrichmentsRes.data) {
+        setEnrichmentData(enrichmentsRes.data);
       }
     },
     [],
@@ -192,6 +205,7 @@ export function usePropertyPolling(
     enrichmentStep,
     property,
     copies,
+    enrichmentData,
     isPolling,
     error,
     stopPolling,

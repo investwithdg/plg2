@@ -136,7 +136,7 @@ export default function RetroGenerator() {
     const raw = window.localStorage.getItem(PRO_TIER_STORAGE_KEY);
     return raw ? Number(raw) || 0 : 0;
   });
-  const [outputs, setOutputs] = useState<Record<OutputTabKey, string> | null>(
+  const [outputs, setOutputs] = useState<Partial<Record<OutputTabKey, string>> | null>(
     null,
   );
   const [historyKey, setHistoryKey] = useState(0);
@@ -144,7 +144,7 @@ export default function RetroGenerator() {
   const [portalLoading, setPortalLoading] = useState(false);
   const [totalGenerations, setTotalGenerations] = useState<number | null>(null);
 
-  const { status, enrichmentStep, copies, error, stopPolling } =
+  const { status, enrichmentStep, copies, enrichmentData, error, stopPolling } =
     usePropertyPolling(propertyId);
 
   const devBypassActive = isDevHost();
@@ -251,7 +251,7 @@ export default function RetroGenerator() {
 
   useEffect(() => {
     if (status === "complete" && copies.length > 0) {
-      const outputMap: Record<OutputTabKey, string> = {
+      const outputMap: Partial<Record<OutputTabKey, string>> = {
         mls: "",
         social: "",
         email: "",
@@ -260,6 +260,13 @@ export default function RetroGenerator() {
         const key = copy.copy_type as OutputTabKey;
         if (key in outputMap) outputMap[key] = copy.content;
       });
+      
+      if (isProUser && enrichmentData && enrichmentData.perplexity_raw_response) {
+        outputMap.research = typeof enrichmentData.perplexity_raw_response === "string" 
+          ? enrichmentData.perplexity_raw_response 
+          : JSON.stringify(enrichmentData.perplexity_raw_response, null, 2);
+      }
+
       setOutputs(outputMap);
       setShowProgress(false);
       setHistoryKey((k) => k + 1);
@@ -614,7 +621,7 @@ export default function RetroGenerator() {
 
         {/* Authenticated users see their listing history; anonymous see landing content */}
         {user && !authLoading ? (
-          <ListingHistory key={historyKey} userId={user.id} />
+          <ListingHistory key={historyKey} userId={user.id} isProUser={isProUser} />
         ) : (
           <>
             <HowItWorks />

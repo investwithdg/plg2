@@ -1,10 +1,10 @@
 import { useEffect, useState } from "react";
 import type { ReactNode } from "react";
 
-export type OutputTabKey = "mls" | "social" | "email";
+export type OutputTabKey = "mls" | "social" | "email" | "research";
 
 type OutputTabsWindowProps = {
-  outputs: Record<OutputTabKey, string>;
+  outputs: Partial<Record<OutputTabKey, string>>;
   initialTab?: OutputTabKey;
   onTabChange?: (tab: OutputTabKey) => void;
   headerRight?: ReactNode;
@@ -34,6 +34,9 @@ export default function OutputTabsWindow({
     { id: "social", label: "Social" },
     { id: "email", label: "Email" },
   ];
+  if (outputs.research !== undefined) {
+    tabs.push({ id: "research", label: "Research Pro" });
+  }
 
   return (
     <div className="win95-window">

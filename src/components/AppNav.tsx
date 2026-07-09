@@ -7,6 +7,7 @@ import RetroLegend from "@/components/RetroLegend";
 
 const NAV_LINKS = [
   { to: "/", label: "Home", exact: true },
+  { to: "/features", label: "Features" },
   { to: "/pricing", label: "Pricing" },
   { to: "/compare", label: "Compare" },
   { to: "/blog", label: "Blog" },

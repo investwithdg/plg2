@@ -42,14 +42,14 @@ function formatDate(iso: string): string {
   });
 }
 
-export default function ListingHistory({ userId }: { userId: string }) {
+export default function ListingHistory({ userId, isProUser }: { userId: string, isProUser?: boolean }) {
   const [entries, setEntries] = useState<HistoryEntry[]>([]);
   const [loading, setLoading] = useState(true);
   const [expandedId, setExpandedId] = useState<string | null>(null);
-  const [expandedCopies, setExpandedCopies] = useState<Record<
+  const [expandedCopies, setExpandedCopies] = useState<Partial<Record<
     OutputTabKey,
     string
-  > | null>(null);
+  >> | null>(null);
   const [loadingCopies, setLoadingCopies] = useState(false);
 
   const fetchHistory = useCallback(async () => {
@@ -83,25 +83,45 @@ export default function ListingHistory({ userId }: { userId: string }) {
     setExpandedCopies(null);
     setLoadingCopies(true);
 
-    const { data, error } = await (
-      supabase.from("copy_generations" as never) as any
-    )
-      .select("copy_type, content")
-      .eq("property_id", id)
-      .order("created_at", { ascending: true });
+    const fetches = [
+      (supabase.from("copy_generations" as never) as any)
+        .select("copy_type, content")
+        .eq("property_id", id)
+        .order("created_at", { ascending: true }),
+    ];
 
-    if (error) {
-      console.error("Copy fetch error:", error);
+    if (isProUser) {
+      fetches.push(
+        (supabase.from("enrichments" as never) as any)
+          .select("perplexity_raw_response")
+          .eq("property_id", id)
+          .maybeSingle()
+      );
+    }
+
+    const results = await Promise.all(fetches);
+    const copyRes = results[0];
+    const enrichRes = results.length > 1 ? results[1] : null;
+
+    if (copyRes.error) {
+      console.error("Copy fetch error:", copyRes.error);
       setLoadingCopies(false);
       return;
     }
 
-    const copies = (data ?? []) as HistoryCopy[];
-    const map: Record<OutputTabKey, string> = { mls: "", social: "", email: "" };
+    const copies = (copyRes.data ?? []) as HistoryCopy[];
+    const map: Partial<Record<OutputTabKey, string>> = { mls: "", social: "", email: "" };
     for (const c of copies) {
       const key = c.copy_type as OutputTabKey;
       if (key in map) map[key] = c.content;
     }
+
+    if (enrichRes && enrichRes.data && enrichRes.data.perplexity_raw_response) {
+      map.research = typeof enrichRes.data.perplexity_raw_response === "string" 
+        ? enrichRes.data.perplexity_raw_response 
+        : JSON.stringify(enrichRes.data.perplexity_raw_response, null, 2);
+    }
+
     setExpandedCopies(map);
     setLoadingCopies(false);
   };
