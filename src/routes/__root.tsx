@@ -91,8 +91,12 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
       { name: "twitter:card", content: "summary_large_image" },
       { name: "twitter:title", content: "PLG — Property Listing Generator" },
       { name: "twitter:description", content: "The fastest way to generate FHA-compliant MLS, social, and email listing copy. Used by thousands of agents." },
-      { property: "og:image", content: "https://pub-bb2e103a32db4e198524a2e9ed8f35b4.r2.dev/fd9b0118-ec7e-4e79-b5e2-def916e87676/id-preview-47622f33--c76353e6-e57a-4f26-aef0-767e3a4734d3.lovable.app-1782271456544.png" },
-      { name: "twitter:image", content: "https://pub-bb2e103a32db4e198524a2e9ed8f35b4.r2.dev/fd9b0118-ec7e-4e79-b5e2-def916e87676/id-preview-47622f33--c76353e6-e57a-4f26-aef0-767e3a4734d3.lovable.app-1782271456544.png" },
+      { property: "og:image", content: "https://propertylistinggenerator.com/og-image.png" },
+      { property: "og:image:width", content: "1200" },
+      { property: "og:image:height", content: "630" },
+      { property: "og:image:alt", content: "PLG — Listing Copy in 15 Seconds" },
+      { property: "og:url", content: "https://propertylistinggenerator.com" },
+      { name: "twitter:image", content: "https://propertylistinggenerator.com/og-image.png" },
     ],
     links: [
       {

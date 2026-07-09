@@ -561,7 +561,7 @@ export default function RetroGenerator() {
               }
               renderActions={(activeTab) => (
                 <div className="flex flex-wrap gap-2 mt-3">
-                  <RetroButton onClick={() => onCopy(outputs[activeTab], activeTab)}>
+                  <RetroButton onClick={() => onCopy(outputs[activeTab] ?? "", activeTab)}>
                     copy {activeTab}
                   </RetroButton>
                   <RetroButton onClick={onCopyAll}>copy all</RetroButton>
