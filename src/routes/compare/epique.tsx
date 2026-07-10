@@ -15,7 +15,7 @@ export const Route = createFileRoute("/compare/epique")({
 const FEATURES = [
   { feature: "Primary purpose", plg: "Listing copy generation", rival: "Broad real estate AI tools" },
   { feature: "FHA Fair Housing compliance", plg: "Strictly enforced via AI guardrails", rival: "Varies by tool" },
-  { feature: "Real property research", plg: "Yes (Perplexity AI)", rival: "Basic or none" },
+  { feature: "Real property research", plg: "Yes (Deep research)", rival: "Basic or none" },
   { feature: "Output formats", plg: "MLS, Social, Email simultaneously", rival: "Requires separate tool uses" },
   { feature: "Brokerage affiliation", plg: "Independent tool for any agent", rival: "Tied to Epique Realty ecosystem" },
   { feature: "Focus", plg: "Deep listing copy specialization", rival: "Broad tools (bio writers, legal, etc.)" },

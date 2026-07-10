@@ -15,7 +15,7 @@ export function CompareFeatureTable({ rival, category }: CompareFeatureTableProp
       features = [
         { feature: "Primary purpose", plg: "Real estate listing copy", rival: "General marketing & sales copy" },
         { feature: "FHA Fair Housing compliance", plg: "Built-in training & guardrails", rival: "None" },
-        { feature: "Real property research", plg: "Yes (Perplexity AI)", rival: "No — hallucinations common" },
+        { feature: "Real property research", plg: "Yes (Deep research)", rival: "No — hallucinations common" },
         { feature: "MLS-ready formatting", plg: "Yes — structure & character limits", rival: "No — generic paragraphs" },
         { feature: "Input method", plg: "Paste an address or URL", rival: "Prompt engineering required" },
       ];
@@ -24,7 +24,7 @@ export function CompareFeatureTable({ rival, category }: CompareFeatureTableProp
       features = [
         { feature: "Primary purpose", plg: "Automated listing copy generator", rival: "Lead management & tracking" },
         { feature: "FHA Fair Housing compliance", plg: "Built-in training & guardrails", rival: "Basic or non-existent" },
-        { feature: "Real property research", plg: "Yes (Perplexity AI)", rival: "No" },
+        { feature: "Real property research", plg: "Yes (Deep research)", rival: "No" },
         { feature: "Listing copy focus", plg: "Core product", rival: "Afterthought / basic add-on" },
       ];
       break;
@@ -48,7 +48,7 @@ export function CompareFeatureTable({ rival, category }: CompareFeatureTableProp
       features = [
         { feature: "Primary purpose", plg: "Real estate listing copy", rival: "Varies" },
         { feature: "FHA Fair Housing compliance", plg: "Built-in training & guardrails", rival: "Rarely included" },
-        { feature: "Real property research", plg: "Yes (Perplexity AI)", rival: "No" },
+        { feature: "Real property research", plg: "Yes (Deep research)", rival: "No" },
         { feature: "MLS-ready formatting", plg: "Yes — structure & character limits", rival: "No" },
       ];
       break;

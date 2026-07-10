@@ -18,7 +18,7 @@ export const Route = createFileRoute("/compare/copyai")({
 const FEATURES = [
   { feature: "Primary purpose", plg: "Real estate listing copy", rival: "General marketing & sales copy" },
   { feature: "FHA Fair Housing compliance", plg: "Built-in training & guardrails", rival: "None" },
-  { feature: "Real property research", plg: "Yes (Perplexity AI)", rival: "No" },
+  { feature: "Real property research", plg: "Yes (Deep research)", rival: "No" },
   { feature: "MLS-ready formatting", plg: "Yes — structure & character limits", rival: "No — generic paragraphs" },
   { feature: "Social media copy", plg: "Instagram & Facebook optimized", rival: "Generic social templates" },
   { feature: "Email marketing copy", plg: "Yes — buyer list blurbs", rival: "Generic email workflows" },

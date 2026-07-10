@@ -19,7 +19,7 @@ export const Route = createFileRoute("/compare/jasper")({
 const FEATURES = [
   { feature: "Primary purpose", plg: "Real estate listing copy", rival: "General marketing copywriting" },
   { feature: "FHA Fair Housing compliance", plg: "Built-in training & guardrails", rival: "None — no real estate training" },
-  { feature: "Real property research", plg: "Yes (Perplexity AI lookups)", rival: "No — uses only templates & input" },
+  { feature: "Real property research", plg: "Yes (Deep property research)", rival: "No — uses only templates & input" },
   { feature: "MLS-ready formatting", plg: "Yes — proper structure & length", rival: "No — generic marketing format" },
   { feature: "Social media copy", plg: "Instagram & Facebook optimized", rival: "Yes — generic social templates" },
   { feature: "Email marketing copy", plg: "Yes — buyer list blurbs", rival: "Yes — generic email templates" },

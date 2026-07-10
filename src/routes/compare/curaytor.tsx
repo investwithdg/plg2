@@ -35,7 +35,7 @@ function VsCuraytor() {
           <div className="p-4 space-y-3">
             <h1 className="text-win95-16 font-bold">PLG vs Marketing Platforms</h1>
             <p className="text-win95-12"><strong>CuraytoR</strong> and <strong>Ylopo</strong> are massive, full-service marketing platforms. They build websites, run Facebook ads, and handle lead generation. They cost thousands of dollars a month and require significant onboarding.</p>
-            <p className="text-win95-12"><strong>PLG</strong> is a specialized tool that costs $49 a month. You use it the moment you get a listing to instantly generate FHA-compliant, Perplexity-researched copy for the MLS, social media, and your email list.</p>
+            <p className="text-win95-12"><strong>PLG</strong> is a specialized tool that costs $49 a month. You use it the moment you get a listing to instantly generate FHA-compliant, AI-researched copy for the MLS, social media, and your email list.</p>
           </div>
         </div>
 

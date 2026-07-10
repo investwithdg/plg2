@@ -1,4 +1,7 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
+import { useEffect, useState } from "react";
+import { useAuth } from "@/hooks/useAuth";
+import { supabase } from "@/integrations/supabase/client";
 
 export const Route = createFileRoute("/pricing")({
   head: () => ({
@@ -21,6 +24,30 @@ export const Route = createFileRoute("/pricing")({
 });
 
 function Pricing() {
+  const { user } = useAuth();
+  const [isProUser, setIsProUser] = useState(false);
+
+  useEffect(() => {
+    if (!user) {
+      setIsProUser(false);
+      return;
+    }
+    let cancelled = false;
+    (async () => {
+      const { data } = await (supabase.from("subscriptions" as never) as any)
+        .select("plan, status")
+        .eq("user_id", user.id)
+        .eq("status", "active")
+        .limit(1);
+      const active = !!data?.some(
+        (row: { plan?: string; status?: string }) =>
+          row.plan === "pro" && row.status === "active",
+      );
+      if (!cancelled) setIsProUser(active);
+    })();
+    return () => { cancelled = true; };
+  }, [user]);
+
   return (
     <div className="min-h-screen bg-[var(--background)] p-4 flex flex-col items-center">
       <div className="w-full max-w-3xl space-y-4">
@@ -51,13 +78,13 @@ function Pricing() {
         {/* Pricing cards side by side */}
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
           {/* Free plan */}
-          <div className="win95-window">
+          <div className="win95-window flex flex-col h-full">
             <div className="win95-titlebar">
               <span className="font-bold text-win95-12 truncate pl-1">
                 Free Plan
               </span>
             </div>
-            <div className="p-4 space-y-3 flex flex-col h-full">
+            <div className="p-4 space-y-3 flex flex-col flex-1">
               <div className="text-center">
                 <span className="text-win95-16 font-bold">$0</span>
                 <span className="text-win95-11 text-muted-foreground">
@@ -96,7 +123,7 @@ function Pricing() {
                   </li>
                   <li className="flex gap-2">
                     <span className="font-bold text-[var(--win95-blue)]">+</span>
-                    <span>Perplexity property research</span>
+                    <span>Automated property research</span>
                   </li>
                   <li className="flex gap-2 text-muted-foreground">
                     <span className="font-bold">-</span>
@@ -113,20 +140,30 @@ function Pricing() {
                 </ul>
               </div>
               <div className="text-center pt-1 mt-auto">
-                <Link to="/">
+                {user && !isProUser ? (
                   <button
                     type="button"
-                    className="win95-raised px-4 py-1 text-win95-12 font-bold cursor-pointer active:win95-pressed"
+                    disabled
+                    className="win95-raised px-4 py-1 text-win95-12 font-bold cursor-default opacity-60"
                   >
-                    Start Free
+                    Current Plan
                   </button>
-                </Link>
+                ) : (
+                  <Link to="/">
+                    <button
+                      type="button"
+                      className="win95-raised px-4 py-1 text-win95-12 font-bold cursor-pointer active:win95-pressed"
+                    >
+                      Start Free
+                    </button>
+                  </Link>
+                )}
               </div>
             </div>
           </div>
 
           {/* Pro plan */}
-          <div className="win95-window">
+          <div className="win95-window flex flex-col h-full">
             <div
               className="win95-titlebar"
               style={{
@@ -138,7 +175,7 @@ function Pricing() {
               </span>
               <span className="text-win95-11 opacity-90">unlimited</span>
             </div>
-            <div className="p-4 space-y-3 flex flex-col h-full">
+            <div className="p-4 space-y-3 flex flex-col flex-1">
               <div className="text-center">
                 <span className="text-win95-16 font-bold">$49</span>
                 <span className="text-win95-11 text-muted-foreground">
@@ -163,14 +200,7 @@ function Pricing() {
                     <span className="font-bold text-[var(--win95-blue)]">+</span>
                     <span>Unlimited Pro-tier property types</span>
                   </li>
-                  <li className="flex gap-2">
-                    <span className="font-bold text-[var(--win95-blue)]">+</span>
-                    <span>FHA Fair Housing compliant</span>
-                  </li>
-                  <li className="flex gap-2">
-                    <span className="font-bold text-[var(--win95-blue)]">+</span>
-                    <span>Perplexity property research</span>
-                  </li>
+
                   <li className="flex gap-2">
                     <span className="font-bold text-[var(--win95-blue)]">+</span>
                     <span>
@@ -192,21 +222,31 @@ function Pricing() {
                 </ul>
               </div>
               <div className="text-center pt-1 mt-auto">
-                <a href="/?upgrade=true">
+                {isProUser ? (
                   <button
                     type="button"
-                    className="win95-raised px-4 py-1 text-win95-12 font-bold cursor-pointer active:win95-pressed"
-                    style={{ color: "var(--win95-blue)" }}
+                    disabled
+                    className="win95-raised px-4 py-1 text-win95-12 font-bold cursor-default opacity-60"
                   >
-                    Go Pro
+                    Current Plan
                   </button>
-                </a>
+                ) : (
+                  <a href="/?upgrade=true">
+                    <button
+                      type="button"
+                      className="win95-raised px-4 py-1 text-win95-12 font-bold cursor-pointer active:win95-pressed"
+                      style={{ color: "var(--win95-blue)" }}
+                    >
+                      Go Pro
+                    </button>
+                  </a>
+                )}
               </div>
             </div>
           </div>
 
           {/* Elite plan */}
-          <div className="win95-window">
+          <div className="win95-window flex flex-col h-full">
             <div
               className="win95-titlebar"
               style={{
@@ -219,7 +259,7 @@ function Pricing() {
               </span>
               <span className="text-win95-11 opacity-90">coming soon</span>
             </div>
-            <div className="p-4 space-y-3 flex flex-col h-full">
+            <div className="p-4 space-y-3 flex flex-col flex-1">
               <div className="text-center">
                 <span className="text-win95-16 font-bold text-muted-foreground">—</span>
                 <div className="text-[10px] text-muted-foreground mt-0.5">

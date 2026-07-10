@@ -978,7 +978,7 @@ function WhyPLG() {
   const reasons = [
     {
       title: "Real research, not hallucination",
-      body: "PLG uses Perplexity AI to pull actual property data and neighborhood context before writing. ChatGPT invents details. PLG verifies them.",
+      body: "PLG uses Automated property research to pull actual property data and neighborhood context before writing. ChatGPT invents details. PLG verifies them.",
     },
     {
       title: "FHA Fair Housing — built in",

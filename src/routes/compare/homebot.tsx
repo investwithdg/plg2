@@ -17,7 +17,7 @@ const FEATURES = [
   { feature: "Target user", plg: "Listing agents", rival: "Lenders & agents retaining past clients" },
   { feature: "FHA compliance", plg: "Built-in", rival: "N/A (doesn't generate listing copy)" },
   { feature: "Listing copy generation", plg: "Yes — MLS, social, email", rival: "No" },
-  { feature: "Property research", plg: "Yes (Perplexity AI)", rival: "Home value estimates only" },
+  { feature: "Property research", plg: "Yes (Deep research)", rival: "Home value estimates only" },
   { feature: "Output", plg: "3 copy formats per address", rival: "Monthly homeowner digest emails" },
   { feature: "Use case timing", plg: "When you list a property", rival: "Ongoing client nurturing" },
   { feature: "Free tier", plg: "10 free generations", rival: "No free tier" },

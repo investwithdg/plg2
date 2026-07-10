@@ -15,7 +15,7 @@ export const Route = createFileRoute("/compare/writesonic")({
 const FEATURES = [
   { feature: "Primary purpose", plg: "Real estate listing copy", rival: "Blog posts, ads, and general content" },
   { feature: "FHA compliance", plg: "Built-in training & guardrails", rival: "None" },
-  { feature: "Real property research", plg: "Yes (Perplexity AI)", rival: "No" },
+  { feature: "Real property research", plg: "Yes (Deep research)", rival: "No" },
   { feature: "MLS-ready formatting", plg: "Yes", rival: "No — generic article format" },
   { feature: "Social media copy", plg: "Instagram & Facebook optimized", rival: "Generic social templates" },
   { feature: "Email copy", plg: "Yes — buyer list blurbs", rival: "Generic email templates" },

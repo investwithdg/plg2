@@ -15,7 +15,7 @@ export const Route = createFileRoute("/compare/kvcore")({
 const FEATURES = [
   { feature: "Primary purpose", plg: "Listing copy generation", rival: "Real Estate CRM & Lead Gen" },
   { feature: "FHA Fair Housing compliance", plg: "Strict AI guardrails", rival: "Basic or manual review needed" },
-  { feature: "Real property research", plg: "Yes (Perplexity AI)", rival: "No" },
+  { feature: "Real property research", plg: "Yes (Deep research)", rival: "No" },
   { feature: "Listing generation focus", plg: "Core feature", rival: "Minor add-on feature" },
   { feature: "Copy formats", plg: "MLS, Social, Email simultaneously", rival: "Basic text generation" },
 ];

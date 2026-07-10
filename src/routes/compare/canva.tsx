@@ -15,7 +15,7 @@ export const Route = createFileRoute("/compare/canva")({
 const FEATURES = [
   { feature: "Primary purpose", plg: "Real estate listing copy", rival: "Graphic design with AI copy add-on" },
   { feature: "FHA compliance", plg: "Built-in training & guardrails", rival: "None" },
-  { feature: "Real property research", plg: "Yes (Perplexity AI)", rival: "No" },
+  { feature: "Real property research", plg: "Yes (Deep research)", rival: "No" },
   { feature: "MLS-ready formatting", plg: "Yes", rival: "No — designed for social graphics" },
   { feature: "Social media copy", plg: "Instagram & Facebook optimized", rival: "Basic captions for designs" },
   { feature: "Email copy", plg: "Yes — buyer list blurbs", rival: "No" },

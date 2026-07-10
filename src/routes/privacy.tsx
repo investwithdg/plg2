@@ -115,7 +115,7 @@ function PrivacyPage() {
                   management. Handles all billing and payment card data.
                 </li>
                 <li>
-                  <strong>Perplexity / OpenAI</strong> — AI services used to
+                  <strong>Data Providers / OpenAI</strong> — AI services used to
                   research properties and generate listing copy. Property
                   addresses and related data are sent to these services for
                   processing.

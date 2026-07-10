@@ -22,7 +22,7 @@ export const Route = createFileRoute("/compare/chatgpt")({
 const FEATURES = [
   { feature: "Primary purpose", plg: "Real estate listing copy", rival: "General-purpose AI chatbot" },
   { feature: "FHA Fair Housing compliance", plg: "Built-in training & guardrails", rival: "None — doesn't know FHA rules" },
-  { feature: "Real property research", plg: "Yes (Perplexity AI lookups)", rival: "No — uses only what you type" },
+  { feature: "Real property research", plg: "Yes (Deep property research)", rival: "No — uses only what you type" },
   { feature: "Property data accuracy", plg: "Verified from public sources", rival: "Frequently hallucinated" },
   { feature: "MLS-ready formatting", plg: "Yes — proper structure & length", rival: "No — generic paragraphs" },
   { feature: "Social media copy", plg: "Instagram & Facebook optimized", rival: "Generic, needs manual editing" },
