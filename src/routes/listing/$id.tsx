@@ -124,9 +124,7 @@ function ListingPage() {
     listing.copies.map((c: { copy_type: string; content: string }) => [c.copy_type, c.content]),
   ) as Partial<Record<CopyTab, string>>;
 
-  const tabs = (["mls", "social", "email"] as CopyTab[]).filter(
-    (t) => copyMap[t],
-  );
+  const tabs = (["mls", "social", "email"] as CopyTab[]).filter((t) => copyMap[t]);
 
   const handleCopy = () => {
     const text = copyMap[activeTab] ?? "";
@@ -149,9 +147,7 @@ function ListingPage() {
         {/* Header window */}
         <div className="win95-window">
           <div className="win95-titlebar">
-            <span className="font-bold text-win95-12 truncate pl-1">
-              {listing.address}
-            </span>
+            <span className="font-bold text-win95-12 truncate pl-1">{listing.address}</span>
             <div className="flex gap-[2px]">
               <Link to="/" className="win95-control-btn no-underline" aria-label="Home">
                 ×
@@ -232,7 +228,8 @@ function ListingPage() {
           </div>
           <div className="p-4 flex items-center justify-between gap-4">
             <p className="text-win95-11 text-muted-foreground">
-              PLG researches the property and writes FHA-compliant MLS, social, and email copy in ~15 seconds.
+              PLG researches the property and writes FHA-compliant MLS, social, and email copy in
+              ~15 seconds.
             </p>
             <Link to="/">
               <button className="win95-raised px-4 py-1 text-win95-12 font-bold cursor-pointer active:win95-pressed shrink-0">

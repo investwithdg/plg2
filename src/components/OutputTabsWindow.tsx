@@ -54,9 +54,7 @@ export default function OutputTabsWindow({
               type="button"
               onClick={() => handleTabClick(tab.id)}
               className={`px-4 py-1 text-win95-12 font-bold cursor-pointer relative ${
-                isActive
-                  ? "win95-raised bg-card -mb-[2px] pb-[3px] z-10"
-                  : "win95-inset bg-input"
+                isActive ? "win95-raised bg-card -mb-[2px] pb-[3px] z-10" : "win95-inset bg-input"
               } ${index > 0 ? "-ml-[1px]" : ""}`}
             >
               {tab.label}

@@ -4,8 +4,7 @@ export const Route = createFileRoute("/compare/dealmachine")({
   head: () => ({
     meta: [
       {
-        title:
-          "PLG vs DealMachine — Property Listing Generator Comparison",
+        title: "PLG vs DealMachine — Property Listing Generator Comparison",
       },
       {
         name: "description",
@@ -86,15 +85,9 @@ function VsDealMachine() {
         {/* Header window */}
         <div className="win95-window">
           <div className="win95-titlebar">
-            <span className="font-bold text-win95-12 truncate pl-1">
-              PLG vs DealMachine
-            </span>
+            <span className="font-bold text-win95-12 truncate pl-1">PLG vs DealMachine</span>
             <div className="flex gap-[2px]">
-              <Link
-                to="/compare"
-                className="win95-control-btn no-underline"
-                aria-label="Back"
-              >
+              <Link to="/compare" className="win95-control-btn no-underline" aria-label="Back">
                 &lt;
               </Link>
               <Link to="/" className="win95-control-btn no-underline" aria-label="Close">
@@ -107,20 +100,18 @@ function VsDealMachine() {
               PLG vs DealMachine: Different Tools for Different Jobs
             </h1>
             <p className="text-win95-12">
-              <strong>DealMachine</strong> is a popular driving-for-dollars and
-              lead generation platform. It helps investors and agents find
-              off-market deals by identifying distressed properties and
-              contacting owners.
+              <strong>DealMachine</strong> is a popular driving-for-dollars and lead generation
+              platform. It helps investors and agents find off-market deals by identifying
+              distressed properties and contacting owners.
             </p>
             <p className="text-win95-12">
-              <strong>PropertyListingGenerator.com (PLG)</strong> is
-              purpose-built for the next step: once you have a property, PLG
-              generates polished, FHA-compliant listing copy for MLS, social
-              media, and email in about 15 seconds.
+              <strong>PropertyListingGenerator.com (PLG)</strong> is purpose-built for the next
+              step: once you have a property, PLG generates polished, FHA-compliant listing copy for
+              MLS, social media, and email in about 15 seconds.
             </p>
             <p className="text-win95-12 font-bold">
-              They solve different problems. But when it comes to listing copy,
-              PLG dominates the niche.
+              They solve different problems. But when it comes to listing copy, PLG dominates the
+              niche.
             </p>
           </div>
         </div>
@@ -128,9 +119,7 @@ function VsDealMachine() {
         {/* Feature comparison table */}
         <div className="win95-window">
           <div className="win95-titlebar">
-            <span className="font-bold text-win95-12 truncate pl-1">
-              Feature Comparison
-            </span>
+            <span className="font-bold text-win95-12 truncate pl-1">Feature Comparison</span>
           </div>
           <div className="p-3">
             <div className="win95-inset overflow-x-auto">
@@ -152,19 +141,13 @@ function VsDealMachine() {
                   {FEATURES.map((row, i) => (
                     <tr
                       key={row.feature}
-                      className={
-                        i % 2 === 0 ? "bg-white" : "bg-[var(--win95-gray-light)]"
-                      }
+                      className={i % 2 === 0 ? "bg-white" : "bg-[var(--win95-gray-light)]"}
                     >
                       <td className="p-2 border-b border-[var(--win95-gray-light)] font-bold">
                         {row.feature}
                       </td>
-                      <td className="p-2 border-b border-[var(--win95-gray-light)]">
-                        {row.plg}
-                      </td>
-                      <td className="p-2 border-b border-[var(--win95-gray-light)]">
-                        {row.rival}
-                      </td>
+                      <td className="p-2 border-b border-[var(--win95-gray-light)]">{row.plg}</td>
+                      <td className="p-2 border-b border-[var(--win95-gray-light)]">{row.rival}</td>
                     </tr>
                   ))}
                 </tbody>
@@ -176,20 +159,17 @@ function VsDealMachine() {
         {/* Verdict + CTA */}
         <div className="win95-window">
           <div className="win95-titlebar">
-            <span className="font-bold text-win95-12 truncate pl-1">
-              Verdict
-            </span>
+            <span className="font-bold text-win95-12 truncate pl-1">Verdict</span>
           </div>
           <div className="p-4 space-y-3">
             <p className="text-win95-12">
-              If you need to <strong>find</strong> deals, DealMachine is a solid
-              choice. If you need to <strong>market</strong> a property with
-              professional, compliant listing copy, PLG is the tool built
-              specifically for that job.
+              If you need to <strong>find</strong> deals, DealMachine is a solid choice. If you need
+              to <strong>market</strong> a property with professional, compliant listing copy, PLG
+              is the tool built specifically for that job.
             </p>
             <p className="text-win95-12">
-              Many agents use both: DealMachine to source leads, PLG to write
-              the listing once the deal closes.
+              Many agents use both: DealMachine to source leads, PLG to write the listing once the
+              deal closes.
             </p>
             <div className="flex gap-2 pt-1">
               <Link to="/">

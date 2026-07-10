@@ -7,7 +7,10 @@ interface UseAuthResult {
   session: Session | null;
   loading: boolean;
   signIn: (email: string, password: string) => Promise<string | null>;
-  signUp: (email: string, password: string) => Promise<{ error: string | null; isNewUser: boolean }>;
+  signUp: (
+    email: string,
+    password: string,
+  ) => Promise<{ error: string | null; isNewUser: boolean }>;
   signOut: () => Promise<void>;
 }
 
@@ -42,7 +45,7 @@ export function useAuth(): UseAuthResult {
     const { data, error } = await supabase.auth.signUp({ email, password });
     // When email confirmation is enabled, Supabase returns error=null for existing
     // addresses (enumeration prevention). identities.length === 0 means no new account.
-    const isNewUser = !error && !!(data.user) && (data.user.identities?.length ?? 0) > 0;
+    const isNewUser = !error && !!data.user && (data.user.identities?.length ?? 0) > 0;
     return { error: error?.message ?? null, isNewUser };
   }, []);
 

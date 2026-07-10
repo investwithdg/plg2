@@ -6,18 +6,13 @@ import { supabase } from "@/integrations/supabase/client";
 import { usePropertyPolling } from "@/hooks/usePropertyPolling";
 import { useAuth } from "@/hooks/useAuth";
 import type { CopyGeneration } from "@/hooks/usePropertyPolling";
-import OutputTabsWindow, {
-  type OutputTabKey,
-} from "@/components/OutputTabsWindow";
+import OutputTabsWindow, { type OutputTabKey } from "@/components/OutputTabsWindow";
 import GenerationProgressModal from "@/components/GenerationProgressModal";
 import AuthModal from "@/components/AuthModal";
 import ListingHistory from "@/components/ListingHistory";
 import TurnstileWidget from "@/components/TurnstileWidget";
 import { RetroButton, RetroInput, RetroWindow } from "@/components/retro";
-import {
-  describeFunctionInvokeError,
-  parsePropertyInput,
-} from "@/lib/parsePropertyInput";
+import { describeFunctionInvokeError, parsePropertyInput } from "@/lib/parsePropertyInput";
 import { track } from "@/lib/posthog";
 
 type PropertyType =
@@ -40,12 +35,9 @@ const STORAGE_KEY = "plg_generations_used";
 const PRO_TIER_STORAGE_KEY = "plg_pro_tier_generations_used";
 const ANON_ID_COOKIE = "plg_anon_id";
 const FREE_PROPERTY_TYPES: PropertyType[] = ["sfr", "fsbo"];
-const TURNSTILE_SITE_KEY = import.meta.env.VITE_TURNSTILE_SITE_KEY as
-  | string
-  | undefined;
+const TURNSTILE_SITE_KEY = import.meta.env.VITE_TURNSTILE_SITE_KEY as string | undefined;
 
-const isProTierPropertyType = (type: PropertyType) =>
-  !FREE_PROPERTY_TYPES.includes(type);
+const isProTierPropertyType = (type: PropertyType) => !FREE_PROPERTY_TYPES.includes(type);
 
 const isDevHost = () => {
   if (typeof window === "undefined") return false;
@@ -106,9 +98,7 @@ async function readFunctionInvokeErrorBody(
 
   try {
     const body = await err.context.json();
-    return body && typeof body === "object"
-      ? (body as Record<string, unknown>)
-      : null;
+    return body && typeof body === "object" ? (body as Record<string, unknown>) : null;
   } catch {
     return null;
   }
@@ -137,30 +127,22 @@ export default function RetroGenerator() {
     const raw = window.localStorage.getItem(PRO_TIER_STORAGE_KEY);
     return raw ? Number(raw) || 0 : 0;
   });
-  const [outputs, setOutputs] = useState<Partial<Record<OutputTabKey, ReactNode>> | null>(
-    null,
-  );
+  const [outputs, setOutputs] = useState<Partial<Record<OutputTabKey, ReactNode>> | null>(null);
   const [historyKey, setHistoryKey] = useState(0);
   const [isProUser, setIsProUser] = useState(false);
   const [portalLoading, setPortalLoading] = useState(false);
   const [totalGenerations, setTotalGenerations] = useState<number | null>(null);
 
-  const { status, enrichmentStep, copies, enrichmentData, error, stopPolling } =
+  const { status, enrichmentStep, property, copies, enrichmentData, error, stopPolling } =
     usePropertyPolling(propertyId);
 
   const devBypassActive = isDevHost();
   const generationsLeft = Math.max(0, MAX_GENERATIONS - generationsUsed);
-  const proTierGenerationsLeft = Math.max(
-    0,
-    FREE_PRO_TIER_LIMIT - proTierGenerationsUsed,
-  );
+  const proTierGenerationsLeft = Math.max(0, FREE_PRO_TIER_LIMIT - proTierGenerationsUsed);
   const selectedProTier = isProTierPropertyType(propertyType);
-  const anonymousTurnstileRequired =
-    !devBypassActive && !user && !!TURNSTILE_SITE_KEY;
+  const anonymousTurnstileRequired = !devBypassActive && !user && !!TURNSTILE_SITE_KEY;
   const generateDisabled =
-    showProgress ||
-    !query.trim() ||
-    (anonymousTurnstileRequired && !turnstileToken);
+    showProgress || !query.trim() || (anonymousTurnstileRequired && !turnstileToken);
   const generationCountLabel = devBypassActive
     ? "dev"
     : isProUser
@@ -218,12 +200,13 @@ export default function RetroGenerator() {
         .eq("status", "active")
         .limit(1);
       const active = !!data?.some(
-        (row: { plan?: string; status?: string }) =>
-          row.plan === "pro" && row.status === "active",
+        (row: { plan?: string; status?: string }) => row.plan === "pro" && row.status === "active",
       );
       if (!cancelled) setIsProUser(active);
     })();
-    return () => { cancelled = true; };
+    return () => {
+      cancelled = true;
+    };
   }, [user]);
 
   // --- Social proof: total generation count ---
@@ -237,7 +220,9 @@ export default function RetroGenerator() {
         setTotalGenerations(count);
       }
     })();
-    return () => { cancelled = true; };
+    return () => {
+      cancelled = true;
+    };
   }, []);
 
   useEffect(() => {
@@ -252,7 +237,7 @@ export default function RetroGenerator() {
 
   useEffect(() => {
     if (status === "complete" && copies.length > 0) {
-      const outputMap: Partial<Record<OutputTabKey, string>> = {
+      const outputMap: Partial<Record<OutputTabKey, ReactNode>> = {
         mls: "",
         social: "",
         email: "",
@@ -261,11 +246,12 @@ export default function RetroGenerator() {
         const key = copy.copy_type as OutputTabKey;
         if (key in outputMap) outputMap[key] = copy.content;
       });
-      
+
       if (isProUser && enrichmentData && enrichmentData.perplexity_raw_response) {
-        const rawString = typeof enrichmentData.perplexity_raw_response === "string"
-          ? enrichmentData.perplexity_raw_response
-          : JSON.stringify(enrichmentData.perplexity_raw_response, null, 2);
+        const rawString =
+          typeof enrichmentData.perplexity_raw_response === "string"
+            ? enrichmentData.perplexity_raw_response
+            : JSON.stringify(enrichmentData.perplexity_raw_response, null, 2);
 
         outputMap.research = (
           <div className="space-y-4">
@@ -276,7 +262,9 @@ export default function RetroGenerator() {
                 </div>
                 <div className="p-3 bg-red-50 space-y-2 text-red-900 text-win95-12">
                   <p className="font-bold">We found FHA violations in your existing listing.</p>
-                  <p>The following terms were flagged and removed before generating your new copy:</p>
+                  <p>
+                    The following terms were flagged and removed before generating your new copy:
+                  </p>
                   <ul className="list-disc pl-5">
                     {property.fha_violations.map((v, i) => (
                       <li key={i}>{v}</li>
@@ -285,17 +273,22 @@ export default function RetroGenerator() {
                 </div>
               </div>
             )}
-            {property?.fha_violations && property.fha_violations.length === 0 && property.existing_listing_raw && (
-              <div className="win95-window mb-4">
-                <div className="win95-titlebar bg-[var(--win95-blue)] text-white">
-                  <span className="font-bold text-win95-12 pl-1">FHA Compliance Report</span>
+            {property?.fha_violations &&
+              property.fha_violations.length === 0 &&
+              property.existing_listing_raw && (
+                <div className="win95-window mb-4">
+                  <div className="win95-titlebar bg-[var(--win95-blue)] text-white">
+                    <span className="font-bold text-win95-12 pl-1">FHA Compliance Report</span>
+                  </div>
+                  <div className="p-3 bg-[var(--win95-gray)] space-y-2 text-win95-12">
+                    <p className="font-bold">Good news!</p>
+                    <p>
+                      Your existing listing was analyzed and found to be fully FHA-compliant. We
+                      used it to enrich your new copy.
+                    </p>
+                  </div>
                 </div>
-                <div className="p-3 bg-[var(--win95-gray)] space-y-2 text-win95-12">
-                  <p className="font-bold">Good news!</p>
-                  <p>Your existing listing was analyzed and found to be fully FHA-compliant. We used it to enrich your new copy.</p>
-                </div>
-              </div>
-            )}
+              )}
             <div className="win95-window">
               <div className="win95-titlebar">
                 <span className="font-bold text-win95-12 pl-1">Neighborhood Data</span>
@@ -316,7 +309,7 @@ export default function RetroGenerator() {
       track("generation_completed", { property_type: propertyType, property_id: propertyId });
       fireLoopsEvent("generation_created", { property_type: propertyType });
     }
-  }, [status, copies, propertyType, propertyId]);
+  }, [status, copies, property, enrichmentData, isProUser, propertyType, propertyId]);
 
   const handleGenerate = async () => {
     if (!query.trim()) return;
@@ -357,45 +350,33 @@ export default function RetroGenerator() {
         throw new Error("Enter an address or paste a listing URL.");
       }
 
-      const { data, error } = await supabase.functions.invoke(
-        "receive-property",
-        {
-          body: {
-            ...parsed,
-            propertyType,
-            source: "generator",
-            ...(!user
-              ? {
-                  anonymousId,
-                  turnstileToken,
-                }
-              : {}),
-          },
+      const { data, error } = await supabase.functions.invoke("receive-property", {
+        body: {
+          ...parsed,
+          propertyType,
+          source: "generator",
+          ...(!user
+            ? {
+                anonymousId,
+                turnstileToken,
+              }
+            : {}),
         },
-      );
+      });
 
       if (error) throw error;
 
       if (data?.error && !data?.propertyId) {
-        if (
-          data.error === "pro_required" ||
-          data.error === "free_limit_exceeded"
-        ) {
+        if (data.error === "pro_required" || data.error === "free_limit_exceeded") {
           setShowProgress(false);
           if (!user) resetAnonymousTurnstile();
-          setPaywallReason(
-            data.error === "pro_required" ? "pro_tier_limit" : "free_limit",
-          );
+          setPaywallReason(data.error === "pro_required" ? "pro_tier_limit" : "free_limit");
           setShowPaywall(true);
           track("paywall_shown", { reason: data.error, property_type: propertyType });
           fireLoopsEvent("limit_reached", { reason: data.error, property_type: propertyType });
           return;
         }
-        throw new Error(
-          typeof data.message === "string"
-            ? data.message
-            : String(data.error),
-        );
+        throw new Error(typeof data.message === "string" ? data.message : String(data.error));
       }
 
       if (data?.propertyId) {
@@ -413,13 +394,10 @@ export default function RetroGenerator() {
       setShowProgress(false);
       if (!user) resetAnonymousTurnstile();
       const errorBody = await readFunctionInvokeErrorBody(err);
-      const errorCode =
-        typeof errorBody?.error === "string" ? errorBody.error : null;
+      const errorCode = typeof errorBody?.error === "string" ? errorBody.error : null;
 
       if (errorCode === "pro_required" || errorCode === "free_limit_exceeded") {
-        setPaywallReason(
-          errorCode === "pro_required" ? "pro_tier_limit" : "free_limit",
-        );
+        setPaywallReason(errorCode === "pro_required" ? "pro_tier_limit" : "free_limit");
         setShowPaywall(true);
         track("paywall_shown", { reason: errorCode, property_type: propertyType });
         return;
@@ -468,11 +446,7 @@ export default function RetroGenerator() {
       .catch(console.error);
   };
 
-  const handleAuth = async (
-    email: string,
-    password: string,
-    mode: "signin" | "signup",
-  ) => {
+  const handleAuth = async (email: string, password: string, mode: "signin" | "signup") => {
     if (mode === "signin") return signIn(email, password);
     const { error, isNewUser } = await signUp(email, password);
     if (isNewUser) {
@@ -486,10 +460,9 @@ export default function RetroGenerator() {
   const handleManageSubscription = async () => {
     setPortalLoading(true);
     try {
-      const { data, error } = await supabase.functions.invoke(
-        "create-portal-session",
-        { body: {} },
-      );
+      const { data, error } = await supabase.functions.invoke("create-portal-session", {
+        body: {},
+      });
       if (error) throw error;
       if (data?.url) {
         window.location.href = data.url;
@@ -522,13 +495,11 @@ export default function RetroGenerator() {
                 </div>
               )}
             </div>
-            <div className="text-win95-16 font-bold">
-              listing copy in 15 seconds
-            </div>
+            <div className="text-win95-16 font-bold">listing copy in 15 seconds</div>
             <div className="text-win95-12 text-muted-foreground">
-              paste an address or zillow link. pick the property type.
-              hit generate. we research the property, analyze the neighborhood,
-              and write 3 FHA-compliant listings — MLS, social, and email.
+              paste an address or zillow link. pick the property type. hit generate. we research the
+              property, analyze the neighborhood, and write 3 FHA-compliant listings — MLS, social,
+              and email.
             </div>
 
             <div className="flex gap-2 flex-wrap">
@@ -544,11 +515,7 @@ export default function RetroGenerator() {
                   Please be specific (e.g., 123 Main St, Austin TX) for best research results.
                 </span>
               </div>
-              <RetroButton
-                variant="primary"
-                onClick={handleGenerate}
-                disabled={generateDisabled}
-              >
+              <RetroButton variant="primary" onClick={handleGenerate} disabled={generateDisabled}>
                 {outputs ? `regenerate (${generationCountLabel})` : "generate"}
               </RetroButton>
             </div>
@@ -575,9 +542,7 @@ export default function RetroGenerator() {
               <span>fha trained</span>
               <span>real property research</span>
               <span>
-                {isProUser
-                  ? "unlimited generations"
-                  : "10 free generations, 1 Pro-tier included"}
+                {isProUser ? "unlimited generations" : "10 free generations, 1 Pro-tier included"}
               </span>
               {!user && !isProUser && selectedProTier && (
                 <span>{proTierGenerationsLeft} Pro-tier left</span>
@@ -600,24 +565,38 @@ export default function RetroGenerator() {
             <OutputTabsWindow
               outputs={outputs}
               headerRight={
-                <button
-                  className="win95-control-btn"
-                  onClick={() => setOutputs(null)}
-                >
+                <button className="win95-control-btn" onClick={() => setOutputs(null)}>
                   x
                 </button>
               }
               renderActions={(activeTab) => (
                 <div className="flex flex-wrap gap-2 mt-3">
-                  <RetroButton onClick={() => onCopy(outputs[activeTab] ?? "", activeTab)}>
-                    copy {activeTab}
-                  </RetroButton>
+                  {activeTab !== "research" && (
+                    <RetroButton
+                      onClick={() =>
+                        onCopy(
+                          typeof outputs[activeTab] === "string"
+                            ? (outputs[activeTab] as string)
+                            : "",
+                          activeTab,
+                        )
+                      }
+                    >
+                      copy {activeTab}
+                    </RetroButton>
+                  )}
                   <RetroButton onClick={onCopyAll}>copy all</RetroButton>
                   {propertyId && (
-                    <RetroButton onClick={() => {
-                      navigator.clipboard.writeText(`${window.location.origin}/listing/${propertyId}`);
-                      sonnerToast.success("Link copied!", { description: "Share this listing with anyone" });
-                    }}>
+                    <RetroButton
+                      onClick={() => {
+                        navigator.clipboard.writeText(
+                          `${window.location.origin}/listing/${propertyId}`,
+                        );
+                        sonnerToast.success("Link copied!", {
+                          description: "Share this listing with anyone",
+                        });
+                      }}
+                    >
                       share link
                     </RetroButton>
                   )}
@@ -625,8 +604,7 @@ export default function RetroGenerator() {
                     variant="primary"
                     onClick={handleGenerate}
                     disabled={
-                      generateDisabled ||
-                      (!devBypassActive && !user && generationsLeft <= 0)
+                      generateDisabled || (!devBypassActive && !user && generationsLeft <= 0)
                     }
                   >
                     regenerate ({generationCountLabel})
@@ -660,12 +638,7 @@ export default function RetroGenerator() {
           />
         )}
 
-        {showAuthModal && (
-          <AuthModal
-            onClose={() => setShowAuthModal(false)}
-            onAuth={handleAuth}
-          />
-        )}
+        {showAuthModal && <AuthModal onClose={() => setShowAuthModal(false)} onAuth={handleAuth} />}
 
         {/* Authenticated users see their listing history; anonymous see landing content */}
         {user && !authLoading ? (
@@ -683,9 +656,7 @@ export default function RetroGenerator() {
             <span>
               <strong className="text-foreground">PLG</strong> — PropertyListingGenerator.com
             </span>
-            <span>
-              FHA-compliant listing copy for real estate agents
-            </span>
+            <span>FHA-compliant listing copy for real estate agents</span>
           </div>
           <div className="flex flex-wrap items-center justify-center gap-3">
             <Link to="/explore" className="underline hover:text-foreground">
@@ -752,7 +723,15 @@ function PropertyTypeToggle({
           <button
             key={opt.key}
             onClick={() => onChange(opt.key)}
-            title={isProTier ? (isProUser ? "Pro tier (included)" : proTierUsed ? "0 Pro tier generations left — upgrade to unlock" : "Pro tier: 1 included free, then Pro") : "Free tier"}
+            title={
+              isProTier
+                ? isProUser
+                  ? "Pro tier (included)"
+                  : proTierUsed
+                    ? "0 Pro tier generations left — upgrade to unlock"
+                    : "Pro tier: 1 included free, then Pro"
+                : "Free tier"
+            }
             className={`px-2 py-1 text-win95-11 font-bold cursor-pointer relative ${
               isActive ? "win95-pressed bg-input" : "win95-raised bg-card"
             }`}
@@ -797,10 +776,9 @@ function Win95PaywallModal({
     track("checkout_started", { interval });
     setLoading(interval);
     try {
-      const { data, error } = await supabase.functions.invoke(
-        "create-checkout",
-        { body: { interval } },
-      );
+      const { data, error } = await supabase.functions.invoke("create-checkout", {
+        body: { interval },
+      });
       if (error) throw error;
       if (data?.url) {
         window.location.href = data.url;
@@ -839,8 +817,8 @@ function Win95PaywallModal({
                 Ready to take your real estate listings to the next level?
               </p>
               <p className="text-win95-11 text-muted-foreground mb-3">
-                Upgrade to Pro to unlock unlimited generations, all property types,
-                and advanced research features.
+                Upgrade to Pro to unlock unlimited generations, all property types, and advanced
+                research features.
               </p>
             </>
           ) : proTierLimit ? (
@@ -849,9 +827,8 @@ function Win95PaywallModal({
                 You&apos;ve used your included Pro-tier property generation.
               </p>
               <p className="text-win95-11 text-muted-foreground mb-3">
-                Free users can use 1 of their 10 generations on MF, STR, MTR,
-                LTR, Estate Sale, Luxury, Commercial, or Lease. Pro makes
-                those unlimited.
+                Free users can use 1 of their 10 generations on MF, STR, MTR, LTR, Estate Sale,
+                Luxury, Commercial, or Lease. Pro makes those unlimited.
               </p>
             </>
           ) : isSignedIn ? (
@@ -869,8 +846,8 @@ function Win95PaywallModal({
                 You&apos;ve used your 10 free anonymous generations.
               </p>
               <p className="text-win95-11 text-muted-foreground mb-3">
-                Create an account for 10 free generations each month, or upgrade
-                to Pro for unlimited volume.
+                Create an account for 10 free generations each month, or upgrade to Pro for
+                unlimited volume.
               </p>
             </>
           )}
@@ -903,10 +880,7 @@ function Win95PaywallModal({
               </RetroButton>
             </div>
             <div className="flex gap-2 justify-center">
-              <RetroButton
-                onClick={() => handleCheckout("year")}
-                disabled={loading !== null}
-              >
+              <RetroButton onClick={() => handleCheckout("year")} disabled={loading !== null}>
                 {loading === "year" ? "Loading..." : "Pro $39/mo — billed annually"}
               </RetroButton>
             </div>
@@ -921,9 +895,7 @@ function Win95PaywallModal({
                 Sign in / create account
               </button>
             ) : (
-              <span className="text-win95-11 text-muted-foreground">
-                Cancel anytime
-              </span>
+              <span className="text-win95-11 text-muted-foreground">Cancel anytime</span>
             )}
             <RetroButton onClick={onClose}>Cancel</RetroButton>
           </div>

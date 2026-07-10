@@ -3,19 +3,13 @@ import { supabase } from "@/integrations/supabase/client";
 import { RetroButton, RetroInput } from "@/components/retro";
 import TurnstileWidget from "@/components/TurnstileWidget";
 
-const TURNSTILE_SITE_KEY = import.meta.env.VITE_TURNSTILE_SITE_KEY as
-  | string
-  | undefined;
+const TURNSTILE_SITE_KEY = import.meta.env.VITE_TURNSTILE_SITE_KEY as string | undefined;
 
 type AuthMode = "signin" | "signup";
 
 interface AuthModalProps {
   onClose: () => void;
-  onAuth: (
-    email: string,
-    password: string,
-    mode: AuthMode,
-  ) => Promise<string | null>;
+  onAuth: (email: string, password: string, mode: AuthMode) => Promise<string | null>;
 }
 
 export default function AuthModal({ onClose, onAuth }: AuthModalProps) {
@@ -143,16 +137,16 @@ export default function AuthModal({ onClose, onAuth }: AuthModalProps) {
               onChange={(e) => setConsentChecked(e.target.checked)}
               className="mt-1"
             />
-            <label htmlFor="consent-checkbox" className="text-[10px] leading-tight text-muted-foreground cursor-pointer select-none">
-              I agree to the Terms of Service & Privacy Policy, and consent to my listing data being used to improve the PLG AI model.
+            <label
+              htmlFor="consent-checkbox"
+              className="text-[10px] leading-tight text-muted-foreground cursor-pointer select-none"
+            >
+              I agree to the Terms of Service & Privacy Policy, and consent to my listing data being
+              used to improve the PLG AI model.
             </label>
           </div>
 
-          {error && (
-            <p className="text-win95-11 text-[color:var(--destructive)]">
-              {error}
-            </p>
-          )}
+          {error && <p className="text-win95-11 text-[color:var(--destructive)]">{error}</p>}
           <div className="flex gap-2 justify-between items-center">
             <button
               className="text-win95-11 underline cursor-pointer bg-transparent border-none text-muted-foreground"
