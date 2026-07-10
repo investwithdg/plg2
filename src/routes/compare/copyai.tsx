@@ -27,7 +27,7 @@ const FEATURES = [
     rival: "General marketing & sales copy",
   },
   { feature: "FHA Fair Housing compliance", plg: "Built-in training & guardrails", rival: "None" },
-  { feature: "Real property research", plg: "Yes (Perplexity AI)", rival: "No" },
+  { feature: "Real property research", plg: "Yes (Deep research)", rival: "No" },
   {
     feature: "MLS-ready formatting",
     plg: "Yes — structure & character limits",

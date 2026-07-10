@@ -26,7 +26,7 @@ const FEATURES = [
     rival: "Graphic design with AI copy add-on",
   },
   { feature: "FHA compliance", plg: "Built-in training & guardrails", rival: "None" },
-  { feature: "Real property research", plg: "Yes (Perplexity AI)", rival: "No" },
+  { feature: "Real property research", plg: "Yes (Deep research)", rival: "No" },
   { feature: "MLS-ready formatting", plg: "Yes", rival: "No — designed for social graphics" },
   {
     feature: "Social media copy",

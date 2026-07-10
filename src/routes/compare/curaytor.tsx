@@ -59,8 +59,8 @@ function VsCuraytor() {
             </p>
             <p className="text-win95-12">
               <strong>PLG</strong> is a specialized tool that costs $49 a month. You use it the
-              moment you get a listing to instantly generate FHA-compliant, Perplexity-researched
-              copy for the MLS, social media, and your email list.
+              moment you get a listing to instantly generate FHA-compliant, AI-researched copy for
+              the MLS, social media, and your email list.
             </p>
           </div>
         </div>

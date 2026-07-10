@@ -7,7 +7,7 @@ export const Route = createFileRoute("/compare/listingrobot")({
       {
         name: "description",
         content:
-          "Listing Robot provides template-based MLS descriptions. PLG is an copy generator with Perplexity research, FHA compliance, and three format outputs.",
+          "Listing Robot provides template-based MLS descriptions. PLG is an copy generator with Automated research, FHA compliance, and three format outputs.",
       },
       {
         property: "og:title",
@@ -26,7 +26,7 @@ export const Route = createFileRoute("/compare/listingrobot")({
 const FEATURES = [
   {
     feature: "Generation method",
-    plg: "AI with Perplexity research",
+    plg: "AI with Automated research",
     rival: "Mad-libs style templates",
   },
   {
@@ -73,8 +73,9 @@ function VsListingRobot() {
             </p>
             <p className="text-win95-12">
               <strong>PLG</strong> is a modern listing generator. Instead of just filling in blanks,
-              it uses Perplexity AI to research the property, neighborhood, and schools, and then
-              writes unique, FHA-compliant copy for MLS, social media, and email simultaneously.
+              it uses Automated property research to research the property, neighborhood, and
+              schools, and then writes unique, FHA-compliant copy for MLS, social media, and email
+              simultaneously.
             </p>
           </div>
         </div>

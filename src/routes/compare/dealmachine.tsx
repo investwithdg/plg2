@@ -48,7 +48,7 @@ const FEATURES = [
   },
   {
     feature: "Real property research",
-    plg: "Yes (via Perplexity AI)",
+    plg: "Yes (via Deep research)",
     rival: "Property data for leads",
   },
   {

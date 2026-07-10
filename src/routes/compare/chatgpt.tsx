@@ -33,7 +33,7 @@ const FEATURES = [
   },
   {
     feature: "Real property research",
-    plg: "Yes (Perplexity AI lookups)",
+    plg: "Yes (Deep property research)",
     rival: "No — uses only what you type",
   },
   {

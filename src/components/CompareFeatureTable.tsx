@@ -25,7 +25,7 @@ export function CompareFeatureTable({ rival, category }: CompareFeatureTableProp
         },
         {
           feature: "Real property research",
-          plg: "Yes (Perplexity AI)",
+          plg: "Yes (Deep research)",
           rival: "No — hallucinations common",
         },
         {
@@ -52,7 +52,7 @@ export function CompareFeatureTable({ rival, category }: CompareFeatureTableProp
           plg: "Built-in training & guardrails",
           rival: "Basic or non-existent",
         },
-        { feature: "Real property research", plg: "Yes (Perplexity AI)", rival: "No" },
+        { feature: "Real property research", plg: "Yes (Deep research)", rival: "No" },
         {
           feature: "Listing copy focus",
           plg: "Core product",
@@ -104,7 +104,7 @@ export function CompareFeatureTable({ rival, category }: CompareFeatureTableProp
           plg: "Built-in training & guardrails",
           rival: "Rarely included",
         },
-        { feature: "Real property research", plg: "Yes (Perplexity AI)", rival: "No" },
+        { feature: "Real property research", plg: "Yes (Deep research)", rival: "No" },
         { feature: "MLS-ready formatting", plg: "Yes — structure & character limits", rival: "No" },
       ];
       break;

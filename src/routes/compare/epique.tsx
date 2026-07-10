@@ -30,7 +30,7 @@ const FEATURES = [
     plg: "Strictly enforced via AI guardrails",
     rival: "Varies by tool",
   },
-  { feature: "Real property research", plg: "Yes (Perplexity AI)", rival: "Basic or none" },
+  { feature: "Real property research", plg: "Yes (Deep research)", rival: "Basic or none" },
   {
     feature: "Output formats",
     plg: "MLS, Social, Email simultaneously",

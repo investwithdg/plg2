@@ -159,7 +159,7 @@ async function extractWithPerplexity(
   apiKey: string,
   propertyId: string,
   property: { address: string; source_url: string | null },
-): Promise<{ parsed: Record<string, unknown>; usage: TokenUsage }> {
+): Promise<{ parsed: Record<string, unknown>; raw: unknown; usage: TokenUsage }> {
   const target = property.source_url || property.address;
   const schema = {
     type: "object",
@@ -220,7 +220,7 @@ async function extractWithPerplexity(
   } catch {
     /* ignore */
   }
-  return { parsed, usage };
+  return { parsed, raw: data, usage };
 }
 
 async function enrichWithPerplexity(
@@ -499,7 +499,7 @@ async function process(propertyId: string) {
     failedStep = "extraction";
     await updateStep(supabase, propertyId, "researching_property", "processing");
     const extractStart = Date.now();
-    const { parsed: extracted, usage: extractionUsage } = await extractWithPerplexity(
+    const { parsed: extracted, raw: extractRaw, usage: extractionUsage } = await extractWithPerplexity(
       perplexityKey,
       propertyId,
       {
@@ -539,12 +539,14 @@ async function process(propertyId: string) {
         baths: extracted.baths ?? null,
         sqft: extracted.sqft ?? null,
         price: extracted.price ?? null,
-        property_type: extracted.property_type ?? property.property_type,
+        year_built: extracted.year_built ?? null,
+        property_type: extracted.property_type ?? null,
         existing_listing_raw: existingListingRaw ?? null,
-        fha_compliant_listing_parts: fhaCompliantParts ?? null,
-        fha_violations: fhaViolations ?? null,
-        extraction_status: "complete",
-        extraction_latency_ms: extractionLatency,
+        fha_compliant_listing_parts: fhaCompliantParts,
+        fha_violations: fhaViolations ? fhaViolations : null,
+        perplexity_extract_raw: extractRaw as any,
+        extraction_status: "success",
+        extraction_latency_ms: extractionLatency + fhaParseLatency,
         extraction_model_version: "perplexity-sonar-pro",
       })
       .eq("id", propertyId);

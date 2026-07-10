@@ -14,7 +14,7 @@ export function initPostHog() {
     capture_pageview: false, // fired manually via router.subscribe
     capture_pageleave: false, // beforeunload doesn't fire on SPA navigation
     autocapture: false,
-    errorTracking: { autocaptureExceptions: true },
+    capture_exceptions: true,
   });
   initialised = true;
 }

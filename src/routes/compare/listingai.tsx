@@ -33,7 +33,7 @@ const FEATURES = [
   },
   {
     feature: "Real property research",
-    plg: "Yes (Perplexity AI lookups)",
+    plg: "Yes (Deep property research)",
     rival: "No — uses only your input",
   },
   {
@@ -111,7 +111,8 @@ function VsListingAI() {
             <p className="text-win95-12">
               <strong>PropertyListingGenerator.com (PLG)</strong> is different. It was built from
               the ground up for real estate agents: FHA-compliant by default, powered by real
-              property research via Perplexity, and optimized for MLS, social, and email formats.
+              property research via Automated research, and optimized for MLS, social, and email
+              formats.
             </p>
           </div>
         </div>
@@ -130,7 +131,7 @@ function VsListingAI() {
               </p>
               <p className="text-win95-12">
                 <strong>Research matters.</strong> Generic tools only know what you tell them. PLG
-                uses Perplexity to research the actual property — neighborhood details, school
+                uses automated models to research the actual property — neighborhood details, school
                 districts, nearby amenities — producing copy that sounds like you spent an hour
                 writing it.
               </p>
