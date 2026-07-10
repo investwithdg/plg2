@@ -1,7 +1,8 @@
 import posthog from "posthog-js";
 
 const key = import.meta.env.VITE_POSTHOG_KEY as string | undefined;
-const host = (import.meta.env.VITE_POSTHOG_HOST as string | undefined) ?? "https://us.i.posthog.com";
+const host =
+  (import.meta.env.VITE_POSTHOG_HOST as string | undefined) ?? "https://us.i.posthog.com";
 
 let initialised = false;
 
@@ -13,6 +14,7 @@ export function initPostHog() {
     capture_pageview: false, // fired manually via router.subscribe
     capture_pageleave: false, // beforeunload doesn't fire on SPA navigation
     autocapture: false,
+    errorTracking: { autocaptureExceptions: true },
   });
   initialised = true;
 }
@@ -30,4 +32,9 @@ export function resetUser() {
 export function track(event: string, props?: Record<string, unknown>) {
   if (!initialised) return;
   posthog.capture(event, props);
+}
+
+export function captureException(error: unknown, context?: Record<string, unknown>) {
+  if (!initialised) return;
+  posthog.captureException(error, context);
 }
