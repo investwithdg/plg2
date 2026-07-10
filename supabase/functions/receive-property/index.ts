@@ -4,12 +4,7 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { z } from "https://deno.land/x/zod@v3.22.4/mod.ts";
-
-const corsHeaders = {
-  "Access-Control-Allow-Origin": "*",
-  "Access-Control-Allow-Headers":
-    "authorization, x-client-info, apikey, content-type",
-};
+import { getCorsHeaders } from "../_shared/cors.ts";
 
 const FREE_LIMIT = 10;
 const FREE_WINDOW_DAYS = 30;
@@ -69,13 +64,6 @@ async function hmacSha256(input: string, secret: string): Promise<string> {
     .join("");
 }
 
-function jsonResponse(body: Record<string, unknown>, status: number) {
-  return new Response(JSON.stringify(body), {
-    status,
-    headers: { ...corsHeaders, "Content-Type": "application/json" },
-  });
-}
-
 function log(step: string, data?: Record<string, unknown>) {
   console.log(
     JSON.stringify({
@@ -87,104 +75,89 @@ function log(step: string, data?: Record<string, unknown>) {
   );
 }
 
-function usageCheckUnavailableResponse() {
-  return jsonResponse(
-    {
-      success: false,
-      error: "usage_check_unavailable",
-      message: "Usage limit verification is temporarily unavailable. Please try again.",
-    },
-    503,
-  );
-}
+// Response helpers are built fresh per-request so corsHeaders (computed from
+// that request's Origin) never leaks across concurrent requests sharing this isolate.
+function makeResponders(corsHeaders: Record<string, string>) {
+  function jsonResponse(body: Record<string, unknown>, status: number) {
+    return new Response(JSON.stringify(body), {
+      status,
+      headers: { ...corsHeaders, "Content-Type": "application/json" },
+    });
+  }
 
-function gateResponse(errorCode: string, userId: string | null) {
-  if (errorCode === "pro_required") {
+  function usageCheckUnavailableResponse() {
     return jsonResponse(
       {
         success: false,
-        error: "pro_required",
-        message: userId
-          ? "Free accounts include 1 Pro-tier property generation per month. Upgrade to Pro for unlimited Pro-tier generations."
-          : "Anonymous users include 1 Pro-tier property generation. Sign in for a monthly Pro-tier sample or upgrade to Pro.",
+        error: "usage_check_unavailable",
+        message: "Usage limit verification is temporarily unavailable. Please try again.",
       },
-      403,
+      503,
     );
   }
 
-  if (errorCode === "free_limit_exceeded") {
-    return jsonResponse(
-      {
-        success: false,
-        error: "free_limit_exceeded",
-        message: userId
-          ? `Free monthly limit reached (${FREE_LIMIT} per ${FREE_WINDOW_DAYS} days). Upgrade to Pro for unlimited generations.`
-          : `Free anonymous limit reached (${FREE_LIMIT} generations). Sign in for ${FREE_LIMIT} monthly generations or upgrade to Pro.`,
-      },
-      429,
-    );
-  }
-
-  if (errorCode === "anonymous_id_required") {
-    return jsonResponse(
-      {
-        success: false,
-        error: "anonymous_id_required",
-        message: "Anonymous usage identity is required. Refresh and try again.",
-      },
-      400,
-    );
-  }
-
-  return usageCheckUnavailableResponse();
-}
-
-async function verifyAnonymousTurnstile(
-  token: string | undefined,
-  ipRaw: string,
-): Promise<{ ok: true } | { ok: false; response: Response }> {
-  if (!token) {
-    return {
-      ok: false,
-      response: jsonResponse(
+  function gateResponse(errorCode: string, userId: string | null) {
+    if (errorCode === "pro_required") {
+      return jsonResponse(
         {
           success: false,
-          error: "turnstile_required",
-          message: "Security check required. Please try again.",
+          error: "pro_required",
+          message: userId
+            ? "Free accounts include 1 Pro-tier property generation per month. Upgrade to Pro for unlimited Pro-tier generations."
+            : "Anonymous users include 1 Pro-tier property generation. Sign in for a monthly Pro-tier sample or upgrade to Pro.",
+        },
+        403,
+      );
+    }
+
+    if (errorCode === "free_limit_exceeded") {
+      return jsonResponse(
+        {
+          success: false,
+          error: "free_limit_exceeded",
+          message: userId
+            ? `Free monthly limit reached (${FREE_LIMIT} per ${FREE_WINDOW_DAYS} days). Upgrade to Pro for unlimited generations.`
+            : `Free anonymous limit reached (${FREE_LIMIT} generations). Sign in for ${FREE_LIMIT} monthly generations or upgrade to Pro.`,
+        },
+        429,
+      );
+    }
+
+    if (errorCode === "anonymous_id_required") {
+      return jsonResponse(
+        {
+          success: false,
+          error: "anonymous_id_required",
+          message: "Anonymous usage identity is required. Refresh and try again.",
         },
         400,
-      ),
-    };
+      );
+    }
+
+    return usageCheckUnavailableResponse();
   }
 
-  const secret = Deno.env.get("TURNSTILE_SECRET_KEY");
-  if (!secret) {
-    log("missing_turnstile_secret");
-    return {
-      ok: false,
-      response: jsonResponse(
-        {
-          success: false,
-          error: "security_check_unavailable",
-          message: "Security check unavailable. Please try again.",
-        },
-        503,
-      ),
-    };
-  }
+  async function verifyAnonymousTurnstile(
+    token: string | undefined,
+    ipRaw: string,
+  ): Promise<{ ok: true } | { ok: false; response: Response }> {
+    if (!token) {
+      return {
+        ok: false,
+        response: jsonResponse(
+          {
+            success: false,
+            error: "turnstile_required",
+            message: "Security check required. Please try again.",
+          },
+          400,
+        ),
+      };
+    }
 
-  const body = new URLSearchParams({ secret, response: token });
-  if (ipRaw && ipRaw !== "unknown") body.set("remoteip", ipRaw);
-
-  try {
-    const res = await fetch(TURNSTILE_VERIFY_URL, {
-      method: "POST",
-      headers: { "Content-Type": "application/x-www-form-urlencoded" },
-      body: body.toString(),
-    });
-
-    if (!res.ok) {
-      log("turnstile_http_error", { status: res.status });
+    const secret = Deno.env.get("TURNSTILE_SECRET_KEY");
+    if (!secret) {
+      log("missing_turnstile_secret");
       return {
         ok: false,
         response: jsonResponse(
@@ -198,44 +171,76 @@ async function verifyAnonymousTurnstile(
       };
     }
 
-    const result = await res.json();
-    if (!result?.success) {
-      log("turnstile_failed", { codes: result?.["error-codes"] });
+    const body = new URLSearchParams({ secret, response: token });
+    if (ipRaw && ipRaw !== "unknown") body.set("remoteip", ipRaw);
+
+    try {
+      const res = await fetch(TURNSTILE_VERIFY_URL, {
+        method: "POST",
+        headers: { "Content-Type": "application/x-www-form-urlencoded" },
+        body: body.toString(),
+      });
+
+      if (!res.ok) {
+        log("turnstile_http_error", { status: res.status });
+        return {
+          ok: false,
+          response: jsonResponse(
+            {
+              success: false,
+              error: "security_check_unavailable",
+              message: "Security check unavailable. Please try again.",
+            },
+            503,
+          ),
+        };
+      }
+
+      const result = await res.json();
+      if (!result?.success) {
+        log("turnstile_failed", { codes: result?.["error-codes"] });
+        return {
+          ok: false,
+          response: jsonResponse(
+            {
+              success: false,
+              error: "turnstile_failed",
+              message: "Security check failed. Please try again.",
+            },
+            403,
+          ),
+        };
+      }
+
+      return { ok: true };
+    } catch (error) {
+      log("turnstile_verify_error", {
+        error: error instanceof Error ? error.message : "Unknown",
+      });
       return {
         ok: false,
         response: jsonResponse(
           {
             success: false,
-            error: "turnstile_failed",
-            message: "Security check failed. Please try again.",
+            error: "security_check_unavailable",
+            message: "Security check unavailable. Please try again.",
           },
-          403,
+          503,
         ),
       };
     }
-
-    return { ok: true };
-  } catch (error) {
-    log("turnstile_verify_error", {
-      error: error instanceof Error ? error.message : "Unknown",
-    });
-    return {
-      ok: false,
-      response: jsonResponse(
-        {
-          success: false,
-          error: "security_check_unavailable",
-          message: "Security check unavailable. Please try again.",
-        },
-        503,
-      ),
-    };
   }
+
+  return { jsonResponse, usageCheckUnavailableResponse, gateResponse, verifyAnonymousTurnstile };
 }
 
 serve(async (req) => {
+  const corsHeaders = getCorsHeaders(req);
   if (req.method === "OPTIONS")
     return new Response(null, { headers: corsHeaders });
+
+  const { jsonResponse, usageCheckUnavailableResponse, gateResponse, verifyAnonymousTurnstile } =
+    makeResponders(corsHeaders);
 
   let anonymousUsageKey: string | null = null;
   let anonymousUsageReserved = false;
