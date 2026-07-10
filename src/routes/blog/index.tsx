@@ -25,22 +25,12 @@ function formatDate(dateStr: string): string {
   });
 }
 
-const ACCENT_COLORS = [
-  "var(--win95-blue)",
-  "#800000",
-  "#008080",
-  "#808000",
-  "#800080",
-  "#008000",
-];
+const ACCENT_COLORS = ["var(--win95-blue)", "#800000", "#008080", "#808000", "#800080", "#008000"];
 
 function deriveCategory(slug: string): string {
-  if (slug.includes("mls") || slug.includes("listing-description"))
-    return "MLS Copy";
-  if (slug.includes("fha") || slug.includes("fair-housing"))
-    return "FHA Compliance";
-  if (slug.includes("social") || slug.includes("instagram"))
-    return "Social Media";
+  if (slug.includes("mls") || slug.includes("listing-description")) return "MLS Copy";
+  if (slug.includes("fha") || slug.includes("fair-housing")) return "FHA Compliance";
+  if (slug.includes("social") || slug.includes("instagram")) return "Social Media";
   if (slug.includes("email")) return "Email Marketing";
   if (slug.includes("commercial")) return "Commercial";
   return "Listing Tips";
@@ -49,7 +39,7 @@ function deriveCategory(slug: string): string {
 function BlogIndex() {
   const [featured, ...allRest] = ARTICLES;
   const [visibleCount, setVisibleCount] = useState(6);
-  
+
   const rest = allRest.slice(0, visibleCount);
   const hasMore = visibleCount < allRest.length;
 
@@ -71,19 +61,15 @@ function BlogIndex() {
               Listing copy tips for real estate agents
             </h1>
             <p className="text-win95-11 text-muted-foreground">
-              Guides on writing MLS descriptions, Fair Housing compliance, and
-              getting more showings from your listings.
+              Guides on writing MLS descriptions, Fair Housing compliance, and getting more showings
+              from your listings.
             </p>
           </div>
         </div>
 
         {/* Featured article — hero card */}
         {featured && (
-          <Link
-            to="/blog/$slug"
-            params={{ slug: featured.slug }}
-            className="block no-underline"
-          >
+          <Link to="/blog/$slug" params={{ slug: featured.slug }} className="block no-underline">
             <div className="win95-window group cursor-pointer">
               <div
                 className="win95-titlebar"
@@ -91,12 +77,8 @@ function BlogIndex() {
                   background: "linear-gradient(to right, #800000, #c04040)",
                 }}
               >
-                <span className="font-bold text-win95-12 truncate pl-1">
-                  ★ Featured Article
-                </span>
-                <span className="text-win95-11 opacity-90">
-                  {featured.readTime}
-                </span>
+                <span className="font-bold text-win95-12 truncate pl-1">★ Featured Article</span>
+                <span className="text-win95-11 opacity-90">{featured.readTime}</span>
               </div>
               <div className="p-4 group-hover:bg-[color:var(--win95-blue)] group-hover:text-white transition-colors">
                 <div className="flex items-center gap-2 mb-2">
@@ -107,9 +89,7 @@ function BlogIndex() {
                     {formatDate(featured.date)}
                   </span>
                 </div>
-                <h2 className="text-win95-14 font-bold mb-2">
-                  {featured.title}
-                </h2>
+                <h2 className="text-win95-14 font-bold mb-2">{featured.title}</h2>
                 <p className="text-win95-12 text-muted-foreground group-hover:text-white/90">
                   {featured.description}
                 </p>
@@ -135,8 +115,7 @@ function BlogIndex() {
                   <div
                     className="h-1.5"
                     style={{
-                      background:
-                        ACCENT_COLORS[i % ACCENT_COLORS.length],
+                      background: ACCENT_COLORS[i % ACCENT_COLORS.length],
                     }}
                   />
                   <div className="p-3 group-hover:bg-[color:var(--win95-blue)] group-hover:text-white transition-colors h-full">
@@ -145,9 +124,7 @@ function BlogIndex() {
                         {deriveCategory(article.slug)}
                       </span>
                     </div>
-                    <h3 className="text-win95-12 font-bold mb-1 line-clamp-2">
-                      {article.title}
-                    </h3>
+                    <h3 className="text-win95-12 font-bold mb-1 line-clamp-2">{article.title}</h3>
                     <p className="text-win95-11 text-muted-foreground group-hover:text-white/80 line-clamp-2 mb-2">
                       {article.description}
                     </p>
@@ -194,8 +171,8 @@ function BlogIndex() {
           </div>
           <div className="p-4 flex items-center justify-between gap-4">
             <p className="text-win95-11 text-muted-foreground">
-              Stop writing from scratch. PLG researches the property and generates
-              FHA-compliant MLS, social, and email copy for you.
+              Stop writing from scratch. PLG researches the property and generates FHA-compliant
+              MLS, social, and email copy for you.
             </p>
             <Link to="/">
               <button className="win95-raised px-4 py-1 text-win95-12 font-bold cursor-pointer active:win95-pressed shrink-0">

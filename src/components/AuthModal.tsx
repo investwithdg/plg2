@@ -3,19 +3,13 @@ import { supabase } from "@/integrations/supabase/client";
 import { RetroButton, RetroInput } from "@/components/retro";
 import TurnstileWidget from "@/components/TurnstileWidget";
 
-const TURNSTILE_SITE_KEY = import.meta.env.VITE_TURNSTILE_SITE_KEY as
-  | string
-  | undefined;
+const TURNSTILE_SITE_KEY = import.meta.env.VITE_TURNSTILE_SITE_KEY as string | undefined;
 
 type AuthMode = "signin" | "signup";
 
 interface AuthModalProps {
   onClose: () => void;
-  onAuth: (
-    email: string,
-    password: string,
-    mode: AuthMode,
-  ) => Promise<string | null>;
+  onAuth: (email: string, password: string, mode: AuthMode) => Promise<string | null>;
 }
 
 export default function AuthModal({ onClose, onAuth }: AuthModalProps) {
@@ -35,10 +29,7 @@ export default function AuthModal({ onClose, onAuth }: AuthModalProps) {
   }, []);
 
   const requiresTurnstile = mode === "signup" && !!TURNSTILE_SITE_KEY;
-  const canSubmit =
-    !!email.trim() &&
-    !!password.trim() &&
-    (!requiresTurnstile || !!turnstileToken);
+  const canSubmit = !!email.trim() && !!password.trim() && (!requiresTurnstile || !!turnstileToken);
 
   const handleSubmit = async () => {
     if (!canSubmit || submitting) return;
@@ -133,11 +124,7 @@ export default function AuthModal({ onClose, onAuth }: AuthModalProps) {
             </div>
           )}
 
-          {error && (
-            <p className="text-win95-11 text-[color:var(--destructive)]">
-              {error}
-            </p>
-          )}
+          {error && <p className="text-win95-11 text-[color:var(--destructive)]">{error}</p>}
           <div className="flex gap-2 justify-between items-center">
             <button
               className="text-win95-11 underline cursor-pointer bg-transparent border-none text-muted-foreground"

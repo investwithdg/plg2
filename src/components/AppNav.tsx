@@ -45,18 +45,12 @@ export function AppNav() {
     setMenuOpen(false);
   };
 
-  const handleAuth = async (
-    email: string,
-    password: string,
-    mode: "signin" | "signup",
-  ) => {
+  const handleAuth = async (email: string, password: string, mode: "signin" | "signup") => {
     if (mode === "signin") return signIn(email, password);
 
     const { error, isNewUser } = await signUp(email, password);
     if (isNewUser) {
-      supabase.functions
-        .invoke("send-welcome-email", { body: { email } })
-        .catch(console.error);
+      supabase.functions.invoke("send-welcome-email", { body: { email } }).catch(console.error);
     }
     return error;
   };
@@ -74,12 +68,15 @@ export function AppNav() {
 
         {/* Desktop nav links */}
         <nav className="hidden sm:flex items-center gap-1 ml-1">
-          {NAV_LINKS.filter(l => l.to !== "/").map((link) => (
+          {NAV_LINKS.filter((l) => l.to !== "/").map((link) => (
             <Link
               key={link.to}
               to={link.to}
               className="win95-raised bg-[var(--win95-gray)] text-black px-2 py-0.5 text-win95-11 no-underline"
-              activeProps={{ className: "win95-pressed bg-[var(--win95-gray)] text-black px-2 py-0.5 text-win95-11 no-underline" }}
+              activeProps={{
+                className:
+                  "win95-pressed bg-[var(--win95-gray)] text-black px-2 py-0.5 text-win95-11 no-underline",
+              }}
             >
               {link.label}
             </Link>
@@ -127,10 +124,7 @@ export function AppNav() {
 
         {/* Mobile dropdown menu */}
         {menuOpen && (
-          <div
-            ref={menuRef}
-            className="absolute top-full left-0 right-0 z-50 px-2 pt-1 pb-2"
-          >
+          <div ref={menuRef} className="absolute top-full left-0 right-0 z-50 px-2 pt-1 pb-2">
             <div className="win95-window">
               <div className="win95-titlebar">
                 <span className="font-bold text-win95-12 truncate pl-1">Navigation</span>
@@ -148,7 +142,10 @@ export function AppNav() {
                     key={link.to}
                     to={link.to}
                     className="block w-full text-left px-4 py-1.5 text-win95-12 text-black no-underline hover:bg-[color:var(--win95-blue)] hover:text-white"
-                    activeProps={{ className: "block w-full text-left px-4 py-1.5 text-win95-12 no-underline bg-[color:var(--win95-blue)] text-white" }}
+                    activeProps={{
+                      className:
+                        "block w-full text-left px-4 py-1.5 text-win95-12 no-underline bg-[color:var(--win95-blue)] text-white",
+                    }}
                     activeOptions={"exact" in link && link.exact ? { exact: true } : undefined}
                     onClick={() => setMenuOpen(false)}
                   >
@@ -169,7 +166,10 @@ export function AppNav() {
                 ) : (
                   <div className="px-4">
                     <button
-                      onClick={() => { setMenuOpen(false); setShowAuthModal(true); }}
+                      onClick={() => {
+                        setMenuOpen(false);
+                        setShowAuthModal(true);
+                      }}
                       className="win95-raised px-3 py-0.5 text-win95-12 cursor-pointer w-full text-left"
                     >
                       Sign In
@@ -182,12 +182,7 @@ export function AppNav() {
         )}
       </header>
 
-      {showAuthModal && (
-        <AuthModal
-          onClose={() => setShowAuthModal(false)}
-          onAuth={handleAuth}
-        />
-      )}
+      {showAuthModal && <AuthModal onClose={() => setShowAuthModal(false)} onAuth={handleAuth} />}
     </>
   );
 }

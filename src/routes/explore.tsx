@@ -69,9 +69,7 @@ function Explore() {
 
   useEffect(() => {
     async function load() {
-      const { data: properties, error } = await (
-        supabase.from("properties" as never) as any
-      )
+      const { data: properties, error } = await (supabase.from("properties" as never) as any)
         .select("id, address, property_type, created_at, beds, baths, price, mls_number")
         .eq("status", "complete")
         .eq("is_public", true)
@@ -84,9 +82,7 @@ function Explore() {
       }
 
       const ids = (properties as PropertyRow[]).map((p) => p.id);
-      const { data: copies } = await (
-        supabase.from("copy_generations" as never) as any
-      )
+      const { data: copies } = await (supabase.from("copy_generations" as never) as any)
         .select("property_id, content")
         .eq("copy_type", "mls")
         .in("property_id", ids);
@@ -122,12 +118,10 @@ function Explore() {
             </div>
           </div>
           <div className="p-4">
-            <p className="text-win95-12 font-bold mb-1">
-              Browse listings generated with PLG
-            </p>
+            <p className="text-win95-12 font-bold mb-1">Browse listings generated with PLG</p>
             <p className="text-win95-11 text-muted-foreground">
-              Real FHA-compliant copy written by PLG for agents across the US.
-              Click any listing to expand the MLS description.
+              Real FHA-compliant copy written by PLG for agents across the US. Click any listing to
+              expand the MLS description.
             </p>
           </div>
         </div>
@@ -172,18 +166,14 @@ function Explore() {
                           ? "bg-[color:var(--win95-blue)] text-white"
                           : "hover:bg-[color:var(--win95-blue)] hover:text-white"
                       }`}
-                      onClick={() =>
-                        setExpanded(expanded === property.id ? null : property.id)
-                      }
+                      onClick={() => setExpanded(expanded === property.id ? null : property.id)}
                     >
                       <span className="flex-1 truncate">{property.address}</span>
                       <span className="w-24 text-center hidden md:block font-bold text-win95-11 opacity-80">
                         {property.mls_number ?? "—"}
                       </span>
                       <span className="w-20 text-center hidden sm:block font-bold text-win95-11">
-                        {TYPE_LABELS[property.property_type ?? ""] ??
-                          property.property_type ??
-                          "—"}
+                        {TYPE_LABELS[property.property_type ?? ""] ?? property.property_type ?? "—"}
                       </span>
                       <span className="w-24 text-right text-win95-11">
                         {formatDate(property.created_at)}
@@ -199,9 +189,7 @@ function Explore() {
                             </span>
                             <button
                               className="win95-raised px-2 py-0.5 text-win95-11 cursor-pointer active:win95-pressed"
-                              onClick={() =>
-                                navigator.clipboard.writeText(mlsCopy)
-                              }
+                              onClick={() => navigator.clipboard.writeText(mlsCopy)}
                             >
                               Copy
                             </button>
@@ -211,10 +199,7 @@ function Explore() {
                           </p>
                         </div>
                         <div className="mt-2 flex gap-2">
-                          <Link
-                            to="/listing/$id"
-                            params={{ id: property.id }}
-                          >
+                          <Link to="/listing/$id" params={{ id: property.id }}>
                             <button className="win95-raised px-3 py-1 text-win95-11 cursor-pointer active:win95-pressed">
                               View full listing →
                             </button>
@@ -237,9 +222,7 @@ function Explore() {
         {/* CTA */}
         <div className="win95-window">
           <div className="win95-titlebar">
-            <span className="font-bold text-win95-12 truncate pl-1">
-              Want your listing here?
-            </span>
+            <span className="font-bold text-win95-12 truncate pl-1">Want your listing here?</span>
           </div>
           <div className="p-4 flex items-center justify-between gap-4">
             <p className="text-win95-11 text-muted-foreground">

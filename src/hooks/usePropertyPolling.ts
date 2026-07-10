@@ -47,9 +47,7 @@ interface UsePropertyPollingResult {
 const FALLBACK_POLL_INTERVAL = 15000;
 const MAX_FALLBACK_ATTEMPTS = 12;
 
-export function usePropertyPolling(
-  propertyId: string | null,
-): UsePropertyPollingResult {
+export function usePropertyPolling(propertyId: string | null): UsePropertyPollingResult {
   const [status, setStatus] = useState<PropertyStatus>("pending");
   const [enrichmentStep, setEnrichmentStep] = useState<EnrichmentStep>(null);
   const [property, setProperty] = useState<PropertyWithCopies | null>(null);
@@ -71,33 +69,30 @@ export function usePropertyPolling(
     setIsPolling(false);
   }, []);
 
-  const fetchCopies = useCallback(
-    async (propId: string) => {
-      const [copiesRes, enrichmentsRes] = await Promise.all([
-        (supabase.from("copy_generations" as never) as any)
-          .select("id, copy_type, content, created_at")
-          .eq("property_id", propId)
-          .order("created_at", { ascending: false }),
-        (supabase.from("enrichments" as never) as any)
-          .select("perplexity_raw_response")
-          .eq("property_id", propId)
-          .maybeSingle(),
-      ]);
+  const fetchCopies = useCallback(async (propId: string) => {
+    const [copiesRes, enrichmentsRes] = await Promise.all([
+      (supabase.from("copy_generations" as never) as any)
+        .select("id, copy_type, content, created_at")
+        .eq("property_id", propId)
+        .order("created_at", { ascending: false }),
+      (supabase.from("enrichments" as never) as any)
+        .select("perplexity_raw_response")
+        .eq("property_id", propId)
+        .maybeSingle(),
+    ]);
 
-      if (copiesRes.error) {
-        console.error("Error fetching copies:", copiesRes.error);
-      } else {
-        setCopies((copiesRes.data ?? []) as CopyGeneration[]);
-      }
+    if (copiesRes.error) {
+      console.error("Error fetching copies:", copiesRes.error);
+    } else {
+      setCopies((copiesRes.data ?? []) as CopyGeneration[]);
+    }
 
-      if (enrichmentsRes.error) {
-        console.error("Error fetching enrichments:", enrichmentsRes.error);
-      } else if (enrichmentsRes.data) {
-        setEnrichmentData(enrichmentsRes.data);
-      }
-    },
-    [],
-  );
+    if (enrichmentsRes.error) {
+      console.error("Error fetching enrichments:", enrichmentsRes.error);
+    } else if (enrichmentsRes.data) {
+      setEnrichmentData(enrichmentsRes.data);
+    }
+  }, []);
 
   const handlePropertyUpdate = useCallback(
     (row: Record<string, unknown>) => {
@@ -123,9 +118,7 @@ export function usePropertyPolling(
     async (propId: string) => {
       if (stoppedRef.current) return;
       try {
-        const { data, error: fetchErr } = await (
-          supabase.from("properties" as never) as any
-        )
+        const { data, error: fetchErr } = await (supabase.from("properties" as never) as any)
           .select(
             "id, address, property_type, status, enrichment_step, extraction_status, failed_step, beds, baths, sqft, price, fha_violations, existing_listing_raw, created_at",
           )
@@ -188,10 +181,7 @@ export function usePropertyPolling(
 
     // Fallback: slow poll in case Realtime is unavailable or delayed
     fetchOnce(propertyId);
-    fallbackRef.current = setInterval(
-      () => fetchOnce(propertyId),
-      FALLBACK_POLL_INTERVAL,
-    );
+    fallbackRef.current = setInterval(() => fetchOnce(propertyId), FALLBACK_POLL_INTERVAL);
 
     return () => {
       supabase.removeChannel(channel);

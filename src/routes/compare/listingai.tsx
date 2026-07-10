@@ -4,8 +4,7 @@ export const Route = createFileRoute("/compare/listingai")({
   head: () => ({
     meta: [
       {
-        title:
-          "PLG vs Listing AI — Property Listing Generator Comparison",
+        title: "PLG vs Listing AI — Property Listing Generator Comparison",
       },
       {
         name: "description",
@@ -91,15 +90,9 @@ function VsListingAI() {
         {/* Header window */}
         <div className="win95-window">
           <div className="win95-titlebar">
-            <span className="font-bold text-win95-12 truncate pl-1">
-              PLG vs Listing AI
-            </span>
+            <span className="font-bold text-win95-12 truncate pl-1">PLG vs Listing AI</span>
             <div className="flex gap-[2px]">
-              <Link
-                to="/compare"
-                className="win95-control-btn no-underline"
-                aria-label="Back"
-              >
+              <Link to="/compare" className="win95-control-btn no-underline" aria-label="Back">
                 &lt;
               </Link>
               <Link to="/" className="win95-control-btn no-underline" aria-label="Close">
@@ -108,21 +101,17 @@ function VsListingAI() {
             </div>
           </div>
           <div className="p-4 space-y-3">
-            <h1 className="text-win95-16 font-bold">
-              PLG vs Generic AI Listing Tools
-            </h1>
+            <h1 className="text-win95-16 font-bold">PLG vs Generic AI Listing Tools</h1>
             <p className="text-win95-12">
-              Tools like <strong>Listing AI</strong> and other generic AI
-              writing assistants can produce property descriptions, but they are
-              general-purpose wrappers around large language models. They lack
-              the specialized training and safeguards that real estate
+              Tools like <strong>Listing AI</strong> and other generic AI writing assistants can
+              produce property descriptions, but they are general-purpose wrappers around large
+              language models. They lack the specialized training and safeguards that real estate
               professionals need.
             </p>
             <p className="text-win95-12">
-              <strong>PropertyListingGenerator.com (PLG)</strong> is different.
-              It was built from the ground up for real estate agents:
-              FHA-compliant by default, powered by real property research via
-              Perplexity, and optimized for MLS, social, and email formats.
+              <strong>PropertyListingGenerator.com (PLG)</strong> is different. It was built from
+              the ground up for real estate agents: FHA-compliant by default, powered by real
+              property research via Perplexity, and optimized for MLS, social, and email formats.
             </p>
           </div>
         </div>
@@ -130,29 +119,25 @@ function VsListingAI() {
         {/* Why it matters window */}
         <div className="win95-window">
           <div className="win95-titlebar">
-            <span className="font-bold text-win95-12 truncate pl-1">
-              Why It Matters
-            </span>
+            <span className="font-bold text-win95-12 truncate pl-1">Why It Matters</span>
           </div>
           <div className="p-4 space-y-3">
             <div className="win95-inset p-3 space-y-2">
               <p className="text-win95-12">
-                <strong>FHA compliance is not optional.</strong> Fair Housing Act
-                violations can result in lawsuits and fines. Generic AI tools
-                don't know which words and phrases to avoid. PLG does.
+                <strong>FHA compliance is not optional.</strong> Fair Housing Act violations can
+                result in lawsuits and fines. Generic AI tools don't know which words and phrases to
+                avoid. PLG does.
               </p>
               <p className="text-win95-12">
-                <strong>Research matters.</strong> Generic tools only know what
-                you tell them. PLG uses Perplexity to research the actual
-                property — neighborhood details, school districts, nearby
-                amenities — producing copy that sounds like you spent an hour
+                <strong>Research matters.</strong> Generic tools only know what you tell them. PLG
+                uses Perplexity to research the actual property — neighborhood details, school
+                districts, nearby amenities — producing copy that sounds like you spent an hour
                 writing it.
               </p>
               <p className="text-win95-12">
-                <strong>Format matters.</strong> MLS has character limits and
-                structure requirements. Instagram wants hashtags and hooks. Email
-                needs subject lines and concise blurbs. PLG handles all three
-                formats natively.
+                <strong>Format matters.</strong> MLS has character limits and structure
+                requirements. Instagram wants hashtags and hooks. Email needs subject lines and
+                concise blurbs. PLG handles all three formats natively.
               </p>
             </div>
           </div>
@@ -161,9 +146,7 @@ function VsListingAI() {
         {/* Feature comparison table */}
         <div className="win95-window">
           <div className="win95-titlebar">
-            <span className="font-bold text-win95-12 truncate pl-1">
-              Feature Comparison
-            </span>
+            <span className="font-bold text-win95-12 truncate pl-1">Feature Comparison</span>
           </div>
           <div className="p-3">
             <div className="win95-inset overflow-x-auto">
@@ -185,19 +168,13 @@ function VsListingAI() {
                   {FEATURES.map((row, i) => (
                     <tr
                       key={row.feature}
-                      className={
-                        i % 2 === 0 ? "bg-white" : "bg-[var(--win95-gray-light)]"
-                      }
+                      className={i % 2 === 0 ? "bg-white" : "bg-[var(--win95-gray-light)]"}
                     >
                       <td className="p-2 border-b border-[var(--win95-gray-light)] font-bold">
                         {row.feature}
                       </td>
-                      <td className="p-2 border-b border-[var(--win95-gray-light)]">
-                        {row.plg}
-                      </td>
-                      <td className="p-2 border-b border-[var(--win95-gray-light)]">
-                        {row.rival}
-                      </td>
+                      <td className="p-2 border-b border-[var(--win95-gray-light)]">{row.plg}</td>
+                      <td className="p-2 border-b border-[var(--win95-gray-light)]">{row.rival}</td>
                     </tr>
                   ))}
                 </tbody>
@@ -209,16 +186,13 @@ function VsListingAI() {
         {/* Verdict + CTA */}
         <div className="win95-window">
           <div className="win95-titlebar">
-            <span className="font-bold text-win95-12 truncate pl-1">
-              Verdict
-            </span>
+            <span className="font-bold text-win95-12 truncate pl-1">Verdict</span>
           </div>
           <div className="p-4 space-y-3">
             <p className="text-win95-12">
-              Generic AI tools can write <em>something</em>. PLG writes the
-              right thing — compliant, researched, formatted, and ready to
-              publish. For real estate agents who value their time and
-              reputation, there is no substitute for a purpose-built tool.
+              Generic AI tools can write <em>something</em>. PLG writes the right thing — compliant,
+              researched, formatted, and ready to publish. For real estate agents who value their
+              time and reputation, there is no substitute for a purpose-built tool.
             </p>
             <div className="flex gap-2 pt-1">
               <Link to="/">

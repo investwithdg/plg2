@@ -1,8 +1,4 @@
-import type {
-  ButtonHTMLAttributes,
-  InputHTMLAttributes,
-  ReactNode,
-} from "react";
+import type { ButtonHTMLAttributes, InputHTMLAttributes, ReactNode } from "react";
 import { cn } from "@/lib/utils";
 
 /* ---------- RetroWindow ---------- */
@@ -116,15 +112,12 @@ export function RetroProgress({ value, showLabel }: RetroProgressProps) {
             key={i}
             className="flex-1 h-full"
             style={{
-              background:
-                i < filled ? "var(--win95-blue)" : "transparent",
+              background: i < filled ? "var(--win95-blue)" : "transparent",
             }}
           />
         ))}
       </div>
-      {showLabel && (
-        <div className="text-win95-11 text-center font-bold">{pct}%</div>
-      )}
+      {showLabel && <div className="text-win95-11 text-center font-bold">{pct}%</div>}
     </div>
   );
 }

@@ -42,14 +42,19 @@ function formatDate(iso: string): string {
   });
 }
 
-export default function ListingHistory({ userId, isProUser }: { userId: string, isProUser?: boolean }) {
+export default function ListingHistory({
+  userId,
+  isProUser,
+}: {
+  userId: string;
+  isProUser?: boolean;
+}) {
   const [entries, setEntries] = useState<HistoryEntry[]>([]);
   const [loading, setLoading] = useState(true);
   const [expandedId, setExpandedId] = useState<string | null>(null);
-  const [expandedCopies, setExpandedCopies] = useState<Partial<Record<
-    OutputTabKey,
-    string
-  >> | null>(null);
+  const [expandedCopies, setExpandedCopies] = useState<Partial<
+    Record<OutputTabKey, string>
+  > | null>(null);
   const [loadingCopies, setLoadingCopies] = useState(false);
 
   const fetchHistory = useCallback(async () => {
@@ -95,7 +100,7 @@ export default function ListingHistory({ userId, isProUser }: { userId: string, 
         (supabase.from("enrichments" as never) as any)
           .select("perplexity_raw_response")
           .eq("property_id", id)
-          .maybeSingle()
+          .maybeSingle(),
       );
     }
 
@@ -117,9 +122,10 @@ export default function ListingHistory({ userId, isProUser }: { userId: string, 
     }
 
     if (enrichRes && enrichRes.data && enrichRes.data.perplexity_raw_response) {
-      map.research = typeof enrichRes.data.perplexity_raw_response === "string" 
-        ? enrichRes.data.perplexity_raw_response 
-        : JSON.stringify(enrichRes.data.perplexity_raw_response, null, 2);
+      map.research =
+        typeof enrichRes.data.perplexity_raw_response === "string"
+          ? enrichRes.data.perplexity_raw_response
+          : JSON.stringify(enrichRes.data.perplexity_raw_response, null, 2);
     }
 
     setExpandedCopies(map);
@@ -178,31 +184,23 @@ export default function ListingHistory({ userId, isProUser }: { userId: string, 
                   {TYPE_LABELS[entry.property_type ?? ""] ?? "—"}
                 </span>
                 <span className="w-20 text-right hidden sm:block">
-                  {entry.price
-                    ? `$${Number(entry.price).toLocaleString()}`
-                    : "—"}
+                  {entry.price ? `$${Number(entry.price).toLocaleString()}` : "—"}
                 </span>
-                <span className="w-20 text-right">
-                  {formatDate(entry.created_at)}
-                </span>
+                <span className="w-20 text-right">{formatDate(entry.created_at)}</span>
               </button>
 
               {expandedId === entry.id && (
                 <div className="p-2">
                   {loadingCopies ? (
                     <div className="win95-inset bg-input p-3">
-                      <p className="text-win95-11 text-muted-foreground">
-                        Loading copies...
-                      </p>
+                      <p className="text-win95-11 text-muted-foreground">Loading copies...</p>
                     </div>
                   ) : expandedCopies ? (
                     <OutputTabsWindow
                       outputs={expandedCopies}
                       renderActions={(activeTab) => (
                         <div className="flex gap-2 mt-2">
-                          <RetroButton
-                            onClick={() => onCopy(expandedCopies[activeTab] ?? "")}
-                          >
+                          <RetroButton onClick={() => onCopy(expandedCopies[activeTab] ?? "")}>
                             copy {activeTab}
                           </RetroButton>
                           <RetroButton

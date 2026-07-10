@@ -1,8 +1,5 @@
 import { RetroButton, RetroWindow, RetroProgress } from "@/components/retro";
-import type {
-  EnrichmentStep,
-  PropertyStatus,
-} from "@/hooks/usePropertyPolling";
+import type { EnrichmentStep, PropertyStatus } from "@/hooks/usePropertyPolling";
 
 interface GenerationProgressModalProps {
   isOpen: boolean;
@@ -62,11 +59,7 @@ export default function GenerationProgressModal({
 
   return (
     <div className="fixed inset-0 bg-black/50 flex items-center justify-center p-4 z-50">
-      <RetroWindow
-        title="Generating Listing"
-        className="w-full max-w-md"
-        onClose={onCancel}
-      >
+      <RetroWindow title="Generating Listing" className="w-full max-w-md" onClose={onCancel}>
         <div className="space-y-4">
           {isError ? (
             <>
@@ -95,11 +88,7 @@ export default function GenerationProgressModal({
                 </div>
               </div>
               <div className="flex justify-center">
-                <RetroButton
-                  variant="primary"
-                  onClick={onView ?? onCancel}
-                  disabled={!hasOutputs}
-                >
+                <RetroButton variant="primary" onClick={onView ?? onCancel} disabled={!hasOutputs}>
                   {hasOutputs ? "View Listing" : "Finalizing..."}
                 </RetroButton>
               </div>
