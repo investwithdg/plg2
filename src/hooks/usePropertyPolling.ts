@@ -33,12 +33,16 @@ export interface CopyGeneration {
   created_at: string;
 }
 
+export interface EnrichmentData {
+  perplexity_raw_response?: unknown;
+}
+
 interface UsePropertyPollingResult {
   status: PropertyStatus;
   enrichmentStep: EnrichmentStep;
   property: PropertyWithCopies | null;
   copies: CopyGeneration[];
-  enrichmentData: any | null;
+  enrichmentData: EnrichmentData | null;
   isPolling: boolean;
   error: string | null;
   stopPolling: () => void;
@@ -52,7 +56,7 @@ export function usePropertyPolling(propertyId: string | null): UsePropertyPollin
   const [enrichmentStep, setEnrichmentStep] = useState<EnrichmentStep>(null);
   const [property, setProperty] = useState<PropertyWithCopies | null>(null);
   const [copies, setCopies] = useState<CopyGeneration[]>([]);
-  const [enrichmentData, setEnrichmentData] = useState<any | null>(null);
+  const [enrichmentData, setEnrichmentData] = useState<EnrichmentData | null>(null);
   const [isPolling, setIsPolling] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -71,11 +75,13 @@ export function usePropertyPolling(propertyId: string | null): UsePropertyPollin
 
   const fetchCopies = useCallback(async (propId: string) => {
     const [copiesRes, enrichmentsRes] = await Promise.all([
-      (supabase.from("copy_generations" as never) as any)
+      supabase
+        .from("copy_generations")
         .select("id, copy_type, content, created_at")
         .eq("property_id", propId)
         .order("created_at", { ascending: false }),
-      (supabase.from("enrichments" as never) as any)
+      supabase
+        .from("enrichments")
         .select("perplexity_raw_response")
         .eq("property_id", propId)
         .maybeSingle(),
@@ -118,7 +124,8 @@ export function usePropertyPolling(propertyId: string | null): UsePropertyPollin
     async (propId: string) => {
       if (stoppedRef.current) return;
       try {
-        const { data, error: fetchErr } = await (supabase.from("properties" as never) as any)
+        const { data, error: fetchErr } = await supabase
+          .from("properties")
           .select(
             "id, address, property_type, status, enrichment_step, extraction_status, failed_step, beds, baths, sqft, price, fha_violations, existing_listing_raw, created_at",
           )
@@ -164,14 +171,14 @@ export function usePropertyPolling(propertyId: string | null): UsePropertyPollin
     const channel = supabase
       .channel(`property-${propertyId}`)
       .on(
-        "postgres_changes" as any,
+        "postgres_changes",
         {
           event: "UPDATE",
           schema: "public",
           table: "properties",
           filter: `id=eq.${propertyId}`,
         },
-        (payload: any) => {
+        (payload: Record<string, unknown>) => {
           if (payload.new) {
             handlePropertyUpdate(payload.new as Record<string, unknown>);
           }

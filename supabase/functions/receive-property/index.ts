@@ -37,10 +37,7 @@ function isProTierPropertyType(type: string): boolean {
 }
 
 async function sha256(input: string): Promise<string> {
-  const buf = await crypto.subtle.digest(
-    "SHA-256",
-    new TextEncoder().encode(input),
-  );
+  const buf = await crypto.subtle.digest("SHA-256", new TextEncoder().encode(input));
   return Array.from(new Uint8Array(buf))
     .map((b) => b.toString(16).padStart(2, "0"))
     .join("");
@@ -54,11 +51,7 @@ async function hmacSha256(input: string, secret: string): Promise<string> {
     false,
     ["sign"],
   );
-  const signature = await crypto.subtle.sign(
-    "HMAC",
-    key,
-    new TextEncoder().encode(input),
-  );
+  const signature = await crypto.subtle.sign("HMAC", key, new TextEncoder().encode(input));
   return Array.from(new Uint8Array(signature))
     .map((b) => b.toString(16).padStart(2, "0"))
     .join("");
@@ -236,8 +229,7 @@ function makeResponders(corsHeaders: Record<string, string>) {
 
 serve(async (req) => {
   const corsHeaders = getCorsHeaders(req);
-  if (req.method === "OPTIONS")
-    return new Response(null, { headers: corsHeaders });
+  if (req.method === "OPTIONS") return new Response(null, { headers: corsHeaders });
 
   const { jsonResponse, usageCheckUnavailableResponse, gateResponse, verifyAnonymousTurnstile } =
     makeResponders(corsHeaders);
@@ -250,8 +242,7 @@ serve(async (req) => {
   try {
     const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
     const supabaseServiceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
-    const anonymousUsageSecret =
-      Deno.env.get("ANON_USAGE_SECRET") || supabaseServiceKey;
+    const anonymousUsageSecret = Deno.env.get("ANON_USAGE_SECRET") || supabaseServiceKey;
     supabase = createClient(supabaseUrl, supabaseServiceKey);
 
     // Identify caller
@@ -259,10 +250,8 @@ serve(async (req) => {
     let userId: string | null = null;
     if (authHeader?.startsWith("Bearer ")) {
       const token = authHeader.replace("Bearer ", "");
-      const { data: claimsData, error: claimsError } =
-        await supabase.auth.getClaims(token);
-      if (!claimsError && claimsData?.claims)
-        userId = claimsData.claims.sub as string;
+      const { data: claimsData, error: claimsError } = await supabase.auth.getClaims(token);
+      if (!claimsError && claimsData?.claims) userId = claimsData.claims.sub as string;
     }
 
     const ipRaw =
@@ -271,14 +260,8 @@ serve(async (req) => {
       "unknown";
     const userAgentRaw = req.headers.get("user-agent") || "unknown";
     const ipHash = await hmacSha256(`ip:${ipRaw}`, anonymousUsageSecret);
-    const userAgentHash = await hmacSha256(
-      `ua:${userAgentRaw}`,
-      anonymousUsageSecret,
-    );
-    const networkKey = await hmacSha256(
-      `network:${ipRaw}|${userAgentRaw}`,
-      anonymousUsageSecret,
-    );
+    const userAgentHash = await hmacSha256(`ua:${userAgentRaw}`, anonymousUsageSecret);
+    const networkKey = await hmacSha256(`network:${ipRaw}|${userAgentRaw}`, anonymousUsageSecret);
 
     const rawBody = await req.json();
     const parsed = propertyInputSchema.safeParse(rawBody);
@@ -311,14 +294,10 @@ serve(async (req) => {
     const dedupeKey = await sha256(
       [
         userId ?? `anon:${anonymousUsageKey ?? ipHash}`,
-        (validatedInput.url || validatedInput.address || "")
-          .toLowerCase()
-          .trim(),
+        (validatedInput.url || validatedInput.address || "").toLowerCase().trim(),
       ].join("|"),
     );
-    const sinceDedupe = new Date(
-      Date.now() - DEDUPE_WINDOW_SECONDS * 1000,
-    ).toISOString();
+    const sinceDedupe = new Date(Date.now() - DEDUPE_WINDOW_SECONDS * 1000).toISOString();
     const dedupeQuery = supabase
       .from("properties")
       .select("id, status")
@@ -353,9 +332,7 @@ serve(async (req) => {
       hasProPlan = (sub && sub.length > 0) ?? false;
     }
 
-    const sinceWindow = new Date(
-      Date.now() - FREE_WINDOW_DAYS * 86400_000,
-    ).toISOString();
+    const sinceWindow = new Date(Date.now() - FREE_WINDOW_DAYS * 86400_000).toISOString();
 
     // 3) Server-side free-generation caps.
     // Anonymous users are reserved by a server-HMACed first-party anon cookie;
@@ -399,8 +376,7 @@ serve(async (req) => {
         }
 
         const allowed = (reservation as { allowed?: boolean } | null)?.allowed;
-        const errorCode = (reservation as { error_code?: string } | null)
-          ?.error_code;
+        const errorCode = (reservation as { error_code?: string } | null)?.error_code;
 
         if (!allowed) {
           log("anonymous_usage_blocked", {

@@ -59,7 +59,8 @@ export default function ListingHistory({
 
   const fetchHistory = useCallback(async () => {
     setLoading(true);
-    const { data, error } = await (supabase.from("properties" as never) as any)
+    const { data, error } = await supabase
+      .from("properties")
       .select("id, address, property_type, status, created_at, beds, baths, price")
       .eq("user_id", userId)
       .eq("status", "complete")
@@ -88,25 +89,21 @@ export default function ListingHistory({
     setExpandedCopies(null);
     setLoadingCopies(true);
 
-    const fetches = [
-      (supabase.from("copy_generations" as never) as any)
-        .select("copy_type, content")
-        .eq("property_id", id)
-        .order("created_at", { ascending: true }),
-    ];
+    const copyPromise = supabase
+      .from("copy_generations")
+      .select("copy_type, content")
+      .eq("property_id", id)
+      .order("created_at", { ascending: true });
 
-    if (isProUser) {
-      fetches.push(
-        (supabase.from("enrichments" as never) as any)
+    const enrichPromise = isProUser
+      ? supabase
+          .from("enrichments")
           .select("perplexity_raw_response")
           .eq("property_id", id)
-          .maybeSingle(),
-      );
-    }
+          .maybeSingle()
+      : Promise.resolve({ data: null, error: null });
 
-    const results = await Promise.all(fetches);
-    const copyRes = results[0];
-    const enrichRes = results.length > 1 ? results[1] : null;
+    const [copyRes, enrichRes] = await Promise.all([copyPromise, enrichPromise]);
 
     if (copyRes.error) {
       console.error("Copy fetch error:", copyRes.error);

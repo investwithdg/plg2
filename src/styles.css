@@ -35,8 +35,8 @@
   --text-win95-14: 14px;
   --text-win95-16: 16px;
 
-  --font-system: "MS Sans Serif", "Microsoft Sans Serif", "Tahoma", "Geneva",
-    "Arial", "Helvetica", sans-serif;
+  --font-system:
+    "MS Sans Serif", "Microsoft Sans Serif", "Tahoma", "Geneva", "Arial", "Helvetica", sans-serif;
   --font-mono: "Fixedsys", "Consolas", "Courier New", monospace;
 }
 
@@ -134,11 +134,7 @@
 }
 
 @utility win95-titlebar {
-  background: linear-gradient(
-    to right,
-    var(--win95-blue),
-    var(--win95-blue-light)
-  );
+  background: linear-gradient(to right, var(--win95-blue), var(--win95-blue-light));
   color: var(--win95-white);
   padding: 3px 4px;
   display: flex;

@@ -18,7 +18,7 @@ const ENRICHMENT_CACHE_DAYS = 7;
 const PRICING = {
   "sonar-pro": { input: 3.0, output: 15.0 },
   sonar: { input: 1.0, output: 1.0 },
-  "gpt-4o-mini": { input: 0.15, output: 0.60 },
+  "gpt-4o-mini": { input: 0.15, output: 0.6 },
 } as const;
 
 type ModelKey = keyof typeof PRICING;
@@ -32,8 +32,7 @@ interface TokenUsage {
 function computeCost(model: ModelKey, inputTokens: number, outputTokens: number): TokenUsage {
   const rates = PRICING[model];
   const costUsd =
-    (inputTokens * rates.input) / 1_000_000 +
-    (outputTokens * rates.output) / 1_000_000;
+    (inputTokens * rates.input) / 1_000_000 + (outputTokens * rates.output) / 1_000_000;
   return { inputTokens, outputTokens, costUsd };
 }
 
@@ -41,7 +40,10 @@ function computeCost(model: ModelKey, inputTokens: number, outputTokens: number)
 function pickKey(envVar: string): string {
   const raw = Deno.env.get(envVar);
   if (!raw) throw new Error(`${envVar} not configured`);
-  const keys = raw.split(",").map((k) => k.trim()).filter(Boolean);
+  const keys = raw
+    .split(",")
+    .map((k) => k.trim())
+    .filter(Boolean);
   return keys[Math.floor(Math.random() * keys.length)];
 }
 
@@ -136,7 +138,9 @@ async function fetchWithRetry(
           body: body.slice(0, 200),
         });
         if (attempt === maxAttempts) {
-          throw new Error(`${label} failed after ${maxAttempts} attempts [${res.status}]: ${body.slice(0, 200)}`);
+          throw new Error(
+            `${label} failed after ${maxAttempts} attempts [${res.status}]: ${body.slice(0, 200)}`,
+          );
         }
         await new Promise((r) => setTimeout(r, 1000 * Math.pow(2, attempt - 1)));
         continue;
@@ -302,9 +306,7 @@ async function getCachedEnrichment(
   usage: TokenUsage;
 } | null> {
   const cacheKey = enrichmentCacheKey(address);
-  const since = new Date(
-    Date.now() - ENRICHMENT_CACHE_DAYS * 86400_000,
-  ).toISOString();
+  const since = new Date(Date.now() - ENRICHMENT_CACHE_DAYS * 86400_000).toISOString();
 
   const { data, error } = await supabase
     .from("enrichment_cache")
@@ -345,7 +347,12 @@ async function parseExistingListingFHA(
   openaiKey: string,
   propertyId: string,
   rawDescription: string,
-): Promise<{ compliant_parts: string; violations: string[]; latencyMs: number; usage: TokenUsage }> {
+): Promise<{
+  compliant_parts: string;
+  violations: string[];
+  latencyMs: number;
+  usage: TokenUsage;
+}> {
   const start = Date.now();
   const schema = {
     type: "object",
@@ -495,14 +502,14 @@ async function process(propertyId: string) {
     failedStep = "extraction";
     await updateStep(supabase, propertyId, "researching_property", "processing");
     const extractStart = Date.now();
-    const { parsed: extracted, raw: extractRaw, usage: extractionUsage } = await extractWithPerplexity(
-      perplexityKey,
-      propertyId,
-      {
-        address: property.address as string,
-        source_url: (property.source_url as string | null) ?? null,
-      },
-    );
+    const {
+      parsed: extracted,
+      raw: extractRaw,
+      usage: extractionUsage,
+    } = await extractWithPerplexity(perplexityKey, propertyId, {
+      address: property.address as string,
+      source_url: (property.source_url as string | null) ?? null,
+    });
     const extractionLatency = Date.now() - extractStart;
     log(propertyId, "extraction_done", {
       latencyMs: extractionLatency,
@@ -524,7 +531,10 @@ async function process(propertyId: string) {
       fhaViolations = fhaRes.violations;
       fhaParseLatency = fhaRes.latencyMs;
       fhaParseUsage = fhaRes.usage;
-      log(propertyId, "fha_parse_done", { latencyMs: fhaParseLatency, violationsCount: fhaViolations.length });
+      log(propertyId, "fha_parse_done", {
+        latencyMs: fhaParseLatency,
+        violationsCount: fhaViolations.length,
+      });
     }
 
     await supabase
@@ -550,8 +560,7 @@ async function process(propertyId: string) {
     // 2) ENRICHMENT (with neighborhood cache)
     failedStep = "enrichment";
     await updateStep(supabase, propertyId, "researching_schools");
-    const resolvedAddress =
-      (extracted.address as string) || (property.address as string);
+    const resolvedAddress = (extracted.address as string) || (property.address as string);
 
     let enrich: Record<string, unknown>;
     let enrichRaw: unknown;
@@ -566,11 +575,7 @@ async function process(propertyId: string) {
       enrichmentLatency = 0;
     } else {
       const enrichStart = Date.now();
-      const result = await enrichWithPerplexity(
-        perplexityKey,
-        propertyId,
-        resolvedAddress,
-      );
+      const result = await enrichWithPerplexity(perplexityKey, propertyId, resolvedAddress);
       enrich = result.parsed;
       enrichRaw = result.raw;
       enrichmentUsage = result.usage;

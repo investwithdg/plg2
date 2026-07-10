@@ -84,10 +84,10 @@ serve(async (req) => {
     if (!contactRes.ok) {
       const body = await contactRes.text();
       log("contact_upsert_failed", { status: contactRes.status, body });
-      return new Response(
-        JSON.stringify({ ok: false, error: "Failed to upsert Loops contact" }),
-        { status: 502, headers: { ...corsHeaders, "Content-Type": "application/json" } },
-      );
+      return new Response(JSON.stringify({ ok: false, error: "Failed to upsert Loops contact" }), {
+        status: 502,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
     }
 
     log("contact_upserted", { email });

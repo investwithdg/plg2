@@ -6,6 +6,31 @@ export type Database = {
   __InternalSupabase: {
     PostgrestVersion: "14.5";
   };
+  graphql_public: {
+    Tables: {
+      [_ in never]: never;
+    };
+    Views: {
+      [_ in never]: never;
+    };
+    Functions: {
+      graphql: {
+        Args: {
+          extensions?: Json;
+          operationName?: string;
+          query?: string;
+          variables?: Json;
+        };
+        Returns: Json;
+      };
+    };
+    Enums: {
+      [_ in never]: never;
+    };
+    CompositeTypes: {
+      [_ in never]: never;
+    };
+  };
   public: {
     Tables: {
       copy_generations: {
@@ -208,12 +233,18 @@ export type Database = {
           created_at: string;
           dedupe_key: string | null;
           enrichment_step: string | null;
+          existing_listing_raw: string | null;
           extraction_latency_ms: number | null;
           extraction_model_version: string | null;
           extraction_status: string | null;
           failed_step: string | null;
+          fha_compliant_listing_parts: string | null;
+          fha_violations: Json | null;
           id: string;
           ip_hash: string | null;
+          is_public: boolean;
+          mls_number: string | null;
+          perplexity_extract_raw: Json | null;
           price: number | null;
           property_type: string | null;
           source: string | null;
@@ -229,12 +260,18 @@ export type Database = {
           created_at?: string;
           dedupe_key?: string | null;
           enrichment_step?: string | null;
+          existing_listing_raw?: string | null;
           extraction_latency_ms?: number | null;
           extraction_model_version?: string | null;
           extraction_status?: string | null;
           failed_step?: string | null;
+          fha_compliant_listing_parts?: string | null;
+          fha_violations?: Json | null;
           id?: string;
           ip_hash?: string | null;
+          is_public?: boolean;
+          mls_number?: string | null;
+          perplexity_extract_raw?: Json | null;
           price?: number | null;
           property_type?: string | null;
           source?: string | null;
@@ -250,12 +287,18 @@ export type Database = {
           created_at?: string;
           dedupe_key?: string | null;
           enrichment_step?: string | null;
+          existing_listing_raw?: string | null;
           extraction_latency_ms?: number | null;
           extraction_model_version?: string | null;
           extraction_status?: string | null;
           failed_step?: string | null;
+          fha_compliant_listing_parts?: string | null;
+          fha_violations?: Json | null;
           id?: string;
           ip_hash?: string | null;
+          is_public?: boolean;
+          mls_number?: string | null;
+          perplexity_extract_raw?: Json | null;
           price?: number | null;
           property_type?: string | null;
           source?: string | null;
@@ -446,6 +489,9 @@ export type CompositeTypes<
     : never;
 
 export const Constants = {
+  graphql_public: {
+    Enums: {},
+  },
   public: {
     Enums: {},
   },

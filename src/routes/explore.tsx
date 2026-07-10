@@ -69,7 +69,8 @@ function Explore() {
 
   useEffect(() => {
     async function load() {
-      const { data: properties, error } = await (supabase.from("properties" as never) as any)
+      const { data: properties, error } = await supabase
+        .from("properties")
         .select("id, address, property_type, created_at, beds, baths, price, mls_number")
         .eq("status", "complete")
         .eq("is_public", true)
@@ -82,7 +83,8 @@ function Explore() {
       }
 
       const ids = (properties as PropertyRow[]).map((p) => p.id);
-      const { data: copies } = await (supabase.from("copy_generations" as never) as any)
+      const { data: copies } = await supabase
+        .from("copy_generations")
         .select("property_id, content")
         .eq("copy_type", "mls")
         .in("property_id", ids);

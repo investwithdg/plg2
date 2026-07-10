@@ -35,7 +35,7 @@ export default function OutputTabsWindow({
     { id: "email", label: "Email" },
   ];
   if (outputs.research !== undefined) {
-    tabs.push({ id: "research", label: "Research Pro" });
+    tabs.push({ id: "research", label: "Research+" });
   }
 
   return (

@@ -20,11 +20,7 @@ function log(step: string, data?: Record<string, unknown>) {
   );
 }
 
-async function verifySignature(
-  body: string,
-  signature: string,
-  secret: string,
-): Promise<boolean> {
+async function verifySignature(body: string, signature: string, secret: string): Promise<boolean> {
   const parts = signature.split(",").reduce(
     (acc, part) => {
       const [k, v] = part.split("=");
@@ -45,11 +41,7 @@ async function verifySignature(
     false,
     ["sign"],
   );
-  const sig = await crypto.subtle.sign(
-    "HMAC",
-    key,
-    new TextEncoder().encode(payload),
-  );
+  const sig = await crypto.subtle.sign("HMAC", key, new TextEncoder().encode(payload));
   const expected = Array.from(new Uint8Array(sig))
     .map((b) => b.toString(16).padStart(2, "0"))
     .join("");

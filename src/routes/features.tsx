@@ -27,7 +27,7 @@ export const Route = createFileRoute("/features")({
 
 const FEATURES = [
   {
-    title: "Research Pro",
+    title: "Research+",
     description:
       "Instead of hallucinating details like ChatGPT, our engine queries property and neighborhood data in real-time to gather deep, factual insights about your property before writing a single word. Access raw, copyable research data to augment your own workflows.",
   },

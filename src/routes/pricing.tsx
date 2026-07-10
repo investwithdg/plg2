@@ -34,7 +34,8 @@ function Pricing() {
     }
     let cancelled = false;
     (async () => {
-      const { data } = await (supabase.from("subscriptions" as never) as any)
+      const { data } = await supabase
+        .from("subscriptions")
         .select("plan, status")
         .eq("user_id", user.id)
         .eq("status", "active")

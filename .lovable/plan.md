@@ -8,7 +8,6 @@ File: `src/components/RetroLegend.tsx` (keep the file, keep the `?` button and i
 
 - Rename the titlebar from **Legend** → **How PLG works**.
 - Replace the abbreviation list with 4 short, scannable sections in Win95-styled rows:
-
   1. **What you get** — Every generation produces 3 pieces of copy:
      - **MLS** — long-form listing description for the MLS/Zillow/Redfin
      - **Social** — short Instagram/Facebook caption with hashtags

@@ -187,6 +187,16 @@ export default function RetroGenerator() {
   }, []);
 
   // --- Check if user has an active Pro subscription ---
+  const fireLoopsEvent = useCallback(
+    (eventName: string, properties?: Record<string, unknown>) => {
+      if (!user?.email) return;
+      supabase.functions
+        .invoke("send-loops-event", { body: { email: user.email, eventName, properties } })
+        .catch(console.error);
+    },
+    [user?.email],
+  );
+
   useEffect(() => {
     if (!user) {
       setIsProUser(false);
@@ -194,7 +204,8 @@ export default function RetroGenerator() {
     }
     let cancelled = false;
     (async () => {
-      const { data } = await (supabase.from("subscriptions" as never) as any)
+      const { data } = await supabase
+        .from("subscriptions")
         .select("plan, status")
         .eq("user_id", user.id)
         .eq("status", "active")
@@ -309,7 +320,16 @@ export default function RetroGenerator() {
       track("generation_completed", { property_type: propertyType, property_id: propertyId });
       fireLoopsEvent("generation_created", { property_type: propertyType });
     }
-  }, [status, copies, property, enrichmentData, isProUser, propertyType, propertyId]);
+  }, [
+    status,
+    copies,
+    property,
+    enrichmentData,
+    isProUser,
+    propertyType,
+    propertyId,
+    fireLoopsEvent,
+  ]);
 
   const handleGenerate = async () => {
     if (!query.trim()) return;
@@ -437,13 +457,6 @@ export default function RetroGenerator() {
     if (!outputs) return;
     const allText = `MLS Description:\n${outputs.mls}\n\nSocial Post:\n${outputs.social}\n\nEmail:\n${outputs.email}`;
     onCopy(allText, "all");
-  };
-
-  const fireLoopsEvent = (eventName: string, properties?: Record<string, unknown>) => {
-    if (!user?.email) return;
-    supabase.functions
-      .invoke("send-loops-event", { body: { email: user.email, eventName, properties } })
-      .catch(console.error);
   };
 
   const handleAuth = async (email: string, password: string, mode: "signin" | "signup") => {
