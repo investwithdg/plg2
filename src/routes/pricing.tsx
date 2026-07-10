@@ -204,7 +204,7 @@ function Pricing() {
                   <li className="flex gap-2">
                     <span className="font-bold text-[var(--win95-blue)]">+</span>
                     <span>
-                      <strong>Research Pro</strong> — property & neighborhood data
+                      <strong>Research+</strong> — property & neighborhood data
                     </span>
                   </li>
                   <li className="flex gap-2">
@@ -275,7 +275,7 @@ function Pricing() {
                   <li className="flex gap-2">
                     <span className="font-bold">+</span>
                     <span>
-                      <strong>Vision AI:</strong> Photo analysis & feature extraction
+                      <strong>Vision+</strong> Photo analysis & feature extraction
                     </span>
                   </li>
                   <li className="flex gap-2">
