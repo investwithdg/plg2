@@ -14,17 +14,24 @@ export interface OutcomeInput {
 }
 
 export async function recordOutcome(o: OutcomeInput): Promise<void> {
-  await supabase.from("listing_outcomes").insert({
+  // listing_outcomes isn't in the generated Supabase types yet — same escape hatch
+  // used elsewhere in this codebase for tables ahead of the generated schema.
+  const { error } = await (supabase.from("listing_outcomes" as never) as any).insert({
     copy_generation_id: o.copyGenerationId,
     property_id: o.propertyId ?? null,
     event_type: o.event,
     days_on_market: o.daysOnMarket ?? null,
     metadata: o.metadata ?? {},
   });
+  if (error) throw error;
 
   try {
     const ph = (globalThis as { posthog?: { capture: (e: string, p?: unknown) => void } }).posthog;
-    ph?.capture("listing_outcome", { event: o.event, copy_generation_id: o.copyGenerationId, ...(o.metadata ?? {}) });
+    ph?.capture("listing_outcome", {
+      event: o.event,
+      copy_generation_id: o.copyGenerationId,
+      ...(o.metadata ?? {}),
+    });
   } catch {
     /* no-op */
   }

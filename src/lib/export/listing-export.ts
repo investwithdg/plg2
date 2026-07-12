@@ -10,11 +10,14 @@ export interface ExportableListing {
   channel?: string;
 }
 
-export function exportListing(listing: ExportableListing, format: ExportFormat = "markdown"): string {
+export function exportListing(
+  listing: ExportableListing,
+  format: ExportFormat = "markdown",
+): string {
   if (format === "json") return JSON.stringify(listing, null, 2);
   if (format === "csv") {
     const headers = ["address", "headline", "channel", "createdAt", "body"];
-    const cells = headers.map((h) => csvCell((listing as Record<string, unknown>)[h]));
+    const cells = headers.map((h) => csvCell((listing as unknown as Record<string, unknown>)[h]));
     return headers.join(",") + "\n" + cells.join(",");
   }
   const parts = [
