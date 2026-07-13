@@ -132,6 +132,7 @@ export default function RetroGenerator() {
   const [isProUser, setIsProUser] = useState(false);
   const [portalLoading, setPortalLoading] = useState(false);
   const [totalGenerations, setTotalGenerations] = useState<number | null>(null);
+  const isGeneratingRef = useRef(false);
 
   const { status, enrichmentStep, property, copies, enrichmentData, error, stopPolling } =
     usePropertyPolling(propertyId);
@@ -332,6 +333,7 @@ export default function RetroGenerator() {
   ]);
 
   const handleGenerate = async () => {
+    if (isGeneratingRef.current) return;
     if (!query.trim()) return;
 
     if (anonymousTurnstileRequired && !turnstileToken) {
@@ -361,6 +363,7 @@ export default function RetroGenerator() {
     setOutputs(null);
     setPropertyId(null);
     setShowProgress(true);
+    isGeneratingRef.current = true;
 
     track("generation_started", { property_type: propertyType, is_authenticated: !!user });
 
@@ -432,6 +435,8 @@ export default function RetroGenerator() {
       sonnerToast.error("Failed to start generation", {
         description,
       });
+    } finally {
+      isGeneratingRef.current = false;
     }
   };
 
