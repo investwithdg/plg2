@@ -26,3 +26,10 @@ jobs:
 
       - name: Build
         run: npm run build
+
+      - uses: denoland/setup-deno@v2
+        with:
+          deno-version: v2.x
+
+      - name: Edge function smoke tests
+        run: deno test --allow-net --allow-env --allow-read supabase/functions
