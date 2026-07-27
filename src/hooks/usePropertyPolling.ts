@@ -43,13 +43,32 @@ export interface SchoolEntry {
   [key: string]: unknown;
 }
 
+// Transit/amenity entries used to be plain strings; the enrichment schema now
+// asks for structured objects, but properties enriched before that change (or
+// served from the 7-day neighborhood cache) may still have the old shape.
+export interface PlaceEntry {
+  name?: string;
+  type?: string;
+  distance?: string;
+  [key: string]: unknown;
+}
+export type PlaceEntryOrLegacyString = PlaceEntry | string;
+
+export interface KeySource {
+  name?: string;
+  url?: string;
+  facts_provided?: string;
+  [key: string]: unknown;
+}
+
 export interface EnrichmentData {
   schools?: SchoolEntry[] | null;
-  transit_options?: string[] | null;
-  nearby_amenities?: string[] | null;
+  transit_options?: PlaceEntryOrLegacyString[] | null;
+  nearby_amenities?: PlaceEntryOrLegacyString[] | null;
   walkability_score?: number | null;
   market_overview?: string | null;
   median_home_value?: number | null;
+  key_sources?: KeySource[] | null;
   perplexity_raw_response?: unknown;
 }
 
@@ -98,7 +117,9 @@ export function usePropertyPolling(propertyId: string | null): UsePropertyPollin
         .order("created_at", { ascending: false }),
       supabase
         .from("enrichments")
-        .select("schools, transit_options, nearby_amenities, walkability_score, market_overview, median_home_value, perplexity_raw_response")
+        .select(
+          "schools, transit_options, nearby_amenities, walkability_score, market_overview, median_home_value, key_sources, perplexity_raw_response",
+        )
         .eq("property_id", propId)
         .maybeSingle(),
     ]);
