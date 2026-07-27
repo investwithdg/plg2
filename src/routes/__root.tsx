@@ -15,6 +15,7 @@ import { Toaster } from "@/components/ui/sonner";
 import { AppNav } from "@/components/AppNav";
 import { initPostHog, identifyUser, resetUser, track, captureException } from "@/lib/posthog";
 import { useAuth } from "@/hooks/useAuth";
+import PlanThemeProvider from "@/components/PlanThemeProvider";
 
 function NotFoundComponent() {
   return (
@@ -192,6 +193,7 @@ function RootComponent() {
 
   return (
     <QueryClientProvider client={queryClient}>
+      <PlanThemeProvider />
       <PostHogInit />
       <AppNav />
       {/* Required: nested routes render here. Removing <Outlet /> breaks all child routes. */}

@@ -5,6 +5,7 @@ import { toast as sonnerToast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { usePropertyPolling } from "@/hooks/usePropertyPolling";
 import { useAuth } from "@/hooks/useAuth";
+import { usePlanTier } from "@/hooks/usePlanTier";
 import type { CopyGeneration } from "@/hooks/usePropertyPolling";
 import OutputTabsWindow, { type OutputTabKey } from "@/components/OutputTabsWindow";
 import GenerationProgressModal from "@/components/GenerationProgressModal";
@@ -12,6 +13,7 @@ import AuthModal from "@/components/AuthModal";
 import ListingHistory from "@/components/ListingHistory";
 import TurnstileWidget from "@/components/TurnstileWidget";
 import { RetroButton, RetroInput, RetroWindow } from "@/components/retro";
+import ResearchDossier from "@/components/ResearchDossier";
 import { describeFunctionInvokeError, parsePropertyInput } from "@/lib/parsePropertyInput";
 import { track } from "@/lib/posthog";
 
@@ -129,97 +131,8 @@ export default function RetroGenerator() {
   });
   const [outputs, setOutputs] = useState<Partial<Record<OutputTabKey, ReactNode>> | null>(null);
   const [historyKey, setHistoryKey] = useState(0);
-  const [isProUser, setIsProUser] = useState(false);
-  const [portalLoading, setPortalLoading] = useState(false);
-  const [totalGenerations, setTotalGenerations] = useState<number | null>(null);
-  const isGeneratingRef = useRef(false);
-
-  const { status, enrichmentStep, property, copies, enrichmentData, error, stopPolling } =
-    usePropertyPolling(propertyId);
-
-  const devBypassActive = isDevHost();
-  const generationsLeft = Math.max(0, MAX_GENERATIONS - generationsUsed);
-  const proTierGenerationsLeft = Math.max(0, FREE_PRO_TIER_LIMIT - proTierGenerationsUsed);
-  const selectedProTier = isProTierPropertyType(propertyType);
-  const anonymousTurnstileRequired = !devBypassActive && !user && !!TURNSTILE_SITE_KEY;
-  const generateDisabled =
-    showProgress || !query.trim() || (anonymousTurnstileRequired && !turnstileToken);
-  const generationCountLabel = devBypassActive
-    ? "dev"
-    : isProUser
-      ? "pro"
-      : user
-        ? "10/mo"
-        : generationsLeft;
-
-  const resetAnonymousTurnstile = useCallback(() => {
-    if (!anonymousTurnstileRequired) return;
-    setTurnstileToken(null);
-    setTurnstileWidgetKey((key) => key + 1);
-  }, [anonymousTurnstileRequired]);
-
-  const handleTurnstileVerify = useCallback((token: string) => {
-    setTurnstileToken(token);
-  }, []);
-
-  const handleTurnstileExpire = useCallback(() => {
-    setTurnstileToken(null);
-  }, []);
-
-  // --- Checkout success/cancel toast handling ---
-  const checkoutToastShown = useRef(false);
-  useEffect(() => {
-    if (typeof window === "undefined" || checkoutToastShown.current) return;
-    const params = new URLSearchParams(window.location.search);
-    const checkoutStatus = params.get("checkout");
-    if (checkoutStatus === "success") {
-      checkoutToastShown.current = true;
-      sonnerToast.success("Welcome to PLG Pro! Your subscription is active.");
-      window.history.replaceState({}, "", window.location.pathname);
-    } else if (checkoutStatus === "cancel") {
-      checkoutToastShown.current = true;
-      sonnerToast("Checkout cancelled. You can upgrade anytime.");
-      window.history.replaceState({}, "", window.location.pathname);
-    } else if (params.get("upgrade") === "true") {
-      setPaywallReason("upgrade_intent");
-      setShowPaywall(true);
-      window.history.replaceState({}, "", window.location.pathname);
-    }
-  }, []);
-
-  // --- Check if user has an active Pro subscription ---
-  const fireLoopsEvent = useCallback(
-    (eventName: string, properties?: Record<string, unknown>) => {
-      if (!user?.email) return;
-      supabase.functions
-        .invoke("send-loops-event", { body: { email: user.email, eventName, properties } })
-        .catch(console.error);
-    },
-    [user?.email],
-  );
-
-  useEffect(() => {
-    if (!user) {
-      setIsProUser(false);
-      return;
-    }
-    let cancelled = false;
-    (async () => {
-      const { data } = await supabase
-        .from("subscriptions")
-        .select("plan, status")
-        .eq("user_id", user.id)
-        .eq("status", "active")
-        .limit(1);
-      const active = !!data?.some(
-        (row: { plan?: string; status?: string }) => row.plan === "pro" && row.status === "active",
-      );
-      if (!cancelled) setIsProUser(active);
-    })();
-    return () => {
-      cancelled = true;
-    };
-  }, [user]);
+  const { plan } = usePlanTier(user);
+  const isProUser = plan === "pro" || plan === "elite";
 
   // --- Social proof: total generation count ---
   useEffect(() => {
@@ -260,58 +173,8 @@ export default function RetroGenerator() {
       });
 
       if (isProUser && enrichmentData && enrichmentData.perplexity_raw_response) {
-        const rawString =
-          typeof enrichmentData.perplexity_raw_response === "string"
-            ? enrichmentData.perplexity_raw_response
-            : JSON.stringify(enrichmentData.perplexity_raw_response, null, 2);
-
         outputMap.research = (
-          <div className="space-y-4">
-            {property?.fha_violations && property.fha_violations.length > 0 && (
-              <div className="win95-window mb-4">
-                <div className="win95-titlebar bg-red-700 text-white">
-                  <span className="font-bold text-win95-12 pl-1">FHA Compliance Alert</span>
-                </div>
-                <div className="p-3 bg-red-50 space-y-2 text-red-900 text-win95-12">
-                  <p className="font-bold">We found FHA violations in your existing listing.</p>
-                  <p>
-                    The following terms were flagged and removed before generating your new copy:
-                  </p>
-                  <ul className="list-disc pl-5">
-                    {property.fha_violations.map((v, i) => (
-                      <li key={i}>{v}</li>
-                    ))}
-                  </ul>
-                </div>
-              </div>
-            )}
-            {property?.fha_violations &&
-              property.fha_violations.length === 0 &&
-              property.existing_listing_raw && (
-                <div className="win95-window mb-4">
-                  <div className="win95-titlebar bg-[var(--win95-blue)] text-white">
-                    <span className="font-bold text-win95-12 pl-1">FHA Compliance Report</span>
-                  </div>
-                  <div className="p-3 bg-[var(--win95-gray)] space-y-2 text-win95-12">
-                    <p className="font-bold">Good news!</p>
-                    <p>
-                      Your existing listing was analyzed and found to be fully FHA-compliant. We
-                      used it to enrich your new copy.
-                    </p>
-                  </div>
-                </div>
-              )}
-            <div className="win95-window">
-              <div className="win95-titlebar">
-                <span className="font-bold text-win95-12 pl-1">Neighborhood Data</span>
-              </div>
-              <div className="p-3 bg-[var(--win95-gray)]">
-                <pre className="whitespace-pre-wrap text-win95-12 font-system m-0 leading-relaxed bg-input p-2 win95-inset">
-                  {rawString}
-                </pre>
-              </div>
-            </div>
-          </div>
+          <ResearchDossier enrichmentData={enrichmentData} property={property} />
         );
       }
 

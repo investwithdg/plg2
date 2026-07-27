@@ -22,6 +22,7 @@ export interface PropertyWithCopies {
   status: PropertyStatus;
   enrichment_step: EnrichmentStep;
   fha_violations: string[] | null;
+  fha_compliant_listing_parts: string | null;
   existing_listing_raw: string | null;
   created_at: string;
 }
@@ -33,7 +34,22 @@ export interface CopyGeneration {
   created_at: string;
 }
 
+export interface SchoolEntry {
+  name?: string;
+  type?: string;
+  grades?: string;
+  distance?: string;
+  rating?: number | string;
+  [key: string]: unknown;
+}
+
 export interface EnrichmentData {
+  schools?: SchoolEntry[] | null;
+  transit_options?: string[] | null;
+  nearby_amenities?: string[] | null;
+  walkability_score?: number | null;
+  market_overview?: string | null;
+  median_home_value?: number | null;
   perplexity_raw_response?: unknown;
 }
 
@@ -82,7 +98,7 @@ export function usePropertyPolling(propertyId: string | null): UsePropertyPollin
         .order("created_at", { ascending: false }),
       supabase
         .from("enrichments")
-        .select("perplexity_raw_response")
+        .select("schools, transit_options, nearby_amenities, walkability_score, market_overview, median_home_value, perplexity_raw_response")
         .eq("property_id", propId)
         .maybeSingle(),
     ]);
@@ -127,7 +143,7 @@ export function usePropertyPolling(propertyId: string | null): UsePropertyPollin
         const { data, error: fetchErr } = await supabase
           .from("properties")
           .select(
-            "id, address, property_type, status, enrichment_step, extraction_status, failed_step, beds, baths, sqft, price, fha_violations, existing_listing_raw, created_at",
+            "id, address, property_type, status, enrichment_step, extraction_status, failed_step, beds, baths, sqft, price, fha_violations, fha_compliant_listing_parts, existing_listing_raw, created_at",
           )
           .eq("id", propId)
           .maybeSingle();

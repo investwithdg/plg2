@@ -175,3 +175,71 @@
   outline: 1px dotted var(--win95-black);
   outline-offset: -4px;
 }
+
+/* ============================================================
+ * Plan Theme Overrides
+ * Applied via data-plan attribute on <body>.
+ * Free plan = no attribute = default :root vars above.
+ * ============================================================ */
+
+/* ── PRO THEME ────────────────────────────────────────────── */
+body[data-plan="pro"] {
+  --win95-gray: #c4b0b0;
+  --win95-gray-light: #e0d0d0;
+  --win95-gray-dark: #806060;
+  --win95-white: #fff5f5;
+  --win95-black: #1a0000;
+  --win95-blue: #800000;
+  --win95-blue-light: #c04040;
+
+  --background: #3a0e0e;
+  --foreground: #1a0000;
+  --card: #c4b0b0;
+  --card-foreground: #1a0000;
+  --popover: #c4b0b0;
+  --popover-foreground: #1a0000;
+  --primary: #800000;
+  --primary-foreground: #fff5f5;
+  --secondary: #c4b0b0;
+  --secondary-foreground: #1a0000;
+  --muted: #c4b0b0;
+  --muted-foreground: #5a3030;
+  --accent: #800000;
+  --accent-foreground: #fff5f5;
+  --destructive: #cc0000;
+  --destructive-foreground: #ffffff;
+  --border: #806060;
+  --input: #fff5f5;
+  --ring: #800000;
+}
+
+/* ── ELITE THEME ──────────────────────────────────────────── */
+body[data-plan="elite"] {
+  --win95-gray: #c8c8c8;
+  --win95-gray-light: #e8e8e8;
+  --win95-gray-dark: #707070;
+  --win95-white: #f8f8f8;
+  --win95-black: #0a0a0a;
+  --win95-blue: #404040;
+  --win95-blue-light: #808080;
+
+  --background: #1a1a2e;
+  --foreground: #0a0a0a;
+  --card: #c8c8c8;
+  --card-foreground: #0a0a0a;
+  --popover: #c8c8c8;
+  --popover-foreground: #0a0a0a;
+  --primary: #404040;
+  --primary-foreground: #f8f8f8;
+  --secondary: #c8c8c8;
+  --secondary-foreground: #0a0a0a;
+  --muted: #c8c8c8;
+  --muted-foreground: #505050;
+  --accent: #404040;
+  --accent-foreground: #f8f8f8;
+  --destructive: #800000;
+  --destructive-foreground: #ffffff;
+  --border: #707070;
+  --input: #f0f0f0;
+  --ring: #404040;
+}

@@ -1,6 +1,7 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
 import { useAuth } from "@/hooks/useAuth";
+import { usePlanTier } from "@/hooks/usePlanTier";
 import { supabase } from "@/integrations/supabase/client";
 
 export const Route = createFileRoute("/pricing")({
@@ -25,30 +26,8 @@ export const Route = createFileRoute("/pricing")({
 
 function Pricing() {
   const { user } = useAuth();
-  const [isProUser, setIsProUser] = useState(false);
-
-  useEffect(() => {
-    if (!user) {
-      setIsProUser(false);
-      return;
-    }
-    let cancelled = false;
-    (async () => {
-      const { data } = await supabase
-        .from("subscriptions")
-        .select("plan, status")
-        .eq("user_id", user.id)
-        .eq("status", "active")
-        .limit(1);
-      const active = !!data?.some(
-        (row: { plan?: string; status?: string }) => row.plan === "pro" && row.status === "active",
-      );
-      if (!cancelled) setIsProUser(active);
-    })();
-    return () => {
-      cancelled = true;
-    };
-  }, [user]);
+  const { plan } = usePlanTier(user);
+  const isProUser = plan === "pro" || plan === "elite";
 
   return (
     <div className="min-h-screen bg-[var(--background)] p-4 flex flex-col items-center">
