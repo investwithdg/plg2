@@ -151,16 +151,11 @@ export default function RetroGenerator() {
   const selectedProTier = isProTierPropertyType(propertyType);
   const generationsLeft = Math.max(0, MAX_GENERATIONS - generationsUsed);
   const proTierGenerationsLeft = Math.max(0, FREE_PRO_TIER_LIMIT - proTierGenerationsUsed);
-  const generationCountLabel = user || devBypassActive || isProUser
-    ? "unlimited"
-    : `${generationsLeft} left`;
-  const anonymousTurnstileRequired = Boolean(
-    !user && !devBypassActive && TURNSTILE_SITE_KEY,
-  );
+  const generationCountLabel =
+    user || devBypassActive || isProUser ? "unlimited" : `${generationsLeft} left`;
+  const anonymousTurnstileRequired = Boolean(!user && !devBypassActive && TURNSTILE_SITE_KEY);
   const generateDisabled =
-    showProgress ||
-    !query.trim() ||
-    (anonymousTurnstileRequired && !turnstileToken);
+    showProgress || !query.trim() || (anonymousTurnstileRequired && !turnstileToken);
 
   const handleTurnstileVerify = useCallback((token: string) => {
     setTurnstileToken(token);

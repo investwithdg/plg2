@@ -4,7 +4,7 @@ import { RetroWindow, RetroButton } from "@/components/retro";
 import OutputTabsWindow from "@/components/OutputTabsWindow";
 import type { OutputTabKey } from "@/components/OutputTabsWindow";
 import ResearchDossier from "@/components/ResearchDossier";
-import type { PropertyWithCopies } from "@/hooks/usePropertyPolling";
+import type { EnrichmentData, PropertyWithCopies } from "@/hooks/usePropertyPolling";
 import { toast as sonnerToast } from "sonner";
 
 interface HistoryEntry {
@@ -99,14 +99,18 @@ export default function ListingHistory({
 
     const propertyPromise = supabase
       .from("properties")
-      .select("id, address, property_type, status, enrichment_step, extraction_status, failed_step, beds, baths, sqft, price, fha_violations, fha_compliant_listing_parts, existing_listing_raw, created_at")
+      .select(
+        "id, address, property_type, status, enrichment_step, extraction_status, failed_step, beds, baths, sqft, price, fha_violations, fha_compliant_listing_parts, existing_listing_raw, created_at",
+      )
       .eq("id", id)
       .maybeSingle();
 
     const enrichPromise = isProUser
       ? supabase
           .from("enrichments")
-          .select("schools, transit_options, nearby_amenities, walkability_score, market_overview, median_home_value, perplexity_raw_response")
+          .select(
+            "schools, transit_options, nearby_amenities, walkability_score, market_overview, median_home_value, key_sources, perplexity_raw_response",
+          )
           .eq("property_id", id)
           .maybeSingle()
       : Promise.resolve({ data: null, error: null });
@@ -130,10 +134,11 @@ export default function ListingHistory({
       if (key in map) map[key] = c.content;
     }
 
-    if (isProUser && enrichRes?.data && enrichRes.data.perplexity_raw_response) {
+    const enrichData = enrichRes?.data as unknown as EnrichmentData | null | undefined;
+    if (isProUser && enrichData?.perplexity_raw_response) {
       map.research = (
         <ResearchDossier
-          enrichmentData={enrichRes.data}
+          enrichmentData={enrichData}
           property={(propertyRes?.data as unknown as PropertyWithCopies) || null}
         />
       );
@@ -212,7 +217,15 @@ export default function ListingHistory({
                       renderActions={(activeTab) => (
                         <div className="flex gap-2 mt-2">
                           {activeTab !== "research" && (
-                            <RetroButton onClick={() => onCopy(typeof expandedCopies[activeTab] === "string" ? (expandedCopies[activeTab] as string) : "")}>
+                            <RetroButton
+                              onClick={() =>
+                                onCopy(
+                                  typeof expandedCopies[activeTab] === "string"
+                                    ? (expandedCopies[activeTab] as string)
+                                    : "",
+                                )
+                              }
+                            >
                               copy {activeTab}
                             </RetroButton>
                           )}

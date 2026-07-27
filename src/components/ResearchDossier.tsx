@@ -8,7 +8,11 @@
  * 2. At-a-Glance Neighborhood Intelligence (Schools, Walkability, Market Value, Amenities)
  * 3. Verified Web Sources & Grounding Links
  */
-import type { EnrichmentData, SchoolEntry } from "@/hooks/usePropertyPolling";
+import type {
+  EnrichmentData,
+  KeySource,
+  PlaceEntryOrLegacyString,
+} from "@/hooks/usePropertyPolling";
 import type { PropertyWithCopies } from "@/hooks/usePropertyPolling";
 
 interface ResearchDossierProps {
@@ -47,7 +51,7 @@ function extractCitations(raw: unknown): string[] {
     try {
       target = JSON.parse(raw);
     } catch {
-      const urlRegex = /(https?:\/\/[^\s"',\]\}]+)/g;
+      const urlRegex = /(https?:\/\/[^\s"',\]}]+)/g;
       const matches = raw.match(urlRegex) || [];
       return Array.from(new Set(matches));
     }
@@ -69,7 +73,7 @@ function extractCitations(raw: unknown): string[] {
           foundUrls.push(...msg.citations.filter((c): c is string => typeof c === "string"));
         }
         if (typeof msg.content === "string") {
-          const matches = msg.content.match(/(https?:\/\/[^\s"',\]\}]+)/g) || [];
+          const matches = msg.content.match(/(https?:\/\/[^\s"',\]}]+)/g) || [];
           foundUrls.push(...matches);
         }
       }
@@ -80,7 +84,7 @@ function extractCitations(raw: unknown): string[] {
     }
 
     const str = JSON.stringify(obj);
-    const matches = str.match(/(https?:\/\/[^\s"',\]\}]+)/g) || [];
+    const matches = str.match(/(https?:\/\/[^\s"',\]}]+)/g) || [];
     return Array.from(new Set(matches));
   }
 
@@ -96,10 +100,23 @@ function getDomainName(url: string): string {
   }
 }
 
-export default function ResearchDossier({
-  enrichmentData,
-  property,
-}: ResearchDossierProps) {
+// transit_options/nearby_amenities were plain strings before the enrichment
+// schema was tightened; properties enriched before that (or served from the
+// 7-day neighborhood cache) may still hand back the old shape.
+function placeName(item: PlaceEntryOrLegacyString): string {
+  return typeof item === "string" ? item : item.name || "Unnamed";
+}
+function placeDetail(item: PlaceEntryOrLegacyString): string | null {
+  if (typeof item === "string") return null;
+  return [item.type, item.distance].filter(Boolean).join(" · ") || null;
+}
+
+function mapsSearchUrl(query: string, nearAddress?: string | null): string {
+  const q = nearAddress ? `${query} near ${nearAddress}` : query;
+  return `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(q)}`;
+}
+
+export default function ResearchDossier({ enrichmentData, property }: ResearchDossierProps) {
   const {
     schools,
     transit_options,
@@ -107,14 +124,18 @@ export default function ResearchDossier({
     walkability_score,
     market_overview,
     median_home_value,
+    key_sources,
     perplexity_raw_response,
   } = enrichmentData;
 
-  const citations = extractCitations(perplexity_raw_response);
+  const hasKeySources = Array.isArray(key_sources) && key_sources.length > 0;
+  // Fallback for properties enriched before key_sources existed (or served
+  // from the neighborhood cache) — naked domain links beat no sources at all.
+  const legacyCitations = hasKeySources ? [] : extractCitations(perplexity_raw_response);
   const walkCategory = getWalkabilityCategory(walkability_score);
+  const address = property?.address;
 
-  const hasViolations =
-    property?.fha_violations && property.fha_violations.length > 0;
+  const hasViolations = property?.fha_violations && property.fha_violations.length > 0;
   const isCleanExisting =
     property?.fha_violations &&
     property.fha_violations.length === 0 &&
@@ -181,8 +202,8 @@ export default function ResearchDossier({
                 </div>
                 <p className="text-win95-11 text-red-950">
                   The existing market listing contained terms that violate Fair Housing Act
-                  guidelines (42 U.S.C. 3604(c)) regarding resident demographics, accessibility,
-                  or steering.
+                  guidelines (42 U.S.C. 3604(c)) regarding resident demographics, accessibility, or
+                  steering.
                 </p>
                 <div className="flex flex-wrap gap-1.5 pt-1">
                   {property.fha_violations!.map((v, i) => (
@@ -202,8 +223,8 @@ export default function ResearchDossier({
                   <span>✅</span> AI Mitigation & Rewritten Compliant Facts
                 </div>
                 <p className="text-win95-11 text-emerald-900">
-                  PLG stripped all restricted terms and rewritten the factual elements into
-                  100% compliant property features:
+                  PLG stripped all restricted terms and rewritten the factual elements into 100%
+                  compliant property features:
                 </p>
                 <div className="win95-inset bg-white p-2.5 text-win95-11 font-mono text-slate-800 leading-relaxed max-h-32 overflow-y-auto">
                   {property.fha_compliant_listing_parts ||
@@ -320,7 +341,20 @@ export default function ResearchDossier({
                 <tbody className="divide-y divide-slate-100">
                   {schools.map((s, idx) => (
                     <tr key={idx} className="hover:bg-slate-50">
-                      <td className="p-2 font-bold text-slate-900">{s.name || "School"}</td>
+                      <td className="p-2 font-bold text-slate-900">
+                        {s.name ? (
+                          <a
+                            href={mapsSearchUrl(s.name, address)}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="text-[var(--win95-blue)] underline decoration-dotted hover:decoration-solid"
+                          >
+                            {s.name}
+                          </a>
+                        ) : (
+                          "School"
+                        )}
+                      </td>
                       <td className="p-2 text-slate-600">{s.type || "Public"}</td>
                       <td className="p-2 text-slate-600">{s.grades || "N/A"}</td>
                       <td className="p-2 text-slate-600">{s.distance || "Nearby"}</td>
@@ -353,14 +387,26 @@ export default function ResearchDossier({
             <div className="win95-inset bg-white p-3 min-h-[90px]">
               {transit_options && transit_options.length > 0 ? (
                 <div className="flex flex-wrap gap-1.5">
-                  {transit_options.map((item, idx) => (
-                    <span
-                      key={idx}
-                      className="win95-raised bg-slate-100 text-slate-800 px-2 py-1 text-win95-11 flex items-center gap-1 font-medium"
-                    >
-                      <span>🚌</span> {item}
-                    </span>
-                  ))}
+                  {transit_options.map((item, idx) => {
+                    const name = placeName(item);
+                    const detail = placeDetail(item);
+                    return (
+                      <a
+                        key={idx}
+                        href={mapsSearchUrl(name, address)}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="win95-raised bg-slate-100 text-slate-800 hover:bg-slate-200 px-2 py-1 text-win95-11 no-underline flex items-center gap-1 font-medium active:win95-pressed"
+                      >
+                        <span>🚌</span> {name}
+                        {detail && (
+                          <span className="text-[10px] text-muted-foreground font-normal">
+                            ({detail})
+                          </span>
+                        )}
+                      </a>
+                    );
+                  })}
                 </div>
               ) : (
                 <p className="text-muted-foreground">No transit data recorded.</p>
@@ -380,14 +426,26 @@ export default function ResearchDossier({
             <div className="win95-inset bg-white p-3 min-h-[90px]">
               {nearby_amenities && nearby_amenities.length > 0 ? (
                 <div className="flex flex-wrap gap-1.5">
-                  {nearby_amenities.map((item, idx) => (
-                    <span
-                      key={idx}
-                      className="win95-raised bg-slate-100 text-slate-800 px-2 py-1 text-win95-11 flex items-center gap-1 font-medium"
-                    >
-                      <span>📍</span> {item}
-                    </span>
-                  ))}
+                  {nearby_amenities.map((item, idx) => {
+                    const name = placeName(item);
+                    const detail = placeDetail(item);
+                    return (
+                      <a
+                        key={idx}
+                        href={mapsSearchUrl(name, address)}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="win95-raised bg-slate-100 text-slate-800 hover:bg-slate-200 px-2 py-1 text-win95-11 no-underline flex items-center gap-1 font-medium active:win95-pressed"
+                      >
+                        <span>📍</span> {name}
+                        {detail && (
+                          <span className="text-[10px] text-muted-foreground font-normal">
+                            ({detail})
+                          </span>
+                        )}
+                      </a>
+                    );
+                  })}
                 </div>
               ) : (
                 <p className="text-muted-foreground">No amenity data recorded.</p>
@@ -407,11 +465,37 @@ export default function ResearchDossier({
         </div>
         <div className="p-3 bg-[var(--win95-gray)] space-y-2">
           <p className="text-win95-11 text-muted-foreground">
-            The property facts and neighborhood metrics above were verified using real-time search queries across public records and real estate sources:
+            The property facts and neighborhood metrics above were verified using real-time search
+            queries across public records and real estate sources:
           </p>
-          {citations.length > 0 ? (
+          {hasKeySources ? (
+            <div className="win95-inset bg-white divide-y divide-slate-100 max-h-56 overflow-y-auto">
+              {(key_sources as KeySource[]).map((source, idx) => (
+                <a
+                  key={idx}
+                  href={source.url}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="flex items-start gap-2 p-2 no-underline text-black hover:bg-slate-50"
+                >
+                  <span className="text-[var(--win95-blue)] mt-0.5">🌐</span>
+                  <div className="min-w-0">
+                    <div className="font-bold text-win95-11 truncate">
+                      {source.name || (source.url ? getDomainName(source.url) : "Source")}
+                      <span className="text-[10px] text-muted-foreground font-normal ml-1">↗</span>
+                    </div>
+                    {source.facts_provided && (
+                      <div className="text-win95-11 text-muted-foreground">
+                        {source.facts_provided}
+                      </div>
+                    )}
+                  </div>
+                </a>
+              ))}
+            </div>
+          ) : legacyCitations.length > 0 ? (
             <div className="win95-inset bg-white p-2.5 flex flex-wrap gap-2 max-h-40 overflow-y-auto">
-              {citations.map((url, idx) => (
+              {legacyCitations.map((url, idx) => (
                 <a
                   key={idx}
                   href={url}

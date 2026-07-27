@@ -13,7 +13,9 @@ const SUPABASE_URL = "https://bbytwflsulxuctkpuvzs.supabase.co";
 const SERVICE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY;
 if (!SERVICE_KEY) {
   console.error("ERROR: Set SUPABASE_SERVICE_ROLE_KEY env var first.");
-  console.error("Find it at: https://supabase.com/dashboard/project/bbytwflsulxuctkpuvzs/settings/api");
+  console.error(
+    "Find it at: https://supabase.com/dashboard/project/bbytwflsulxuctkpuvzs/settings/api",
+  );
   process.exit(1);
 }
 
