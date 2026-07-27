@@ -1,8 +1,10 @@
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, type ReactNode } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { RetroWindow, RetroButton } from "@/components/retro";
 import OutputTabsWindow from "@/components/OutputTabsWindow";
 import type { OutputTabKey } from "@/components/OutputTabsWindow";
+import ResearchDossier from "@/components/ResearchDossier";
+import type { PropertyWithCopies } from "@/hooks/usePropertyPolling";
 import { toast as sonnerToast } from "sonner";
 
 interface HistoryEntry {
@@ -53,7 +55,7 @@ export default function ListingHistory({
   const [loading, setLoading] = useState(true);
   const [expandedId, setExpandedId] = useState<string | null>(null);
   const [expandedCopies, setExpandedCopies] = useState<Partial<
-    Record<OutputTabKey, string>
+    Record<OutputTabKey, ReactNode>
   > | null>(null);
   const [loadingCopies, setLoadingCopies] = useState(false);
 
@@ -95,15 +97,25 @@ export default function ListingHistory({
       .eq("property_id", id)
       .order("created_at", { ascending: true });
 
+    const propertyPromise = supabase
+      .from("properties")
+      .select("id, address, property_type, status, enrichment_step, extraction_status, failed_step, beds, baths, sqft, price, fha_violations, fha_compliant_listing_parts, existing_listing_raw, created_at")
+      .eq("id", id)
+      .maybeSingle();
+
     const enrichPromise = isProUser
       ? supabase
           .from("enrichments")
-          .select("perplexity_raw_response")
+          .select("schools, transit_options, nearby_amenities, walkability_score, market_overview, median_home_value, perplexity_raw_response")
           .eq("property_id", id)
           .maybeSingle()
       : Promise.resolve({ data: null, error: null });
 
-    const [copyRes, enrichRes] = await Promise.all([copyPromise, enrichPromise]);
+    const [copyRes, propertyRes, enrichRes] = await Promise.all([
+      copyPromise,
+      propertyPromise,
+      enrichPromise,
+    ]);
 
     if (copyRes.error) {
       console.error("Copy fetch error:", copyRes.error);
@@ -112,17 +124,19 @@ export default function ListingHistory({
     }
 
     const copies = (copyRes.data ?? []) as HistoryCopy[];
-    const map: Partial<Record<OutputTabKey, string>> = { mls: "", social: "", email: "" };
+    const map: Partial<Record<OutputTabKey, ReactNode>> = { mls: "", social: "", email: "" };
     for (const c of copies) {
       const key = c.copy_type as OutputTabKey;
       if (key in map) map[key] = c.content;
     }
 
-    if (enrichRes && enrichRes.data && enrichRes.data.perplexity_raw_response) {
-      map.research =
-        typeof enrichRes.data.perplexity_raw_response === "string"
-          ? enrichRes.data.perplexity_raw_response
-          : JSON.stringify(enrichRes.data.perplexity_raw_response, null, 2);
+    if (isProUser && enrichRes?.data && enrichRes.data.perplexity_raw_response) {
+      map.research = (
+        <ResearchDossier
+          enrichmentData={enrichRes.data}
+          property={(propertyRes?.data as unknown as PropertyWithCopies) || null}
+        />
+      );
     }
 
     setExpandedCopies(map);
@@ -197,9 +211,11 @@ export default function ListingHistory({
                       outputs={expandedCopies}
                       renderActions={(activeTab) => (
                         <div className="flex gap-2 mt-2">
-                          <RetroButton onClick={() => onCopy(expandedCopies[activeTab] ?? "")}>
-                            copy {activeTab}
-                          </RetroButton>
+                          {activeTab !== "research" && (
+                            <RetroButton onClick={() => onCopy(typeof expandedCopies[activeTab] === "string" ? (expandedCopies[activeTab] as string) : "")}>
+                              copy {activeTab}
+                            </RetroButton>
+                          )}
                           <RetroButton
                             onClick={() =>
                               onCopy(
