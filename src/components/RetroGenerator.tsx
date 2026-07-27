@@ -131,8 +131,21 @@ export default function RetroGenerator() {
   });
   const [outputs, setOutputs] = useState<Partial<Record<OutputTabKey, ReactNode>> | null>(null);
   const [historyKey, setHistoryKey] = useState(0);
+  const [portalLoading, setPortalLoading] = useState(false);
+  const [totalGenerations, setTotalGenerations] = useState<number | null>(null);
+  const isGeneratingRef = useRef(false);
   const { plan } = usePlanTier(user);
   const isProUser = plan === "pro" || plan === "elite";
+
+  const fireLoopsEvent = useCallback(
+    (eventName: string, properties?: Record<string, unknown>) => {
+      if (!user?.email) return;
+      supabase.functions
+        .invoke("send-loops-event", { body: { email: user.email, eventName, properties } })
+        .catch(console.error);
+    },
+    [user?.email],
+  );
 
   // --- Social proof: total generation count ---
   useEffect(() => {
