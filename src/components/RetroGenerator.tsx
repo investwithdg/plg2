@@ -137,6 +137,16 @@ export default function RetroGenerator() {
   const { plan } = usePlanTier(user);
   const isProUser = plan === "pro" || plan === "elite";
 
+  const {
+    status,
+    enrichmentStep,
+    property,
+    copies,
+    enrichmentData,
+    error: pollingError,
+    stopPolling,
+  } = usePropertyPolling(propertyId);
+
   const fireLoopsEvent = useCallback(
     (eventName: string, properties?: Record<string, unknown>) => {
       if (!user?.email) return;
