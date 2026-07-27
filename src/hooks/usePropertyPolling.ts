@@ -112,7 +112,7 @@ export function usePropertyPolling(propertyId: string | null): UsePropertyPollin
     if (enrichmentsRes.error) {
       console.error("Error fetching enrichments:", enrichmentsRes.error);
     } else if (enrichmentsRes.data) {
-      setEnrichmentData(enrichmentsRes.data);
+      setEnrichmentData(enrichmentsRes.data as unknown as EnrichmentData);
     }
   }, []);
 

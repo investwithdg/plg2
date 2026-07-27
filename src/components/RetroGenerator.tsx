@@ -549,7 +549,7 @@ export default function RetroGenerator() {
           isOpen={showProgress}
           status={status}
           enrichmentStep={enrichmentStep}
-          error={error}
+          error={pollingError}
           onCancel={handleCancelProgress}
           onRetry={handleRetry}
           onView={() => setShowProgress(false)}
