@@ -147,6 +147,32 @@ export default function RetroGenerator() {
     stopPolling,
   } = usePropertyPolling(propertyId);
 
+  const devBypassActive = isDevHost();
+  const selectedProTier = isProTierPropertyType(propertyType);
+  const generationsLeft = Math.max(0, MAX_GENERATIONS - generationsUsed);
+  const proTierGenerationsLeft = Math.max(0, FREE_PRO_TIER_LIMIT - proTierGenerationsUsed);
+  const generationCountLabel = user || devBypassActive || isProUser
+    ? "unlimited"
+    : `${generationsLeft} left`;
+  const anonymousTurnstileRequired = Boolean(
+    !user && !devBypassActive && TURNSTILE_SITE_KEY,
+  );
+  const generateDisabled =
+    showProgress ||
+    !query.trim() ||
+    (anonymousTurnstileRequired && !turnstileToken);
+
+  const handleTurnstileVerify = useCallback((token: string) => {
+    setTurnstileToken(token);
+  }, []);
+  const handleTurnstileExpire = useCallback(() => {
+    setTurnstileToken(null);
+  }, []);
+  const resetAnonymousTurnstile = useCallback(() => {
+    setTurnstileToken(null);
+    setTurnstileWidgetKey((k) => k + 1);
+  }, []);
+
   const fireLoopsEvent = useCallback(
     (eventName: string, properties?: Record<string, unknown>) => {
       if (!user?.email) return;
