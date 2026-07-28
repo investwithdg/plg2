@@ -5,3 +5,8 @@
 - [x] Deploy updated Edge Function with compliance score + categories checklist
 - [x] Retrieve fha_categories in usePropertyPolling client hook
 - [x] Render a detailed FHA Audit Checklist Breakdown in ResearchDossier.tsx showing checked reasoning per category
+- [x] Remove subscription management from the generator search box layout (relocated strictly to User Member Hub)
+- [x] Create Win95 yellow tooltips that pop up on hover showing the full name of each property type
+- [x] Consolidate Condo & Townhome buttons into a single "ROW" button (configured as free-tier option covering Townhouse, Condo, or Rowhouse)
+- [x] Design and implement a Property Type Mismatch dialog warning box for residential vs. raw land mismatch edge cases
+- [x] Redesign Research+ top layout: merge Market Overview and Walkability cards into a single compact window, removing the large progress bar

@@ -329,16 +329,16 @@ export default function ResearchDossier({ enrichmentData, property }: ResearchDo
         </div>
       </div>
 
-      {/* ── 3. AT-A-GLANCE NEIGHBORHOOD & MARKET CARDS ── */}
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-        {/* Market Value Card */}
-        <div className="win95-window flex flex-col">
-          <div className="win95-titlebar">
-            <span className="font-bold text-win95-12 pl-1 flex items-center gap-1">
-              Local Market Overview
-            </span>
-          </div>
-          <div className="p-3 bg-[var(--win95-gray)] space-y-2 flex-grow">
+      {/* ── 3. AT-A-GLANCE NEIGHBORHOOD & MARKET CARD ── */}
+      <div className="win95-window">
+        <div className="win95-titlebar">
+          <span className="font-bold text-win95-12 pl-1">
+            Local Market & Walkability Overview
+          </span>
+        </div>
+        <div className="p-3 bg-[var(--win95-gray)] space-y-3">
+          {/* Top Row: Metric Stats Side by Side */}
+          <div className="grid grid-cols-2 gap-3">
             <div className="win95-inset bg-white p-2.5 text-center">
               <span className="text-[10px] text-muted-foreground block font-bold uppercase">
                 Est. Median Home Value
@@ -347,45 +347,27 @@ export default function ResearchDossier({ enrichmentData, property }: ResearchDo
                 {formatCurrency(median_home_value)}
               </span>
             </div>
-            <div className="win95-inset bg-white p-2.5 text-win95-11 leading-relaxed text-slate-800 flex-grow">
-              {market_overview || "Neighborhood market trend data is being compiled."}
-            </div>
-          </div>
-        </div>
 
-        {/* Walkability Score Card */}
-        <div className="win95-window flex flex-col">
-          <div className="win95-titlebar">
-            <span className="font-bold text-win95-12 pl-1 flex items-center gap-1">
-              Walkability Index
-            </span>
-          </div>
-          <div className="p-3 bg-[var(--win95-gray)] space-y-2 flex-grow">
-            <div className="win95-inset bg-white p-2.5 text-center space-y-1">
+            <div className="win95-inset bg-white p-2.5 text-center">
               <span className="text-[10px] text-muted-foreground block font-bold uppercase">
                 Walkability Score
               </span>
-              <div className="flex items-center justify-center gap-2">
-                <span className="text-win95-16 font-bold">{walkability_score ?? "N/A"}</span>
+              <div className="flex items-center justify-center gap-1.5">
+                <span className="text-win95-16 font-bold text-[var(--win95-blue)]">{walkability_score ?? "N/A"}</span>
                 <span className="text-[10px] font-bold text-muted-foreground">/ 100</span>
+                {walkability_score != null && (
+                  <span className="text-[10px] font-bold px-1.5 py-0.2 bg-slate-200 text-slate-800 border border-[var(--win95-gray-dark)] ml-1">
+                    {walkCategory.label}
+                  </span>
+                )}
               </div>
-              <span
-                className="inline-block text-[11px] font-bold px-2 py-0.5 win95-raised text-white"
-                style={{ backgroundColor: walkCategory.color }}
-              >
-                {walkCategory.label}
-              </span>
             </div>
-            {/* Retro 3D Progress Bar */}
-            <div className="win95-inset bg-slate-200 p-1">
-              <div
-                className="h-3 transition-all duration-500"
-                style={{
-                  width: `${walkCategory.percent}%`,
-                  backgroundColor: walkCategory.color,
-                }}
-              />
-            </div>
+          </div>
+
+          {/* Bottom Row: Market Narrative */}
+          <div className="win95-inset bg-white p-3 text-win95-11 leading-relaxed text-slate-800">
+            <div className="font-bold mb-1 text-slate-900 text-win95-11">Market Trends & Neighborhood Context:</div>
+            {market_overview || "Neighborhood market trend data is being compiled."}
           </div>
         </div>
       </div>

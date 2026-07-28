@@ -27,7 +27,8 @@ type PropertyType =
   | "estate"
   | "lux"
   | "commercial"
-  | "lease";
+  | "lease"
+  | "row";
 
 type PaywallReason = "free_limit" | "pro_tier_limit" | "upgrade_intent";
 
@@ -36,7 +37,7 @@ const FREE_PRO_TIER_LIMIT = 1;
 const STORAGE_KEY = "plg_generations_used";
 const PRO_TIER_STORAGE_KEY = "plg_pro_tier_generations_used";
 const ANON_ID_COOKIE = "plg_anon_id";
-const FREE_PROPERTY_TYPES: PropertyType[] = ["sfr", "fsbo"];
+const FREE_PROPERTY_TYPES: PropertyType[] = ["sfr", "fsbo", "row"];
 const TURNSTILE_SITE_KEY = import.meta.env.VITE_TURNSTILE_SITE_KEY as string | undefined;
 
 const isProTierPropertyType = (type: PropertyType) => !FREE_PROPERTY_TYPES.includes(type);
@@ -134,6 +135,7 @@ export default function RetroGenerator() {
   const [portalLoading, setPortalLoading] = useState(false);
   const [totalGenerations, setTotalGenerations] = useState<number | null>(null);
   const isGeneratingRef = useRef(false);
+  const [showMismatchWarning, setShowMismatchWarning] = useState(false);
   const { plan } = usePlanTier(user);
   const isProUser = plan === "pro" || plan === "elite";
 
@@ -225,6 +227,17 @@ export default function RetroGenerator() {
       setOutputs(outputMap);
       setShowProgress(false);
       setHistoryKey((k) => k + 1);
+
+      // Check for property type mismatch warning (e.g. user selected residential/lux but search says raw land)
+      if (property && property.property_type) {
+        const ext = property.property_type.toLowerCase();
+        const isExtLand = ext.includes("land") || ext.includes("lot") || ext.includes("raw") || ext.includes("vacant");
+        const isSelResidential = ["sfr", "lux", "row", "mf"].includes(propertyType);
+        if (isExtLand && isSelResidential) {
+          setShowMismatchWarning(true);
+        }
+      }
+
       track("generation_completed", { property_type: propertyType, property_id: propertyId });
       fireLoopsEvent("generation_created", { property_type: propertyType });
     }
@@ -472,15 +485,6 @@ export default function RetroGenerator() {
               {!user && !isProUser && selectedProTier && (
                 <span>{proTierGenerationsLeft} Pro-tier left</span>
               )}
-              {isProUser && (
-                <RetroButton
-                  onClick={handleManageSubscription}
-                  disabled={portalLoading}
-                  className="text-win95-11 px-2 py-0.5"
-                >
-                  {portalLoading ? "Loading..." : "Manage Subscription"}
-                </RetroButton>
-              )}
             </div>
           </div>
         </RetroWindow>
@@ -565,6 +569,40 @@ export default function RetroGenerator() {
 
         {showAuthModal && <AuthModal onClose={() => setShowAuthModal(false)} onAuth={handleAuth} />}
 
+        {showMismatchWarning && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40">
+            <RetroWindow
+              title="PLG System Message"
+              showControls={true}
+              onClose={() => setShowMismatchWarning(false)}
+              className="w-full max-w-sm"
+            >
+              <div className="p-4 bg-[var(--win95-gray)] text-black space-y-4">
+                <div className="flex items-start gap-3">
+                  <span className="text-xl">⚠️</span>
+                  <div className="space-y-1">
+                    <h3 className="font-bold text-win95-12">Property Type Mismatch</h3>
+                    <p className="text-win95-11 text-slate-800 leading-relaxed">
+                      Our research indicates this property is categorized as <strong className="underline">{property?.property_type}</strong>, but you selected <strong>{propertyType.toUpperCase()}</strong>.
+                    </p>
+                    <p className="text-win95-10 text-slate-600 leading-relaxed">
+                      If this is a new home development built on raw land, this warning can be ignored.
+                    </p>
+                  </div>
+                </div>
+                <div className="flex justify-end gap-2 pt-2">
+                  <RetroButton onClick={() => setShowMismatchWarning(false)}>
+                    Keep Copy
+                  </RetroButton>
+                  <RetroButton variant="primary" onClick={() => setShowMismatchWarning(false)}>
+                    Acknowledge
+                  </RetroButton>
+                </div>
+              </div>
+            </RetroWindow>
+          </div>
+        )}
+
         {/* Authenticated users see their listing history; anonymous see landing content */}
         {user && !authLoading ? (
           <ListingHistory key={historyKey} userId={user.id} isProUser={isProUser} />
@@ -626,17 +664,18 @@ function PropertyTypeToggle({
   proTierUsed: boolean;
   isProUser: boolean;
 }) {
-  const options: { key: PropertyType; label: string }[] = [
-    { key: "sfr", label: "SFR" },
-    { key: "fsbo", label: "FSBO" },
-    { key: "mf", label: "MF" },
-    { key: "str", label: "STR" },
-    { key: "mtr", label: "MTR" },
-    { key: "ltr", label: "LTR" },
-    { key: "estate", label: "ESTATE SALE" },
-    { key: "lux", label: "LUX" },
-    { key: "commercial", label: "COMM" },
-    { key: "lease", label: "LEASE" },
+  const options: { key: PropertyType; label: string; fullName: string }[] = [
+    { key: "sfr", label: "SFR", fullName: "Single Family Residential" },
+    { key: "fsbo", label: "FSBO", fullName: "For Sale By Owner" },
+    { key: "row", label: "ROW", fullName: "Townhouse, Condo, or Rowhouse" },
+    { key: "mf", label: "MF", fullName: "Multi-Family" },
+    { key: "str", label: "STR", fullName: "Short-Term Rental" },
+    { key: "mtr", label: "MTR", fullName: "Medium-Term Rental" },
+    { key: "ltr", label: "LTR", fullName: "Long-Term Rental" },
+    { key: "estate", label: "ESTATE SALE", fullName: "Estate Sale" },
+    { key: "lux", label: "LUX", fullName: "Luxury Property / Estate" },
+    { key: "commercial", label: "COMM", fullName: "Commercial Property" },
+    { key: "lease", label: "LEASE", fullName: "Lease / Rental" },
   ];
 
   return (
@@ -657,7 +696,7 @@ function PropertyTypeToggle({
                     : "Pro tier: 1 included free, then Pro"
                 : "Free tier"
             }
-            className={`px-2 py-1 text-win95-11 font-bold cursor-pointer relative ${
+            className={`px-2 py-1 text-win95-11 font-bold cursor-pointer relative group ${
               isActive ? "win95-pressed bg-input" : "win95-raised bg-card"
             }`}
           >
@@ -673,6 +712,14 @@ function PropertyTypeToggle({
                 {proTierUsed ? "🔒" : "★"}
               </span>
             )}
+
+            {/* Win95 style hover tooltip */}
+            <div className="absolute bottom-full mb-1 left-1/2 -translate-x-1/2 hidden group-hover:block z-50 bg-[#ffffe1] text-black border border-black p-1 text-[10px] whitespace-nowrap shadow-sm font-normal pointer-events-none">
+              <span className="font-bold">{opt.fullName}</span>
+              <span className="text-[9px] text-slate-500 block">
+                {isProTier ? "Pro Tier" : "Free Tier"}
+              </span>
+            </div>
           </button>
         );
       })}
