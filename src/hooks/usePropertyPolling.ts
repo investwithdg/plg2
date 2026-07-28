@@ -24,6 +24,10 @@ export interface PropertyWithCopies {
   fha_violations: string[] | null;
   fha_compliant_listing_parts: string | null;
   existing_listing_raw: string | null;
+  listing_agent: string | null;
+  listing_office: string | null;
+  fha_compliance_score: number | null;
+  fha_categories: Record<string, any> | null;
   created_at: string;
 }
 
@@ -164,7 +168,7 @@ export function usePropertyPolling(propertyId: string | null): UsePropertyPollin
         const { data, error: fetchErr } = await supabase
           .from("properties")
           .select(
-            "id, address, property_type, status, enrichment_step, extraction_status, failed_step, beds, baths, sqft, price, fha_violations, fha_compliant_listing_parts, existing_listing_raw, created_at",
+            "id, address, property_type, status, enrichment_step, extraction_status, failed_step, beds, baths, sqft, price, fha_violations, fha_compliant_listing_parts, existing_listing_raw, listing_agent, listing_office, fha_compliance_score, fha_categories, created_at",
           )
           .eq("id", propId)
           .maybeSingle();

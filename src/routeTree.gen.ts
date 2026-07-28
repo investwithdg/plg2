@@ -12,6 +12,7 @@ import { Route as rootRouteImport } from './routes/__root'
 import { Route as TermsRouteImport } from './routes/terms'
 import { Route as PrivacyRouteImport } from './routes/privacy'
 import { Route as PricingRouteImport } from './routes/pricing'
+import { Route as HubRouteImport } from './routes/hub'
 import { Route as FeaturesRouteImport } from './routes/features'
 import { Route as ExploreRouteImport } from './routes/explore'
 import { Route as IndexRouteImport } from './routes/index'
@@ -51,6 +52,11 @@ const PrivacyRoute = PrivacyRouteImport.update({
 const PricingRoute = PricingRouteImport.update({
   id: '/pricing',
   path: '/pricing',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const HubRoute = HubRouteImport.update({
+  id: '/hub',
+  path: '/hub',
   getParentRoute: () => rootRouteImport,
 } as any)
 const FeaturesRoute = FeaturesRouteImport.update({
@@ -183,6 +189,7 @@ export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/explore': typeof ExploreRoute
   '/features': typeof FeaturesRoute
+  '/hub': typeof HubRoute
   '/pricing': typeof PricingRoute
   '/privacy': typeof PrivacyRoute
   '/terms': typeof TermsRoute
@@ -213,6 +220,7 @@ export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/explore': typeof ExploreRoute
   '/features': typeof FeaturesRoute
+  '/hub': typeof HubRoute
   '/pricing': typeof PricingRoute
   '/privacy': typeof PrivacyRoute
   '/terms': typeof TermsRoute
@@ -244,6 +252,7 @@ export interface FileRoutesById {
   '/': typeof IndexRoute
   '/explore': typeof ExploreRoute
   '/features': typeof FeaturesRoute
+  '/hub': typeof HubRoute
   '/pricing': typeof PricingRoute
   '/privacy': typeof PrivacyRoute
   '/terms': typeof TermsRoute
@@ -276,6 +285,7 @@ export interface FileRouteTypes {
     | '/'
     | '/explore'
     | '/features'
+    | '/hub'
     | '/pricing'
     | '/privacy'
     | '/terms'
@@ -306,6 +316,7 @@ export interface FileRouteTypes {
     | '/'
     | '/explore'
     | '/features'
+    | '/hub'
     | '/pricing'
     | '/privacy'
     | '/terms'
@@ -336,6 +347,7 @@ export interface FileRouteTypes {
     | '/'
     | '/explore'
     | '/features'
+    | '/hub'
     | '/pricing'
     | '/privacy'
     | '/terms'
@@ -367,6 +379,7 @@ export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   ExploreRoute: typeof ExploreRoute
   FeaturesRoute: typeof FeaturesRoute
+  HubRoute: typeof HubRoute
   PricingRoute: typeof PricingRoute
   PrivacyRoute: typeof PrivacyRoute
   TermsRoute: typeof TermsRoute
@@ -415,6 +428,13 @@ declare module '@tanstack/react-router' {
       path: '/pricing'
       fullPath: '/pricing'
       preLoaderRoute: typeof PricingRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/hub': {
+      id: '/hub'
+      path: '/hub'
+      fullPath: '/hub'
+      preLoaderRoute: typeof HubRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/features': {
@@ -599,6 +619,7 @@ const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   ExploreRoute: ExploreRoute,
   FeaturesRoute: FeaturesRoute,
+  HubRoute: HubRoute,
   PricingRoute: PricingRoute,
   PrivacyRoute: PrivacyRoute,
   TermsRoute: TermsRoute,

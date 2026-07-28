@@ -1,0 +1,7 @@
+- [x] Configure Perplexity to extract FULL exact listing description text
+- [x] Create SQL migration to add fha_categories jsonb column
+- [x] Modify parseExistingListingFHA to return a structured category checks breakdown (reasoning + passed/failed)
+- [x] Save fha_categories to database properties table
+- [x] Deploy updated Edge Function with compliance score + categories checklist
+- [x] Retrieve fha_categories in usePropertyPolling client hook
+- [x] Render a detailed FHA Audit Checklist Breakdown in ResearchDossier.tsx showing checked reasoning per category

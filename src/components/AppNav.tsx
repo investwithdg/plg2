@@ -94,12 +94,20 @@ export function AppNav() {
             </span>
           )}
           {userEmail ? (
-            <button
-              onClick={handleSignOut}
-              className="win95-raised bg-[var(--win95-gray)] text-black px-2 py-0.5 text-win95-11 cursor-pointer"
-            >
-              Sign Out
-            </button>
+            <div className="flex items-center gap-1.5">
+              <Link
+                to="/hub"
+                className="win95-raised bg-[var(--win95-gray)] text-black px-2 py-0.5 text-win95-11 no-underline font-bold"
+              >
+                Member Hub
+              </Link>
+              <button
+                onClick={handleSignOut}
+                className="win95-raised bg-[var(--win95-gray)] text-black px-2 py-0.5 text-win95-11 cursor-pointer"
+              >
+                Sign Out
+              </button>
+            </div>
           ) : (
             <button
               onClick={() => setShowAuthModal(true)}
@@ -154,8 +162,15 @@ export function AppNav() {
                 ))}
                 <div className="border-t-2 border-[var(--win95-gray-dark)] my-1 mx-2" />
                 {userEmail ? (
-                  <div className="px-4 space-y-1">
+                  <div className="px-4 space-y-1.5">
                     <p className="text-win95-11 text-muted-foreground truncate">{userEmail}</p>
+                    <Link
+                      to="/hub"
+                      onClick={() => setMenuOpen(false)}
+                      className="win95-raised px-3 py-1 text-win95-12 font-bold no-underline text-black block text-center bg-[var(--win95-gray)]"
+                    >
+                      Member Hub
+                    </Link>
                     <button
                       onClick={handleSignOut}
                       className="win95-raised px-3 py-0.5 text-win95-12 cursor-pointer w-full text-left"

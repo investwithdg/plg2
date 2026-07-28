@@ -147,7 +147,7 @@ export default function ResearchDossier({ enrichmentData, property }: ResearchDo
       <div className="win95-window">
         <div className="win95-titlebar bg-gradient-to-r from-[#800000] to-[#c04040] text-white">
           <span className="font-bold text-win95-12 truncate pl-1 flex items-center gap-1.5">
-            <span>📊</span> PLG Research+ Intelligence Card
+            PLG Research+ Intelligence Card
           </span>
           <span className="text-[10px] bg-white text-black px-1.5 py-0.2 font-bold uppercase rounded-none border border-black">
             PRO TIER
@@ -169,11 +169,24 @@ export default function ResearchDossier({ enrichmentData, property }: ResearchDo
                   .filter(Boolean)
                   .join(" • ")}
               </div>
+              {(property?.listing_agent || property?.listing_office) && (
+                <div className="text-[10px] text-slate-700 mt-1">
+                  {property.listing_agent && <span>Agent: {property.listing_agent}</span>}
+                  {property.listing_agent && property.listing_office && <span> • </span>}
+                  {property.listing_office && <span>Brokerage: {property.listing_office}</span>}
+                </div>
+              )}
             </div>
             <div className="win95-raised px-2.5 py-1 text-center bg-card">
               <span className="text-[10px] block font-bold text-muted-foreground">FHA STATUS</span>
-              <span className="text-win95-12 font-bold text-[#008000] flex items-center gap-1">
-                <span>🛡️</span> VERIFIED COMPLIANT
+              <span className={`text-win95-12 font-bold ${
+                property?.fha_compliance_score != null && property.fha_compliance_score < 100
+                  ? "text-[#800000]"
+                  : "text-[#008000]"
+              }`}>
+                {property?.fha_compliance_score != null
+                  ? `${property.fha_compliance_score}% COMPLIANT`
+                  : "VERIFIED COMPLIANT"}
               </span>
             </div>
           </div>
@@ -184,7 +197,7 @@ export default function ResearchDossier({ enrichmentData, property }: ResearchDo
       <div className="win95-window">
         <div className="win95-titlebar bg-[var(--win95-blue)] text-white">
           <span className="font-bold text-win95-12 pl-1 flex items-center gap-1.5">
-            <span>⚖️</span> FHA Fair Housing Compliance Audit & Mitigation Report
+            FHA Fair Housing Compliance Audit & Mitigation Report
           </span>
         </div>
         <div className="p-3 bg-[var(--win95-gray)] space-y-3">
@@ -194,7 +207,7 @@ export default function ResearchDossier({ enrichmentData, property }: ResearchDo
               <div className="win95-inset bg-red-50 border-red-700 p-3 space-y-2">
                 <div className="flex items-center justify-between">
                   <span className="font-bold text-red-900 text-win95-12 flex items-center gap-1">
-                    <span>⚠️</span> FHA Violations Flagged in Original Listing
+                    FHA Violations Flagged in Original Listing
                   </span>
                   <span className="win95-raised bg-red-700 text-white text-[10px] font-bold px-1.5 py-0.5">
                     {property.fha_violations!.length} FLAGGED
@@ -211,7 +224,7 @@ export default function ResearchDossier({ enrichmentData, property }: ResearchDo
                       key={i}
                       className="win95-raised bg-red-100 text-red-900 border-red-400 font-bold px-2 py-0.5 text-win95-11 flex items-center gap-1"
                     >
-                      <span className="text-red-600 font-bold">×</span> "{v}"
+                      <span className="text-red-600 font-bold">x</span> "{v}"
                     </span>
                   ))}
                 </div>
@@ -220,7 +233,7 @@ export default function ResearchDossier({ enrichmentData, property }: ResearchDo
               {/* Green Mitigation Fix Card */}
               <div className="win95-inset bg-emerald-50 border-emerald-700 p-3 space-y-1.5">
                 <div className="font-bold text-emerald-950 text-win95-12 flex items-center gap-1">
-                  <span>✅</span> AI Mitigation & Rewritten Compliant Facts
+                  AI Mitigation & Rewritten Compliant Facts
                 </div>
                 <p className="text-win95-11 text-emerald-900">
                   PLG stripped all restricted terms and rewritten the factual elements into 100%
@@ -235,7 +248,7 @@ export default function ResearchDossier({ enrichmentData, property }: ResearchDo
           ) : isCleanExisting ? (
             <div className="win95-inset bg-emerald-50 p-3 space-y-1.5">
               <div className="font-bold text-emerald-950 text-win95-12 flex items-center gap-1">
-                <span>✨</span> Original Listing Analyzed — 100% FHA Compliant
+                Original Listing Analyzed — 100% FHA Compliant
               </div>
               <p className="text-win95-11 text-emerald-900">
                 We retrieved the current listing for this property. No discriminatory terms or FHA
@@ -245,13 +258,72 @@ export default function ResearchDossier({ enrichmentData, property }: ResearchDo
           ) : (
             <div className="win95-inset bg-white p-3 space-y-1.5">
               <div className="font-bold text-win95-12 flex items-center gap-1">
-                <span>🛡️</span> FHA Screening Active
+                FHA Screening Active
               </div>
               <p className="text-win95-11 text-muted-foreground">
                 All property facts and neighborhood data were screened against Fair Housing Act
                 rules prior to copywriting. Discriminatory terms, religious/familial preferences,
                 and restricted phrasing are automatically blocked.
               </p>
+            </div>
+          )}
+
+          {/* Category Audit Checklist */}
+          {property?.fha_categories && (
+            <div className="win95-inset bg-white p-3 space-y-2.5">
+              <div className="font-bold text-win95-12 text-slate-800 border-b pb-1.5">FHA Audit Checklist Breakdown</div>
+              <div className="space-y-3">
+                {/* Protected Classes */}
+                {(() => {
+                  const check = (property.fha_categories as any).protected_classes;
+                  if (!check) return null;
+                  return (
+                    <div className="text-win95-11 space-y-0.5">
+                      <div className="flex items-center gap-2 font-bold">
+                        <span className={check.passed ? "text-[#008000]" : "text-[#800000]"}>
+                          [{check.passed ? "PASSED" : "FAILED"}]
+                        </span>
+                        <span className="text-slate-900">Protected Classes & Demographic Steering</span>
+                      </div>
+                      <p className="text-muted-foreground pl-14 leading-relaxed">{check.reasoning}</p>
+                    </div>
+                  );
+                })()}
+
+                {/* Steering & Coded Language */}
+                {(() => {
+                  const check = (property.fha_categories as any).steering_coded_language;
+                  if (!check) return null;
+                  return (
+                    <div className="text-win95-11 space-y-0.5">
+                      <div className="flex items-center gap-2 font-bold">
+                        <span className={check.passed ? "text-[#008000]" : "text-[#800000]"}>
+                          [{check.passed ? "PASSED" : "FAILED"}]
+                        </span>
+                        <span className="text-slate-900">Steering & Coded Phrasing (e.g., churches, families, walking distance)</span>
+                      </div>
+                      <p className="text-muted-foreground pl-14 leading-relaxed">{check.reasoning}</p>
+                    </div>
+                  );
+                })()}
+
+                {/* Demographics / Neighborhood Character */}
+                {(() => {
+                  const check = (property.fha_categories as any).demographics_character;
+                  if (!check) return null;
+                  return (
+                    <div className="text-win95-11 space-y-0.5">
+                      <div className="flex items-center gap-2 font-bold">
+                        <span className={check.passed ? "text-[#008000]" : "text-[#800000]"}>
+                          [{check.passed ? "PASSED" : "FAILED"}]
+                        </span>
+                        <span className="text-slate-900">Neighborhood Demographics & Resident Profiling</span>
+                      </div>
+                      <p className="text-muted-foreground pl-14 leading-relaxed">{check.reasoning}</p>
+                    </div>
+                  );
+                })()}
+              </div>
             </div>
           )}
         </div>
@@ -263,7 +335,7 @@ export default function ResearchDossier({ enrichmentData, property }: ResearchDo
         <div className="win95-window flex flex-col">
           <div className="win95-titlebar">
             <span className="font-bold text-win95-12 pl-1 flex items-center gap-1">
-              <span>🏠</span> Local Market Overview
+              Local Market Overview
             </span>
           </div>
           <div className="p-3 bg-[var(--win95-gray)] space-y-2 flex-grow">
@@ -285,7 +357,7 @@ export default function ResearchDossier({ enrichmentData, property }: ResearchDo
         <div className="win95-window flex flex-col">
           <div className="win95-titlebar">
             <span className="font-bold text-win95-12 pl-1 flex items-center gap-1">
-              <span>🚶</span> Walkability Index
+              Walkability Index
             </span>
           </div>
           <div className="p-3 bg-[var(--win95-gray)] space-y-2 flex-grow">
@@ -322,7 +394,7 @@ export default function ResearchDossier({ enrichmentData, property }: ResearchDo
       <div className="win95-window">
         <div className="win95-titlebar">
           <span className="font-bold text-win95-12 pl-1 flex items-center gap-1">
-            <span>🎓</span> Nearby Schools Directory
+            Nearby Schools Directory
           </span>
         </div>
         <div className="p-3 bg-[var(--win95-gray)]">
@@ -347,7 +419,7 @@ export default function ResearchDossier({ enrichmentData, property }: ResearchDo
                             href={mapsSearchUrl(s.name, address)}
                             target="_blank"
                             rel="noopener noreferrer"
-                            className="text-[var(--win95-blue)] underline decoration-dotted hover:decoration-solid"
+                            className="text-blue-700 hover:text-blue-900 font-bold underline cursor-pointer"
                           >
                             {s.name}
                           </a>
@@ -380,7 +452,7 @@ export default function ResearchDossier({ enrichmentData, property }: ResearchDo
         <div className="win95-window">
           <div className="win95-titlebar">
             <span className="font-bold text-win95-12 pl-1 flex items-center gap-1">
-              <span>🚌</span> Transit Options
+              Transit Options
             </span>
           </div>
           <div className="p-3 bg-[var(--win95-gray)]">
@@ -396,9 +468,9 @@ export default function ResearchDossier({ enrichmentData, property }: ResearchDo
                         href={mapsSearchUrl(name, address)}
                         target="_blank"
                         rel="noopener noreferrer"
-                        className="win95-raised bg-slate-100 text-slate-800 hover:bg-slate-200 px-2 py-1 text-win95-11 no-underline flex items-center gap-1 font-medium active:win95-pressed"
+                        className="win95-raised bg-slate-100 text-blue-700 hover:bg-slate-200 px-2 py-1 text-win95-11 underline font-bold flex items-center gap-1 active:win95-pressed"
                       >
-                        <span>🚌</span> {name}
+                        {name}
                         {detail && (
                           <span className="text-[10px] text-muted-foreground font-normal">
                             ({detail})
@@ -419,7 +491,7 @@ export default function ResearchDossier({ enrichmentData, property }: ResearchDo
         <div className="win95-window">
           <div className="win95-titlebar">
             <span className="font-bold text-win95-12 pl-1 flex items-center gap-1">
-              <span>☕</span> Nearby Amenities
+              Nearby Amenities
             </span>
           </div>
           <div className="p-3 bg-[var(--win95-gray)]">
@@ -435,9 +507,9 @@ export default function ResearchDossier({ enrichmentData, property }: ResearchDo
                         href={mapsSearchUrl(name, address)}
                         target="_blank"
                         rel="noopener noreferrer"
-                        className="win95-raised bg-slate-100 text-slate-800 hover:bg-slate-200 px-2 py-1 text-win95-11 no-underline flex items-center gap-1 font-medium active:win95-pressed"
+                        className="win95-raised bg-slate-100 text-blue-700 hover:bg-slate-200 px-2 py-1 text-win95-11 underline font-bold flex items-center gap-1 active:win95-pressed"
                       >
-                        <span>📍</span> {name}
+                        {name}
                         {detail && (
                           <span className="text-[10px] text-muted-foreground font-normal">
                             ({detail})
@@ -459,7 +531,7 @@ export default function ResearchDossier({ enrichmentData, property }: ResearchDo
       <div className="win95-window">
         <div className="win95-titlebar bg-slate-800 text-white">
           <span className="font-bold text-win95-12 pl-1 flex items-center gap-1">
-            <span>🔗</span> Verified Search Sources & Citations
+            Verified Search Sources & Citations
           </span>
           <span className="text-[10px] text-slate-300">Grounding Audit Trail</span>
         </div>
@@ -476,11 +548,10 @@ export default function ResearchDossier({ enrichmentData, property }: ResearchDo
                   href={source.url}
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="flex items-start gap-2 p-2 no-underline text-black hover:bg-slate-50"
+                  className="flex items-start gap-2 p-2 no-underline text-blue-700 hover:bg-slate-50"
                 >
-                  <span className="text-[var(--win95-blue)] mt-0.5">🌐</span>
                   <div className="min-w-0">
-                    <div className="font-bold text-win95-11 truncate">
+                    <div className="font-bold text-win95-11 truncate underline">
                       {source.name || (source.url ? getDomainName(source.url) : "Source")}
                       <span className="text-[10px] text-muted-foreground font-normal ml-1">↗</span>
                     </div>
@@ -501,9 +572,8 @@ export default function ResearchDossier({ enrichmentData, property }: ResearchDo
                   href={url}
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="win95-raised bg-card hover:bg-slate-100 text-black px-2.5 py-1 text-win95-11 no-underline font-bold flex items-center gap-1.5 active:win95-pressed truncate max-w-full"
+                  className="win95-raised bg-card hover:bg-slate-100 text-blue-700 px-2.5 py-1 text-win95-11 underline font-bold flex items-center gap-1.5 active:win95-pressed truncate max-w-full"
                 >
-                  <span className="text-[var(--win95-blue)]">🌐</span>
                   <span className="truncate">{getDomainName(url)}</span>
                   <span className="text-[10px] text-muted-foreground font-normal">↗</span>
                 </a>

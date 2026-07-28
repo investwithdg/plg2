@@ -113,7 +113,7 @@ export default function GenerationProgressModal({
 
               <RetroProgress value={currentStepInfo.progress} showLabel />
               <p className="text-win95-11 text-muted-foreground text-center">
-                This usually takes 10-15 seconds...
+                Doing real-time market research, school indexing, and FHA audits... this can take 30-45 seconds.
               </p>
 
               <div className="flex justify-center">
