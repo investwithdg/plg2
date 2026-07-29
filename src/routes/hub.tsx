@@ -5,6 +5,7 @@ import { useState, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { RetroButton, RetroWindow } from "@/components/retro";
 import ListingHistory from "@/components/ListingHistory";
+import ApiKeysPanel from "@/components/ApiKeysPanel";
 import { toast as sonnerToast } from "sonner";
 
 export const Route = createFileRoute("/hub")({
@@ -137,6 +138,9 @@ function UserHubPage() {
             </div>
           </div>
         </RetroWindow>
+
+        {/* MCP API keys for agent/Claude Desktop/Cursor access (Pro+Elite only) */}
+        <ApiKeysPanel isProUser={isProUser} />
 
         {/* Listings history rendering inside the Hub */}
         <ListingHistory userId={user.id} isProUser={isProUser} />

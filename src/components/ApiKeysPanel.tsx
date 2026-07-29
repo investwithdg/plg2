@@ -1,0 +1,182 @@
+/**
+ * ApiKeysPanel.tsx
+ *
+ * Member Hub section for creating/listing/revoking long-lived MCP API keys
+ * (supabase/functions/manage-api-keys). MCP access is a Pro/Elite paid-tier feature, so
+ * free-tier users see an upgrade prompt instead of the create-key form.
+ */
+import { useEffect, useState } from "react";
+import { supabase } from "@/integrations/supabase/client";
+import { RetroButton, RetroInput, RetroWindow } from "@/components/retro";
+import { Link } from "@tanstack/react-router";
+import { toast as sonnerToast } from "sonner";
+
+interface ApiKeySummary {
+  id: string;
+  name: string | null;
+  keyPrefix: string;
+  createdAt: string;
+  lastUsedAt: string | null;
+  revokedAt: string | null;
+}
+
+interface ApiKeysPanelProps {
+  isProUser: boolean;
+}
+
+export default function ApiKeysPanel({ isProUser }: ApiKeysPanelProps) {
+  const [keys, setKeys] = useState<ApiKeySummary[] | null>(null);
+  const [loading, setLoading] = useState(false);
+  const [name, setName] = useState("");
+  const [creating, setCreating] = useState(false);
+  const [newKey, setNewKey] = useState<string | null>(null);
+  const [copied, setCopied] = useState(false);
+
+  const loadKeys = async () => {
+    setLoading(true);
+    try {
+      const { data, error } = await supabase.functions.invoke("manage-api-keys", {
+        body: { action: "list" },
+      });
+      if (error) throw error;
+      setKeys((data?.keys as ApiKeySummary[]) ?? []);
+    } catch (err) {
+      console.error("Failed to load API keys:", err);
+      sonnerToast.error("Failed to load API keys");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    if (isProUser) loadKeys();
+  }, [isProUser]);
+
+  const handleCreate = async () => {
+    setCreating(true);
+    try {
+      const { data, error } = await supabase.functions.invoke("manage-api-keys", {
+        body: { action: "create", name: name.trim() || undefined },
+      });
+      if (error) throw error;
+      if (data?.error) throw new Error(data.message ?? data.error);
+      setNewKey(data.key as string);
+      setName("");
+      await loadKeys();
+    } catch (err) {
+      console.error("Failed to create API key:", err);
+      sonnerToast.error(err instanceof Error ? err.message : "Failed to create API key");
+    } finally {
+      setCreating(false);
+    }
+  };
+
+  const handleRevoke = async (id: string) => {
+    try {
+      const { data, error } = await supabase.functions.invoke("manage-api-keys", {
+        body: { action: "revoke", id },
+      });
+      if (error) throw error;
+      if (data?.error) throw new Error(data.message ?? data.error);
+      sonnerToast.success("API key revoked");
+      await loadKeys();
+    } catch (err) {
+      console.error("Failed to revoke API key:", err);
+      sonnerToast.error("Failed to revoke API key");
+    }
+  };
+
+  const handleCopy = async () => {
+    if (!newKey) return;
+    try {
+      await navigator.clipboard.writeText(newKey);
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
+    } catch {
+      sonnerToast.error("Copy failed — select and copy the key manually");
+    }
+  };
+
+  return (
+    <RetroWindow title="MCP API Keys" showControls={false} className="w-full">
+      <div className="win95-inset bg-[var(--win95-gray)] text-black p-4 space-y-3">
+        <p className="text-win95-11 text-slate-700 max-w-lg">
+          Generate a long-lived API key to connect PLG to Claude Desktop, Cursor, or any MCP client
+          — so agents can call generate_listing, compliance_check, and rewrite_for_channel directly.
+        </p>
+
+        {!isProUser ? (
+          <div className="border-t border-[var(--win95-gray-dark)] pt-3 flex flex-wrap items-center justify-between gap-3">
+            <p className="text-win95-11 text-slate-700 max-w-md">
+              MCP/agent access is available on Pro and Elite plans. Upgrade to generate an API key.
+            </p>
+            <Link to="/pricing">
+              <RetroButton variant="primary">Upgrade to Pro</RetroButton>
+            </Link>
+          </div>
+        ) : (
+          <div className="border-t border-[var(--win95-gray-dark)] pt-3 space-y-3">
+            {newKey && (
+              <div className="win95-raised bg-card p-3 space-y-2">
+                <p className="text-win95-11 font-bold text-red-800">
+                  Copy this key now — it will not be shown again.
+                </p>
+                <div className="flex flex-wrap items-center gap-2">
+                  <code className="text-win95-11 bg-white win95-inset px-2 py-1 break-all">
+                    {newKey}
+                  </code>
+                  <RetroButton onClick={handleCopy}>{copied ? "Copied!" : "Copy"}</RetroButton>
+                </div>
+              </div>
+            )}
+
+            <div className="flex flex-wrap items-center gap-2">
+              <RetroInput
+                placeholder="Key name (e.g. Claude Desktop)"
+                value={name}
+                onChange={(e) => setName(e.target.value)}
+                className="max-w-xs"
+                maxLength={200}
+              />
+              <RetroButton onClick={handleCreate} disabled={creating} variant="primary">
+                {creating ? "Generating..." : "Generate New Key"}
+              </RetroButton>
+            </div>
+
+            <div className="space-y-2">
+              {loading && <p className="text-win95-11 text-slate-600">Loading keys...</p>}
+              {!loading && keys && keys.length === 0 && (
+                <p className="text-win95-11 text-slate-600">No API keys yet.</p>
+              )}
+              {!loading &&
+                keys?.map((k) => (
+                  <div
+                    key={k.id}
+                    className="win95-raised bg-card px-3 py-2 flex flex-wrap items-center justify-between gap-2"
+                  >
+                    <div>
+                      <span className="text-win95-11 font-bold block">
+                        {k.name || "Unnamed key"}
+                      </span>
+                      <span className="text-win95-11 text-slate-600">
+                        {k.keyPrefix}... · created {new Date(k.createdAt).toLocaleDateString()}
+                        {k.lastUsedAt
+                          ? ` · last used ${new Date(k.lastUsedAt).toLocaleDateString()}`
+                          : ""}
+                        {k.revokedAt ? " · REVOKED" : ""}
+                      </span>
+                    </div>
+                    {!k.revokedAt && (
+                      <RetroButton onClick={() => handleRevoke(k.id)} className="text-red-800">
+                        Revoke
+                      </RetroButton>
+                    )}
+                  </div>
+                ))}
+            </div>
+          </div>
+        )}
+      </div>
+    </RetroWindow>
+  );
+}
