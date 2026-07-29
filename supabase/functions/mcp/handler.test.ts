@@ -10,6 +10,10 @@ function fakeDeps(overrides: Partial<McpDeps> = {}): McpDeps {
     invokeReceiveProperty: async () => ({ propertyId: "prop-1", success: true }),
     waitForCompletion: async () => ({ status: "complete", mls: "MLS copy", social: "Social copy" }),
     checkCompliance: async () => ({ passed: true, violations: [] as Violation[] }),
+    getProtectedResourceMetadata: () => ({
+      resource: "https://project.supabase.co/functions/v1/mcp",
+      authorization_servers: ["https://project.supabase.co/functions/v1/oauth"],
+    }),
     ...overrides,
   };
 }
@@ -88,6 +92,34 @@ Deno.test("tools/call compliance_check flags a baseline prohibited phrase", asyn
 Deno.test("tools/call for an unknown tool returns an error shape", async () => {
   const result = await runTool("delete_everything", {}, "Bearer test-jwt", fakeDeps());
   assertEquals((result as { error?: string }).error, "unknown tool: delete_everything");
+});
+
+Deno.test("GET .well-known/oauth-protected-resource returns the OAuth resource metadata, no auth required", async () => {
+  const res = await handleRequest(
+    new Request("https://example.com/mcp/.well-known/oauth-protected-resource"),
+    fakeDeps(),
+  );
+  assertEquals(res.status, 200);
+  const body = await res.json();
+  assertEquals(body.resource, "https://project.supabase.co/functions/v1/mcp");
+  assertEquals(body.authorization_servers, ["https://project.supabase.co/functions/v1/oauth"]);
+});
+
+Deno.test("handleRequest tools/call without a valid caller returns 401 with a WWW-Authenticate resource_metadata URL", async () => {
+  const deps = fakeDeps({ verifyCaller: async () => null });
+  const res = await handleRequest(
+    req({ method: "tools/call", params: { name: "compliance_check", arguments: { text: "clean copy" } } }),
+    deps,
+  );
+  assertEquals(res.status, 401);
+  const header = res.headers.get("WWW-Authenticate");
+  assertEquals(
+    header,
+    'Bearer resource_metadata="https://example.com/mcp/.well-known/oauth-protected-resource"',
+  );
+  const body = await res.json();
+  const parsed = JSON.parse(body.content[0].text);
+  assertEquals(parsed.error, "unauthorized");
 });
 
 Deno.test("end-to-end: OPTIONS preflight, unknown method, and a full tools/call round-trip", async () => {

@@ -1,7 +1,7 @@
 // Pure request-handling logic for the PLG MCP server — no Supabase/network imports,
 // so this can be unit-tested without any external module resolution. Real
 // implementations of McpDeps live in deps.ts.
-import { getCorsHeaders } from "../_shared/cors.ts";
+import { getCorsHeaders, getPublicCorsHeaders } from "../_shared/cors.ts";
 
 export const TOOLS = [
   {
@@ -50,6 +50,10 @@ export interface McpDeps {
   ) => Promise<{ propertyId?: string; success?: boolean; message?: string; error?: string }>;
   waitForCompletion: (propertyId: string) => Promise<Record<string, unknown> | null>;
   checkCompliance: (text: string, board?: string) => Promise<{ passed: boolean; violations: Violation[] }>;
+  /** RFC 9728 OAuth 2.0 Protected Resource Metadata for this MCP server, served
+   * at GET .well-known/oauth-protected-resource so MCP clients (claude.ai etc.)
+   * can discover the `oauth` edge function as the authorization server. */
+  getProtectedResourceMetadata: () => Record<string, unknown>;
 }
 
 export async function runTool(
@@ -100,8 +104,19 @@ export async function runTool(
 }
 
 export async function handleRequest(req: Request, deps: McpDeps): Promise<Response> {
+  const url = new URL(req.url);
   const corsHeaders = getCorsHeaders(req);
   if (req.method === "OPTIONS") return new Response("ok", { headers: corsHeaders });
+
+  // RFC 9728 Protected Resource Metadata — the entry point an MCP client uses
+  // (per the WWW-Authenticate 401 response below, or a direct fetch) to
+  // discover which authorization server issues tokens for this MCP server.
+  if (req.method === "GET" && url.pathname.endsWith("/.well-known/oauth-protected-resource")) {
+    return new Response(JSON.stringify(deps.getProtectedResourceMetadata()), {
+      headers: { ...getPublicCorsHeaders(), "Content-Type": "application/json" },
+    });
+  }
+
   try {
     const body = await req.json();
     if (body?.method === "tools/list") {
@@ -112,8 +127,23 @@ export async function handleRequest(req: Request, deps: McpDeps): Promise<Respon
     if (body?.method === "tools/call") {
       const authHeader = req.headers.get("authorization") ?? req.headers.get("Authorization");
       const result = await runTool(body?.params?.name, body?.params?.arguments ?? {}, authHeader, deps);
+      const unauthorized = !!result && typeof result === "object" && (result as { error?: string }).error === "unauthorized";
+      const headers: Record<string, string> = { ...corsHeaders, "Content-Type": "application/json" };
+      if (unauthorized) {
+        // MCP Authorization spec: a 401 MUST carry WWW-Authenticate pointing at
+        // this server's protected-resource metadata so the client can discover
+        // the authorization server and start the OAuth flow. We hand back the
+        // fully-qualified URL of the endpoint above (derived from this same
+        // request) rather than relying on any well-known path insertion
+        // convention, which sidesteps that ambiguity for this hop — see the PR
+        // description for the fuller discovery-path discussion.
+        const basePath = url.pathname.replace(/\/$/, "");
+        const resourceMetadataUrl = `${url.origin}${basePath}/.well-known/oauth-protected-resource`;
+        headers["WWW-Authenticate"] = `Bearer resource_metadata="${resourceMetadataUrl}"`;
+      }
       return new Response(JSON.stringify({ content: [{ type: "text", text: JSON.stringify(result) }] }), {
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
+        status: unauthorized ? 401 : 200,
+        headers,
       });
     }
     return new Response(JSON.stringify({ error: "unknown method" }), {
