@@ -231,7 +231,11 @@ export default function RetroGenerator() {
       // Check for property type mismatch warning (e.g. user selected residential/lux but search says raw land)
       if (property && property.property_type) {
         const ext = property.property_type.toLowerCase();
-        const isExtLand = ext.includes("land") || ext.includes("lot") || ext.includes("raw") || ext.includes("vacant");
+        const isExtLand =
+          ext.includes("land") ||
+          ext.includes("lot") ||
+          ext.includes("raw") ||
+          ext.includes("vacant");
         const isSelResidential = ["sfr", "lux", "row", "mf"].includes(propertyType);
         if (isExtLand && isSelResidential) {
           setShowMismatchWarning(true);
@@ -583,17 +587,18 @@ export default function RetroGenerator() {
                   <div className="space-y-1">
                     <h3 className="font-bold text-win95-12">Property Type Mismatch</h3>
                     <p className="text-win95-11 text-slate-800 leading-relaxed">
-                      Our research indicates this property is categorized as <strong className="underline">{property?.property_type}</strong>, but you selected <strong>{propertyType.toUpperCase()}</strong>.
+                      Our research indicates this property is categorized as{" "}
+                      <strong className="underline">{property?.property_type}</strong>, but you
+                      selected <strong>{propertyType.toUpperCase()}</strong>.
                     </p>
                     <p className="text-win95-10 text-slate-600 leading-relaxed">
-                      If this is a new home development built on raw land, this warning can be ignored.
+                      If this is a new home development built on raw land, this warning can be
+                      ignored.
                     </p>
                   </div>
                 </div>
                 <div className="flex justify-end gap-2 pt-2">
-                  <RetroButton onClick={() => setShowMismatchWarning(false)}>
-                    Keep Copy
-                  </RetroButton>
+                  <RetroButton onClick={() => setShowMismatchWarning(false)}>Keep Copy</RetroButton>
                   <RetroButton variant="primary" onClick={() => setShowMismatchWarning(false)}>
                     Acknowledge
                   </RetroButton>

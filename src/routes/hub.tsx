@@ -12,7 +12,10 @@ export const Route = createFileRoute("/hub")({
   head: () => ({
     meta: [
       { title: "User Hub — Property Listing Generator" },
-      { name: "description", content: "Manage your PLG account, subscription, and view your generation history." },
+      {
+        name: "description",
+        content: "Manage your PLG account, subscription, and view your generation history.",
+      },
     ],
   }),
   component: UserHubPage,
@@ -92,8 +95,12 @@ function UserHubPage() {
                   <p className="text-win95-11 text-slate-700">{user.email}</p>
                 </div>
                 <div className="win95-raised px-4 py-2 bg-card text-center">
-                  <span className="text-[10px] block font-bold text-muted-foreground uppercase">Active Plan</span>
-                  <span className={`text-win95-14 font-bold ${isProUser ? "text-red-800" : "text-slate-800"}`}>
+                  <span className="text-[10px] block font-bold text-muted-foreground uppercase">
+                    Active Plan
+                  </span>
+                  <span
+                    className={`text-win95-14 font-bold ${isProUser ? "text-red-800" : "text-slate-800"}`}
+                  >
                     {plan?.toUpperCase() || "FREE"}
                   </span>
                 </div>
@@ -101,13 +108,17 @@ function UserHubPage() {
 
               <div className="grid gap-3 sm:grid-cols-2 pt-2">
                 <div className="space-y-1">
-                  <span className="text-[10px] text-muted-foreground block font-bold uppercase">Member Since</span>
+                  <span className="text-[10px] text-muted-foreground block font-bold uppercase">
+                    Member Since
+                  </span>
                   <span className="text-win95-12 font-bold text-slate-900">
                     {user.created_at ? new Date(user.created_at).toLocaleDateString() : "N/A"}
                   </span>
                 </div>
                 <div className="space-y-1">
-                  <span className="text-[10px] text-muted-foreground block font-bold uppercase">Total Listings Generated</span>
+                  <span className="text-[10px] text-muted-foreground block font-bold uppercase">
+                    Total Listings Generated
+                  </span>
                   <span className="text-win95-12 font-bold text-slate-900">
                     {totalListings !== null ? totalListings : "Loading..."}
                   </span>
@@ -118,7 +129,8 @@ function UserHubPage() {
                 {isProUser ? (
                   <>
                     <p className="text-win95-11 text-slate-700 max-w-md">
-                      You are currently on a paid subscription. You can update billing details, change plans, or download invoices in your Stripe billing portal.
+                      You are currently on a paid subscription. You can update billing details,
+                      change plans, or download invoices in your Stripe billing portal.
                     </p>
                     <RetroButton onClick={handleManageSubscription} disabled={portalLoading}>
                       {portalLoading ? "Loading..." : "Manage Subscription"}
@@ -127,7 +139,8 @@ function UserHubPage() {
                 ) : (
                   <>
                     <p className="text-win95-11 text-slate-700 max-w-md">
-                      Upgrade to PLG Pro for unlimited generations, advanced property research, detailed school directories, and Fair Housing Act compliance reviews.
+                      Upgrade to PLG Pro for unlimited generations, advanced property research,
+                      detailed school directories, and Fair Housing Act compliance reviews.
                     </p>
                     <Link to="/pricing">
                       <RetroButton variant="primary">Upgrade to Pro</RetroButton>
