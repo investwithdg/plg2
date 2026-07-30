@@ -147,10 +147,21 @@ export function defaultDeps(): McpDeps {
     },
 
     getProtectedResourceMetadata() {
+      // MCP_PUBLIC_URL/OAUTH_PUBLIC_URL point at this app's own domain-fronted proxy paths
+      // (see src/lib/mcpProxy.ts) rather than the raw <project-ref>.supabase.co URL, so MCP
+      // clients only ever see propertylistinggenerator.com. Falls back to the direct Supabase
+      // URL if those aren't set yet, so this stays correct before/without the proxy in place.
       const supabaseUrl = (Deno.env.get("SUPABASE_URL") ?? "").replace(/\/$/, "");
+      const resource = (Deno.env.get("MCP_PUBLIC_URL") || `${supabaseUrl}/functions/v1/mcp`).replace(
+        /\/$/,
+        "",
+      );
+      const authorizationServer = (
+        Deno.env.get("OAUTH_PUBLIC_URL") || `${supabaseUrl}/functions/v1/oauth`
+      ).replace(/\/$/, "");
       return {
-        resource: `${supabaseUrl}/functions/v1/mcp`,
-        authorization_servers: [`${supabaseUrl}/functions/v1/oauth`],
+        resource,
+        authorization_servers: [authorizationServer],
         bearer_methods_supported: ["header"],
         scopes_supported: ["mcp"],
       };

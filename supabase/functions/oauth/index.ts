@@ -13,10 +13,26 @@ const siteUrl = (Deno.env.get("SITE_URL") || "https://propertylistinggenerator.c
   "",
 );
 
+// OAUTH_PUBLIC_URL/MCP_PUBLIC_URL point at this app's own domain-fronted proxy paths (see
+// src/lib/mcpProxy.ts) instead of the raw <project-ref>.supabase.co URL, so every URL an MCP
+// client sees — issuer, token/registration endpoints, and the resource identifier — stays
+// under propertylistinggenerator.com. Falls back to the direct Supabase URL if unset, so this
+// keeps working correctly before/without the proxy in place. Must stay in sync with
+// getProtectedResourceMetadata()'s resolution in supabase/functions/mcp/deps.ts — both derive
+// the SAME resource identity, just from two different functions.
+const issuer = (Deno.env.get("OAUTH_PUBLIC_URL") || `${supabaseUrl}/functions/v1/oauth`).replace(
+  /\/$/,
+  "",
+);
+const resource = (Deno.env.get("MCP_PUBLIC_URL") || `${supabaseUrl}/functions/v1/mcp`).replace(
+  /\/$/,
+  "",
+);
+
 const config: OAuthConfig = {
-  issuer: `${supabaseUrl}/functions/v1/oauth`,
+  issuer,
   authorizationEndpoint: `${siteUrl}/oauth/authorize`,
-  resource: `${supabaseUrl}/functions/v1/mcp`,
+  resource,
 };
 
 Deno.serve((req) => handleRequest(req, defaultDeps(), config));

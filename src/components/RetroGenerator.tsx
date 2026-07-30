@@ -117,7 +117,8 @@ export default function RetroGenerator() {
   const [showProgress, setShowProgress] = useState(false);
 
   // Autocomplete state
-  const { predictions, getPredictions, clearPredictions, refreshSessionToken } = useGoogleAutocomplete();
+  const { predictions, getPredictions, clearPredictions, refreshSessionToken } =
+    useGoogleAutocomplete();
   const [showPredictions, setShowPredictions] = useState(false);
   const [focusedPredictionIdx, setFocusedPredictionIdx] = useState(-1);
   const [showPaywall, setShowPaywall] = useState(false);
@@ -463,7 +464,11 @@ export default function RetroGenerator() {
                   }}
                   onKeyDown={(e) => {
                     if (e.key === "Enter") {
-                      if (showPredictions && focusedPredictionIdx >= 0 && predictions[focusedPredictionIdx]) {
+                      if (
+                        showPredictions &&
+                        focusedPredictionIdx >= 0 &&
+                        predictions[focusedPredictionIdx]
+                      ) {
                         e.preventDefault();
                         setQuery(predictions[focusedPredictionIdx].description);
                         clearPredictions();
@@ -475,7 +480,9 @@ export default function RetroGenerator() {
                     } else if (e.key === "ArrowDown") {
                       if (showPredictions && predictions.length > 0) {
                         e.preventDefault();
-                        setFocusedPredictionIdx((prev) => Math.min(prev + 1, predictions.length - 1));
+                        setFocusedPredictionIdx((prev) =>
+                          Math.min(prev + 1, predictions.length - 1),
+                        );
                       }
                     } else if (e.key === "ArrowUp") {
                       if (showPredictions && predictions.length > 0) {
@@ -495,7 +502,7 @@ export default function RetroGenerator() {
                   }}
                   className="w-full"
                 />
-                
+
                 {showPredictions && predictions.length > 0 && (
                   <div className="absolute top-[38px] left-0 right-0 z-50 win95-window">
                     <div className="win95-inset bg-white max-h-56 overflow-y-auto divide-y divide-slate-100 shadow-lg text-win95-11">
