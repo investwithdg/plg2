@@ -26,11 +26,52 @@ function req(body: unknown, headers: Record<string, string> = {}): Request {
   });
 }
 
-Deno.test("tools/list returns the tool catalog without requiring auth", async () => {
-  const res = await handleRequest(req({ method: "tools/list" }), fakeDeps());
+Deno.test("initialize returns the protocol handshake result, echoing the request id", async () => {
+  const res = await handleRequest(
+    req({ jsonrpc: "2.0", id: 1, method: "initialize", params: { protocolVersion: "2025-06-18" } }),
+    fakeDeps(),
+  );
   assertEquals(res.status, 200);
   const body = await res.json();
-  const names = body.tools.map((t: { name: string }) => t.name);
+  assertEquals(body.jsonrpc, "2.0");
+  assertEquals(body.id, 1);
+  assertEquals(typeof body.result.protocolVersion, "string");
+  assertEquals(body.result.capabilities.tools, {});
+  assertEquals(typeof body.result.serverInfo.name, "string");
+});
+
+Deno.test("notifications/initialized returns a bare 202 with no JSON-RPC body", async () => {
+  const res = await handleRequest(req({ jsonrpc: "2.0", method: "notifications/initialized" }), fakeDeps());
+  assertEquals(res.status, 202);
+  const text = await res.text();
+  assertEquals(text, "");
+});
+
+Deno.test("a bare GET (not the well-known metadata path) is rejected cleanly, not a 500", async () => {
+  const res = await handleRequest(new Request("https://example.com/mcp"), fakeDeps());
+  assertEquals(res.status, 405);
+});
+
+Deno.test("malformed JSON body returns a JSON-RPC parse error, not an opaque 500", async () => {
+  const res = await handleRequest(
+    new Request("https://example.com/mcp", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: "not json",
+    }),
+    fakeDeps(),
+  );
+  assertEquals(res.status, 400);
+  const body = await res.json();
+  assertEquals(body.error.code, -32700);
+});
+
+Deno.test("tools/list returns the tool catalog without requiring auth", async () => {
+  const res = await handleRequest(req({ jsonrpc: "2.0", id: 2, method: "tools/list" }), fakeDeps());
+  assertEquals(res.status, 200);
+  const body = await res.json();
+  assertEquals(body.id, 2);
+  const names = body.result.tools.map((t: { name: string }) => t.name);
   assertEquals(names, ["generate_listing", "compliance_check", "rewrite_for_channel"]);
 });
 
@@ -108,7 +149,12 @@ Deno.test("GET .well-known/oauth-protected-resource returns the OAuth resource m
 Deno.test("handleRequest tools/call without a valid caller returns 401 with a WWW-Authenticate resource_metadata URL", async () => {
   const deps = fakeDeps({ verifyCaller: async () => null });
   const res = await handleRequest(
-    req({ method: "tools/call", params: { name: "compliance_check", arguments: { text: "clean copy" } } }),
+    req({
+      jsonrpc: "2.0",
+      id: 3,
+      method: "tools/call",
+      params: { name: "compliance_check", arguments: { text: "clean copy" } },
+    }),
     deps,
   );
   assertEquals(res.status, 401);
@@ -118,26 +164,33 @@ Deno.test("handleRequest tools/call without a valid caller returns 401 with a WW
     'Bearer resource_metadata="https://example.com/mcp/.well-known/oauth-protected-resource"',
   );
   const body = await res.json();
-  const parsed = JSON.parse(body.content[0].text);
-  assertEquals(parsed.error, "unauthorized");
+  assertEquals(body.id, 3);
+  assertEquals(body.error.code, -32001);
 });
 
 Deno.test("end-to-end: OPTIONS preflight, unknown method, and a full tools/call round-trip", async () => {
   const preflight = await handleRequest(new Request("https://example.com/mcp", { method: "OPTIONS" }), fakeDeps());
   assertEquals(preflight.status, 200);
 
-  const unknownMethod = await handleRequest(req({ method: "bogus" }), fakeDeps());
-  assertEquals(unknownMethod.status, 400);
+  const unknownMethod = await handleRequest(req({ jsonrpc: "2.0", id: 4, method: "bogus" }), fakeDeps());
+  assertEquals(unknownMethod.status, 200);
+  const unknownBody = await unknownMethod.json();
+  assertEquals(unknownBody.error.code, -32601);
 
   const call = await handleRequest(
     req(
-      { method: "tools/call", params: { name: "compliance_check", arguments: { text: "clean copy" } } },
+      {
+        jsonrpc: "2.0",
+        id: 5,
+        method: "tools/call",
+        params: { name: "compliance_check", arguments: { text: "clean copy" } },
+      },
       { Authorization: "Bearer test-jwt" },
     ),
     fakeDeps(),
   );
   assertEquals(call.status, 200);
   const body = await call.json();
-  const parsed = JSON.parse(body.content[0].text);
+  const parsed = JSON.parse(body.result.content[0].text);
   assertEquals(parsed.passed, true);
 });

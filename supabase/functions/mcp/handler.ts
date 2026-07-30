@@ -103,6 +103,32 @@ export async function runTool(
   }
 }
 
+// Every MCP connection starts with a client "initialize" request/response handshake before
+// any other JSON-RPC method (tools/list, tools/call, ...) is valid — a client that doesn't
+// get a proper initialize result treats the server as broken and disconnects before ever
+// reaching tools/list, regardless of what auth/OAuth is configured. See the "initialize"
+// branch below.
+const PROTOCOL_VERSION = "2025-06-18";
+const SERVER_INFO = { name: "plg-mcp", version: "1.0.0" };
+
+interface JsonRpcRequestBody {
+  jsonrpc?: string;
+  id?: unknown;
+  method?: string;
+  params?: Record<string, unknown>;
+}
+
+function jsonRpcResponse(
+  body: { jsonrpc: "2.0"; id: unknown; result?: unknown; error?: { code: number; message: string } },
+  status: number,
+  headers: Record<string, string>,
+): Response {
+  return new Response(JSON.stringify(body), {
+    status,
+    headers: { ...headers, "Content-Type": "application/json" },
+  });
+}
+
 export async function handleRequest(req: Request, deps: McpDeps): Promise<Response> {
   const url = new URL(req.url);
   const corsHeaders = getCorsHeaders(req);
@@ -117,43 +143,104 @@ export async function handleRequest(req: Request, deps: McpDeps): Promise<Respon
     });
   }
 
-  try {
-    const body = await req.json();
-    if (body?.method === "tools/list") {
-      return new Response(JSON.stringify({ tools: TOOLS }), {
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
-      });
-    }
-    if (body?.method === "tools/call") {
-      const authHeader = req.headers.get("authorization") ?? req.headers.get("Authorization");
-      const result = await runTool(body?.params?.name, body?.params?.arguments ?? {}, authHeader, deps);
-      const unauthorized = !!result && typeof result === "object" && (result as { error?: string }).error === "unauthorized";
-      const headers: Record<string, string> = { ...corsHeaders, "Content-Type": "application/json" };
-      if (unauthorized) {
-        // MCP Authorization spec: a 401 MUST carry WWW-Authenticate pointing at
-        // this server's protected-resource metadata so the client can discover
-        // the authorization server and start the OAuth flow. We hand back the
-        // fully-qualified URL of the endpoint above (derived from this same
-        // request) rather than relying on any well-known path insertion
-        // convention, which sidesteps that ambiguity for this hop — see the PR
-        // description for the fuller discovery-path discussion.
-        const basePath = url.pathname.replace(/\/$/, "");
-        const resourceMetadataUrl = `${url.origin}${basePath}/.well-known/oauth-protected-resource`;
-        headers["WWW-Authenticate"] = `Bearer resource_metadata="${resourceMetadataUrl}"`;
-      }
-      return new Response(JSON.stringify({ content: [{ type: "text", text: JSON.stringify(result) }] }), {
-        status: unauthorized ? 401 : 200,
-        headers,
-      });
-    }
-    return new Response(JSON.stringify({ error: "unknown method" }), {
-      status: 400,
-      headers: { ...corsHeaders, "Content-Type": "application/json" },
-    });
-  } catch (e) {
-    return new Response(JSON.stringify({ error: String(e) }), {
-      status: 500,
+  // Streamable HTTP transport: a GET on the base endpoint is only for an OPTIONAL
+  // server-initiated SSE stream, which this server doesn't offer. Reject cleanly per spec
+  // (405) instead of falling into the JSON-body parsing below — a GET has no body, so that
+  // used to throw and surface as an opaque 500.
+  if (req.method === "GET") {
+    return new Response(JSON.stringify({ error: "method_not_allowed" }), {
+      status: 405,
       headers: { ...corsHeaders, "Content-Type": "application/json" },
     });
   }
+
+  let body: JsonRpcRequestBody;
+  try {
+    body = await req.json();
+  } catch {
+    return jsonRpcResponse(
+      { jsonrpc: "2.0", id: null, error: { code: -32700, message: "Parse error" } },
+      400,
+      corsHeaders,
+    );
+  }
+
+  const id = body?.id ?? null;
+  const method = body?.method;
+
+  // notifications/initialized: the client confirming the initialize handshake is complete.
+  // Per JSON-RPC, notifications carry no "id" and get no response body — the Streamable HTTP
+  // transport spec calls for a bare 202 Accepted here, never a JSON-RPC response.
+  if (method === "notifications/initialized") {
+    return new Response(null, { status: 202, headers: corsHeaders });
+  }
+
+  if (method === "initialize") {
+    return jsonRpcResponse(
+      {
+        jsonrpc: "2.0",
+        id,
+        result: {
+          protocolVersion: PROTOCOL_VERSION,
+          capabilities: { tools: {} },
+          serverInfo: SERVER_INFO,
+        },
+      },
+      200,
+      corsHeaders,
+    );
+  }
+
+  if (method === "tools/list") {
+    return jsonRpcResponse({ jsonrpc: "2.0", id, result: { tools: TOOLS } }, 200, corsHeaders);
+  }
+
+  if (method === "tools/call") {
+    const authHeader = req.headers.get("authorization") ?? req.headers.get("Authorization");
+    const result = await runTool(
+      (body.params?.name as string) ?? "",
+      (body.params?.arguments as Record<string, unknown>) ?? {},
+      authHeader,
+      deps,
+    );
+    const unauthorized =
+      !!result && typeof result === "object" && (result as { error?: string }).error === "unauthorized";
+
+    if (unauthorized) {
+      // MCP Authorization spec: a 401 MUST carry WWW-Authenticate pointing at
+      // this server's protected-resource metadata so the client can discover
+      // the authorization server and start the OAuth flow. We hand back the
+      // fully-qualified URL of the endpoint above (derived from this same
+      // request) rather than relying on any well-known path insertion
+      // convention, which sidesteps that ambiguity for this hop — see the PR
+      // description for the fuller discovery-path discussion.
+      const basePath = url.pathname.replace(/\/$/, "");
+      const resourceMetadataUrl = `${url.origin}${basePath}/.well-known/oauth-protected-resource`;
+      const headers = {
+        ...corsHeaders,
+        "WWW-Authenticate": `Bearer resource_metadata="${resourceMetadataUrl}"`,
+      };
+      return jsonRpcResponse(
+        {
+          jsonrpc: "2.0",
+          id,
+          error: { code: -32001, message: (result as { message?: string }).message ?? "Unauthorized" },
+        },
+        401,
+        headers,
+      );
+    }
+
+    return jsonRpcResponse(
+      { jsonrpc: "2.0", id, result: { content: [{ type: "text", text: JSON.stringify(result) }] } },
+      200,
+      corsHeaders,
+    );
+  }
+
+  return jsonRpcResponse(
+    { jsonrpc: "2.0", id, error: { code: -32601, message: `Method not found: ${String(method)}` } },
+    200,
+    corsHeaders,
+  );
 }
