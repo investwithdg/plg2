@@ -10,6 +10,7 @@
  */
 import type {
   EnrichmentData,
+  FhaCategories,
   KeySource,
   PlaceEntryOrLegacyString,
 } from "@/hooks/usePropertyPolling";
@@ -279,7 +280,7 @@ export default function ResearchDossier({ enrichmentData, property }: ResearchDo
               <div className="space-y-3">
                 {/* Protected Classes */}
                 {(() => {
-                  const check = (property.fha_categories as any).protected_classes;
+                  const check = (property.fha_categories as FhaCategories).protected_classes;
                   if (!check) return null;
                   return (
                     <div className="text-win95-11 space-y-0.5">
@@ -300,7 +301,7 @@ export default function ResearchDossier({ enrichmentData, property }: ResearchDo
 
                 {/* Steering & Coded Language */}
                 {(() => {
-                  const check = (property.fha_categories as any).steering_coded_language;
+                  const check = (property.fha_categories as FhaCategories).steering_coded_language;
                   if (!check) return null;
                   return (
                     <div className="text-win95-11 space-y-0.5">
@@ -321,7 +322,7 @@ export default function ResearchDossier({ enrichmentData, property }: ResearchDo
 
                 {/* Demographics / Neighborhood Character */}
                 {(() => {
-                  const check = (property.fha_categories as any).demographics_character;
+                  const check = (property.fha_categories as FhaCategories).demographics_character;
                   if (!check) return null;
                   return (
                     <div className="text-win95-11 space-y-0.5">

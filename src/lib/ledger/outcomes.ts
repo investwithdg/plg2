@@ -2,6 +2,7 @@
 // so PLG learns which copy converts. ADDITIVE infra; call recordOutcome() from UI/webhooks.
 // Source of truth = Supabase; mirrors to PostHog (already a dependency) if present.
 import { supabase } from "@/integrations/supabase/client"; // adjust if needed
+import type { Json } from "@/integrations/supabase/types";
 
 export type OutcomeEvent = "view" | "lead" | "saved" | "published" | "closed";
 
@@ -14,14 +15,15 @@ export interface OutcomeInput {
 }
 
 export async function recordOutcome(o: OutcomeInput): Promise<void> {
-  // listing_outcomes isn't in the generated Supabase types yet — same escape hatch
-  // used elsewhere in this codebase for tables ahead of the generated schema.
-  const { error } = await (supabase.from("listing_outcomes" as never) as any).insert({
+  const { error } = await supabase.from("listing_outcomes").insert({
     copy_generation_id: o.copyGenerationId,
     property_id: o.propertyId ?? null,
     event_type: o.event,
     days_on_market: o.daysOnMarket ?? null,
-    metadata: o.metadata ?? {},
+    // metadata is caller-supplied JSON-serializable data (the OutcomeInput contract);
+    // Record<string, unknown> isn't structurally assignable to the generated Json type
+    // even though every value we accept here is representable as JSON.
+    metadata: (o.metadata ?? {}) as Json,
   });
   if (error) throw error;
 

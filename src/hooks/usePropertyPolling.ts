@@ -11,6 +11,17 @@ export type EnrichmentStep =
   | "done"
   | null;
 
+export interface FhaCategoryCheck {
+  passed: boolean;
+  reasoning: string;
+}
+
+export interface FhaCategories {
+  protected_classes?: FhaCategoryCheck;
+  steering_coded_language?: FhaCategoryCheck;
+  demographics_character?: FhaCategoryCheck;
+}
+
 export interface PropertyWithCopies {
   id: string;
   address: string;
@@ -27,7 +38,7 @@ export interface PropertyWithCopies {
   listing_agent: string | null;
   listing_office: string | null;
   fha_compliance_score: number | null;
-  fha_categories: Record<string, any> | null;
+  fha_categories: FhaCategories | null;
   created_at: string;
 }
 
