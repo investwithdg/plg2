@@ -34,6 +34,9 @@ export function useGoogleAutocomplete() {
     script.src = `https://maps.googleapis.com/maps/api/js?key=${apiKey}&libraries=places&callback=${callbackName}`;
     script.async = true;
     script.defer = true;
+    script.onerror = (err) => {
+      console.error("Google Maps API script failed to load. Check VITE_GOOGLE_MAPS_API_KEY value or connectivity:", err);
+    };
     document.head.appendChild(script);
 
     return () => {
@@ -44,7 +47,6 @@ export function useGoogleAutocomplete() {
 
   const getPredictions = (input: string) => {
     if (!isLoaded || !autocompleteServiceRef.current || !input.trim()) {
-      setPredictions([]);
       return;
     }
 
@@ -70,6 +72,9 @@ export function useGoogleAutocomplete() {
             }))
           );
         } else {
+          if (status !== "ZERO_RESULTS") {
+            console.warn(`Google Places prediction warning/status: ${status}`);
+          }
           setPredictions([]);
         }
       }
