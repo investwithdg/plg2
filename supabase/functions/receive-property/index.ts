@@ -10,7 +10,7 @@ const FREE_LIMIT = 10;
 const FREE_WINDOW_DAYS = 30;
 const FREE_PRO_TIER_LIMIT = 1;
 const DEDUPE_WINDOW_SECONDS = 60;
-const FREE_PROPERTY_TYPES = ["sfr", "fsbo"];
+const FREE_PROPERTY_TYPES = ["sfr", "fsbo", "row"];
 const TURNSTILE_VERIFY_URL = "https://challenges.cloudflare.com/turnstile/v0/siteverify";
 
 const propertyInputSchema = z
@@ -21,6 +21,7 @@ const propertyInputSchema = z
     source: z.string().trim().max(100).optional(),
     anonymousId: z.string().trim().min(16).max(128).optional(),
     turnstileToken: z.string().trim().max(4096).optional(),
+    regenerate: z.boolean().optional(),
   })
   .refine((d) => d.url || d.address, {
     message: "Either 'url' or 'address' must be provided",
@@ -291,43 +292,49 @@ serve(async (req) => {
     }
 
     // 1) Idempotency: same (caller, address|url) within window returns existing propertyId
+    //    Bypassed when regenerate === true so Pro users can regenerate freely.
+    const isRegenerate = validatedInput.regenerate === true;
     const dedupeKey = await sha256(
       [
         userId ?? `anon:${anonymousUsageKey ?? ipHash}`,
         (validatedInput.url || validatedInput.address || "").toLowerCase().trim(),
       ].join("|"),
     );
-    const sinceDedupe = new Date(Date.now() - DEDUPE_WINDOW_SECONDS * 1000).toISOString();
-    const dedupeQuery = supabase
-      .from("properties")
-      .select("id, status")
-      .eq("dedupe_key", dedupeKey)
-      .gte("created_at", sinceDedupe)
-      .order("created_at", { ascending: false })
-      .limit(1);
-    const { data: dedupeMatch } = await dedupeQuery;
-    if (dedupeMatch && dedupeMatch.length > 0) {
-      log("dedupe_hit", { propertyId: dedupeMatch[0].id });
-      return jsonResponse(
-        {
-          success: true,
-          propertyId: dedupeMatch[0].id,
-          message: "Existing in-flight generation reused",
-          deduped: true,
-        },
-        200,
-      );
+    if (!isRegenerate) {
+      const sinceDedupe = new Date(Date.now() - DEDUPE_WINDOW_SECONDS * 1000).toISOString();
+      const dedupeQuery = supabase
+        .from("properties")
+        .select("id, status")
+        .eq("dedupe_key", dedupeKey)
+        .gte("created_at", sinceDedupe)
+        .order("created_at", { ascending: false })
+        .limit(1);
+      const { data: dedupeMatch } = await dedupeQuery;
+      if (dedupeMatch && dedupeMatch.length > 0) {
+        log("dedupe_hit", { propertyId: dedupeMatch[0].id });
+        return jsonResponse(
+          {
+            success: true,
+            propertyId: dedupeMatch[0].id,
+            message: "Existing in-flight generation reused",
+            deduped: true,
+          },
+          200,
+        );
+      }
+    } else {
+      log("dedupe_bypass_regenerate");
     }
 
-    // 2) Subscription check. Active Pro users are unlimited.
+    // 2) Subscription check. Active Pro or Elite users are unlimited.
     let hasProPlan = false;
     if (userId) {
       const { data: sub } = await supabase
         .from("subscriptions")
         .select("plan, status")
         .eq("user_id", userId)
-        .eq("plan", "pro")
         .eq("status", "active")
+        .in("plan", ["pro", "elite"])
         .limit(1);
       hasProPlan = (sub && sub.length > 0) ?? false;
     }

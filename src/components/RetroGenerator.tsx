@@ -308,6 +308,8 @@ export default function RetroGenerator() {
           ...parsed,
           propertyType,
           source: "generator",
+          // When outputs already exist, this is a regeneration — bypass dedup
+          ...(outputs ? { regenerate: true } : {}),
           ...(!user
             ? {
                 anonymousId,
