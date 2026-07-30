@@ -9,7 +9,8 @@ import type {
   StoredAuthorizationCode,
   StoredClient,
 } from "./handler.ts";
-import { generateOpaqueToken, sha256Hex, type PlanTier } from "../_shared/oauthCrypto.ts";
+import { generateOpaqueToken, sha256Hex } from "../_shared/oauthCrypto.ts";
+import { resolvePlanTier, type PlanTier } from "../_shared/planTier.ts";
 
 function serviceClient() {
   return createClient(Deno.env.get("SUPABASE_URL")!, Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!);
@@ -104,20 +105,16 @@ export function defaultDeps(): OAuthDeps {
     },
 
     async getUserPlan(userId): Promise<PlanTier> {
-      // Mirrors src/hooks/usePlanTier.ts exactly (same table/columns/filter) so
-      // the gate here always agrees with what the frontend shows the user.
+      // Delegates to _shared/planTier.ts's resolvePlanTier — the single source of truth
+      // (mirrors src/hooks/usePlanTier.ts) also used by mcp/deps.ts and manage-api-keys/deps.ts,
+      // so the gate here always agrees with what the frontend shows the user and with every
+      // other place that answers "what plan is this user on".
       const { data } = await serviceClient()
         .from("subscriptions")
         .select("plan, status")
         .eq("user_id", userId)
-        .eq("status", "active")
-        .limit(1);
-      const activeRow = (data ?? []).find(
-        (row: { plan?: string; status?: string }) => row.status === "active",
-      );
-      if (activeRow?.plan === "elite") return "elite";
-      if (activeRow?.plan === "pro") return "pro";
-      return "free";
+        .eq("status", "active");
+      return resolvePlanTier(data);
     },
 
     async saveAuthorizationCode(record) {
@@ -137,17 +134,15 @@ export function defaultDeps(): OAuthDeps {
       if (error) throw new Error(error.message);
     },
 
-    async consumeAuthorizationCode(codeHash): Promise<StoredAuthorizationCode | null> {
-      // Atomic claim: only succeeds (and returns a row) if the code exists and
-      // hasn't been used yet, which is what makes this replay-safe under
-      // concurrent redemption attempts.
+    async getAuthorizationCode(codeHash): Promise<StoredAuthorizationCode | null> {
+      // Non-destructive read — does not mark the code used. handler.ts validates the full
+      // exchange request against this record before ever calling markAuthorizationCodeUsed.
       const { data, error } = await (
         serviceClient().from("oauth_authorization_codes" as never) as any
       )
-        .update({ used_at: new Date().toISOString() })
+        .select("*")
         .eq("code_hash", codeHash)
         .is("used_at", null)
-        .select("*")
         .maybeSingle();
       if (error || !data) return null;
       return {
@@ -160,6 +155,20 @@ export function defaultDeps(): OAuthDeps {
         scope: data.scope,
         expiresAt: new Date(data.expires_at).getTime(),
       };
+    },
+
+    async markAuthorizationCodeUsed(codeHash): Promise<boolean> {
+      // Atomic claim: only succeeds if the code exists and hasn't been used yet, which is
+      // what makes this replay-safe under concurrent redemption attempts.
+      const { data, error } = await (
+        serviceClient().from("oauth_authorization_codes" as never) as any
+      )
+        .update({ used_at: new Date().toISOString() })
+        .eq("code_hash", codeHash)
+        .is("used_at", null)
+        .select("id")
+        .maybeSingle();
+      return !error && !!data;
     },
 
     async saveAccessToken(record) {

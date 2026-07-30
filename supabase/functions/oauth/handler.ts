@@ -18,11 +18,10 @@ import {
   canonicalizeResourceUri,
   generateOpaqueToken,
   isAllowedRedirectUri,
-  isProOrElite,
   sha256Hex,
   verifyPkceS256,
-  type PlanTier,
 } from "../_shared/oauthCrypto.ts";
+import { isMcpEligiblePlan, type PlanTier } from "../_shared/planTier.ts";
 
 // Authorization codes are short-lived per the MCP authorization spec's security
 // guidance ("~10 min" per the task brief).
@@ -99,9 +98,15 @@ export interface OAuthDeps {
     scope: string | null;
     expiresAt: number; // ms epoch
   }) => Promise<void>;
-  /** Atomically marks the code used (if it exists and is unused) and returns it,
-   * else null. Must be atomic at the storage layer to prevent replay races. */
-  consumeAuthorizationCode: (codeHash: string) => Promise<StoredAuthorizationCode | null>;
+  /** Non-destructive lookup: returns the code record if it exists and is unused, else null.
+   * Does NOT mark it used — callers must validate the request fully (client_id, redirect_uri,
+   * expiry, PKCE) before calling markAuthorizationCodeUsed, so a mismatched/invalid exchange
+   * attempt never burns a code the legitimate client hasn't redeemed yet. */
+  getAuthorizationCode: (codeHash: string) => Promise<StoredAuthorizationCode | null>;
+  /** Atomically marks the code used, but ONLY if it still exists and is unused — this is what
+   * makes redemption replay-safe under concurrent attempts. Returns whether the claim
+   * succeeded; false means it was already consumed (e.g. a race with another request). */
+  markAuthorizationCodeUsed: (codeHash: string) => Promise<boolean>;
   saveAccessToken: (record: {
     tokenHash: string;
     userId: string;
@@ -138,7 +143,7 @@ export function buildAuthorizationServerMetadata(config: OAuthConfig): Record<st
     response_types_supported: ["code"],
     grant_types_supported: ["authorization_code"],
     code_challenge_methods_supported: ["S256"],
-    token_endpoint_auth_methods_supported: ["none", "client_secret_post"],
+    token_endpoint_auth_methods_supported: ["none", "client_secret_post", "client_secret_basic"],
     scopes_supported: ["mcp"],
     service_documentation: "https://propertylistinggenerator.com/pricing",
   };
@@ -378,7 +383,7 @@ async function handleAuthorize(
   // real getUserPlan() re-reads the subscriptions table live (not a claim
   // baked into the session JWT), so this reflects the user's plan right now.
   const plan = await deps.getUserPlan(caller.userId);
-  if (!isProOrElite(plan)) {
+  if (!isMcpEligiblePlan(plan)) {
     return json({ upgradeRequired: true, plan }, 200, corsHeaders);
   }
 
@@ -500,8 +505,14 @@ async function handleToken(req: Request, deps: OAuthDeps, config: OAuthConfig): 
     }
   }
 
+  // Peek the code WITHOUT consuming it yet. Validate everything about this exchange request
+  // first (expiry, client_id/redirect_uri, PKCE, resource, plan) and only atomically mark the
+  // code used once the request is fully valid — otherwise a single malformed/mismatched
+  // exchange attempt (a client bug, a proxy retry, or an attacker who merely observed the
+  // code) would permanently burn a code the legitimate client hasn't redeemed yet, since
+  // marking it used is irreversible.
   const codeHash = await sha256Hex(code);
-  const record = await deps.consumeAuthorizationCode(codeHash);
+  const record = await deps.getAuthorizationCode(codeHash);
   if (!record) {
     return json(
       {
@@ -547,10 +558,25 @@ async function handleToken(req: Request, deps: OAuthDeps, config: OAuthConfig): 
   // /authorize gate above) — covers the narrow window where a user's plan
   // changes between approving the connector and the client redeeming the code.
   const plan = await deps.getUserPlan(record.userId);
-  if (!isProOrElite(plan)) {
+  if (!isMcpEligiblePlan(plan)) {
     return json(
       { error: "access_denied", error_description: "MCP access requires a Pro or Elite plan." },
       403,
+      corsHeaders,
+    );
+  }
+
+  // Every check passed — NOW atomically consume the code. Still conditional on it being
+  // unused, so this remains replay-safe under a concurrent redemption attempt (the loser
+  // gets false here rather than a duplicate token).
+  const claimed = await deps.markAuthorizationCodeUsed(codeHash);
+  if (!claimed) {
+    return json(
+      {
+        error: "invalid_grant",
+        error_description: "Authorization code was already redeemed.",
+      },
+      400,
       corsHeaders,
     );
   }

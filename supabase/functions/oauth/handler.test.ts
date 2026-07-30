@@ -81,11 +81,16 @@ function fakeDeps(overrides: Partial<OAuthDeps> = {}, clock = { now: 1_000_000 }
     async saveAuthorizationCode(record) {
       codes.set(record.codeHash, { ...record, used: false });
     },
-    async consumeAuthorizationCode(codeHash) {
+    async getAuthorizationCode(codeHash) {
       const record = codes.get(codeHash);
       if (!record || record.used) return null;
-      record.used = true;
       return record;
+    },
+    async markAuthorizationCodeUsed(codeHash) {
+      const record = codes.get(codeHash);
+      if (!record || record.used) return false;
+      record.used = true;
+      return true;
     },
     async saveAccessToken(record) {
       tokens.push(record);
@@ -461,6 +466,94 @@ Deno.test("POST /token rejects a mismatched code_verifier (PKCE failure)", async
   const body = await res.json();
   assertEquals(body.error, "invalid_grant");
 });
+
+Deno.test(
+  "POST /token: a mismatched PKCE verifier does NOT burn the code — the legitimate client can still redeem it",
+  async () => {
+    const deps = fakeDeps();
+    const { code, verifier } = await seedAuthorizedCode(deps);
+
+    const badAttempt = await handleRequest(
+      req("https://project.supabase.co/functions/v1/oauth/token", {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({
+          grant_type: "authorization_code",
+          code,
+          redirect_uri: REGISTERED_CLIENT.redirectUris[0],
+          client_id: REGISTERED_CLIENT.clientId,
+          code_verifier: "wrong-verifier",
+        }),
+      }),
+      deps,
+      CONFIG,
+    );
+    assertEquals(badAttempt.status, 400);
+
+    // The code must still be redeemable with the correct verifier — a failed exchange
+    // attempt must validate before it consumes, never after.
+    const goodAttempt = await handleRequest(
+      req("https://project.supabase.co/functions/v1/oauth/token", {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({
+          grant_type: "authorization_code",
+          code,
+          redirect_uri: REGISTERED_CLIENT.redirectUris[0],
+          client_id: REGISTERED_CLIENT.clientId,
+          code_verifier: verifier,
+        }),
+      }),
+      deps,
+      CONFIG,
+    );
+    assertEquals(goodAttempt.status, 200);
+    const body = await goodAttempt.json();
+    assertEquals(typeof body.access_token, "string");
+  },
+);
+
+Deno.test(
+  "POST /token: a wrong client_id/redirect_uri does NOT burn the code — the legitimate client can still redeem it",
+  async () => {
+    const deps = fakeDeps();
+    const { code, verifier } = await seedAuthorizedCode(deps);
+
+    const badAttempt = await handleRequest(
+      req("https://project.supabase.co/functions/v1/oauth/token", {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({
+          grant_type: "authorization_code",
+          code,
+          redirect_uri: "https://attacker.example.com/cb",
+          client_id: REGISTERED_CLIENT.clientId,
+          code_verifier: verifier,
+        }),
+      }),
+      deps,
+      CONFIG,
+    );
+    assertEquals(badAttempt.status, 400);
+
+    const goodAttempt = await handleRequest(
+      req("https://project.supabase.co/functions/v1/oauth/token", {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({
+          grant_type: "authorization_code",
+          code,
+          redirect_uri: REGISTERED_CLIENT.redirectUris[0],
+          client_id: REGISTERED_CLIENT.clientId,
+          code_verifier: verifier,
+        }),
+      }),
+      deps,
+      CONFIG,
+    );
+    assertEquals(goodAttempt.status, 200);
+  },
+);
 
 Deno.test(
   "POST /token re-checks the plan at redemption and rejects a since-downgraded user",

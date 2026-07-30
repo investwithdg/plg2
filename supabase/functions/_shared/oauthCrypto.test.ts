@@ -3,20 +3,12 @@ import {
   canonicalizeResourceUri,
   generateOpaqueToken,
   isAllowedRedirectUri,
-  isProOrElite,
   sha256Hex,
   verifyPkceS256,
 } from "./oauthCrypto.ts";
 
-Deno.test("isProOrElite: gates MCP access to paid plans only", () => {
-  assertEquals(isProOrElite("pro"), true);
-  assertEquals(isProOrElite("elite"), true);
-  assertEquals(isProOrElite("free"), false);
-  assertEquals(isProOrElite(null), false);
-  assertEquals(isProOrElite(undefined), false);
-  assertEquals(isProOrElite("trialing"), false);
-  assertEquals(isProOrElite(""), false);
-});
+// Plan-tier gating (isMcpEligiblePlan) is tested in planTier.test.ts — this file only owns
+// the crypto/validation helpers that have nothing to do with subscription plans.
 
 Deno.test("sha256Hex is deterministic and hex-encoded", async () => {
   const a = await sha256Hex("hello");

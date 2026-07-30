@@ -4,12 +4,9 @@
 // imports it) can be loaded by `deno test` without resolving any blocked
 // esm.sh/jsr/deno.land module.
 
-export type PlanTier = "free" | "pro" | "elite";
-
-/** MCP connector access is gated to paid plans — Pro and Elite only. */
-export function isProOrElite(plan: string | null | undefined): boolean {
-  return plan === "pro" || plan === "elite";
-}
+// Plan-tier resolution (PlanTier type, isMcpEligiblePlan) lives in _shared/planTier.ts —
+// the single source of truth mirroring src/hooks/usePlanTier.ts. Import from there instead
+// of duplicating it here.
 
 function toHex(bytes: ArrayBuffer): string {
   return Array.from(new Uint8Array(bytes))
