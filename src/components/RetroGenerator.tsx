@@ -16,6 +16,7 @@ import { RetroButton, RetroInput, RetroWindow } from "@/components/retro";
 import ResearchDossier from "@/components/ResearchDossier";
 import { describeFunctionInvokeError, parsePropertyInput } from "@/lib/parsePropertyInput";
 import { track } from "@/lib/posthog";
+import { useGoogleAutocomplete } from "@/hooks/useGoogleAutocomplete";
 
 type PropertyType =
   | "sfr"
@@ -114,6 +115,11 @@ export default function RetroGenerator() {
   const [propertyType, setPropertyType] = useState<PropertyType>("sfr");
   const [propertyId, setPropertyId] = useState<string | null>(null);
   const [showProgress, setShowProgress] = useState(false);
+
+  // Autocomplete state
+  const { predictions, getPredictions, clearPredictions, refreshSessionToken } = useGoogleAutocomplete();
+  const [showPredictions, setShowPredictions] = useState(false);
+  const [focusedPredictionIdx, setFocusedPredictionIdx] = useState(-1);
   const [showPaywall, setShowPaywall] = useState(false);
   const [paywallReason, setPaywallReason] = useState<PaywallReason>("free_limit");
   const [showAuthModal, setShowAuthModal] = useState(false);
@@ -445,14 +451,80 @@ export default function RetroGenerator() {
             </div>
 
             <div className="flex gap-2 flex-wrap">
-              <div className="flex-1 min-w-[200px] flex flex-col gap-1">
+              <div className="flex-1 min-w-[200px] flex flex-col gap-1 relative">
                 <RetroInput
                   placeholder="123 main st, austin, tx — or paste zillow url"
                   value={query}
-                  onChange={(e) => setQuery(e.target.value)}
-                  onKeyDown={(e) => e.key === "Enter" && handleGenerate()}
+                  onChange={(e) => {
+                    setQuery(e.target.value);
+                    getPredictions(e.target.value);
+                    setShowPredictions(true);
+                    setFocusedPredictionIdx(-1);
+                  }}
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter") {
+                      if (showPredictions && focusedPredictionIdx >= 0 && predictions[focusedPredictionIdx]) {
+                        e.preventDefault();
+                        setQuery(predictions[focusedPredictionIdx].description);
+                        clearPredictions();
+                        setShowPredictions(false);
+                        refreshSessionToken();
+                      } else {
+                        handleGenerate();
+                      }
+                    } else if (e.key === "ArrowDown") {
+                      if (showPredictions && predictions.length > 0) {
+                        e.preventDefault();
+                        setFocusedPredictionIdx((prev) => Math.min(prev + 1, predictions.length - 1));
+                      }
+                    } else if (e.key === "ArrowUp") {
+                      if (showPredictions && predictions.length > 0) {
+                        e.preventDefault();
+                        setFocusedPredictionIdx((prev) => Math.max(prev - 1, 0));
+                      }
+                    } else if (e.key === "Escape") {
+                      setShowPredictions(false);
+                    }
+                  }}
+                  onBlur={() => {
+                    // Small delay to allow clicking predictions listbox before hide
+                    setTimeout(() => setShowPredictions(false), 200);
+                  }}
+                  onFocus={() => {
+                    if (predictions.length > 0) setShowPredictions(true);
+                  }}
                   className="w-full"
                 />
+                
+                {showPredictions && predictions.length > 0 && (
+                  <div className="absolute top-[38px] left-0 right-0 z-50 win95-window">
+                    <div className="win95-inset bg-white max-h-56 overflow-y-auto divide-y divide-slate-100 shadow-lg text-win95-11">
+                      {predictions.map((p, idx) => {
+                        const isFocused = idx === focusedPredictionIdx;
+                        return (
+                          <div
+                            key={p.placeId}
+                            onMouseDown={() => {
+                              setQuery(p.description);
+                              clearPredictions();
+                              setShowPredictions(false);
+                              refreshSessionToken();
+                            }}
+                            onMouseEnter={() => setFocusedPredictionIdx(idx)}
+                            className={`p-2 cursor-pointer transition-colors leading-relaxed select-none ${
+                              isFocused
+                                ? "bg-[#000080] text-white font-bold text-win95-11"
+                                : "text-black hover:bg-slate-50 text-win95-11"
+                            }`}
+                          >
+                            {p.description}
+                          </div>
+                        );
+                      })}
+                    </div>
+                  </div>
+                )}
+
                 <span className="text-[10px] text-muted-foreground ml-1">
                   Please be specific (e.g., 123 Main St, Austin TX) for best research results.
                 </span>
