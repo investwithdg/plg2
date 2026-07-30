@@ -20,6 +20,10 @@ interface ApiKeySummary {
   revokedAt: string | null;
 }
 
+// Domain-fronted proxy path (src/lib/mcpProxy.ts + server.ts) for the MCP resource server —
+// what MCP clients should be given, never the raw <project-ref>.supabase.co URL.
+const MCP_SERVER_URL = "https://propertylistinggenerator.com/mcp";
+
 interface ApiKeysPanelProps {
   isProUser: boolean;
 }
@@ -31,6 +35,7 @@ export default function ApiKeysPanel({ isProUser }: ApiKeysPanelProps) {
   const [creating, setCreating] = useState(false);
   const [newKey, setNewKey] = useState<string | null>(null);
   const [copied, setCopied] = useState(false);
+  const [urlCopied, setUrlCopied] = useState(false);
 
   const loadKeys = async () => {
     setLoading(true);
@@ -97,6 +102,16 @@ export default function ApiKeysPanel({ isProUser }: ApiKeysPanelProps) {
     }
   };
 
+  const handleCopyUrl = async () => {
+    try {
+      await navigator.clipboard.writeText(MCP_SERVER_URL);
+      setUrlCopied(true);
+      setTimeout(() => setUrlCopied(false), 2000);
+    } catch {
+      sonnerToast.error("Copy failed — select and copy the URL manually");
+    }
+  };
+
   return (
     <RetroWindow title="MCP API Keys" showControls={false} className="w-full">
       <div className="win95-inset bg-[var(--win95-gray)] text-black p-4 space-y-3">
@@ -115,7 +130,25 @@ export default function ApiKeysPanel({ isProUser }: ApiKeysPanelProps) {
             </Link>
           </div>
         ) : (
-          <div className="border-t border-[var(--win95-gray-dark)] pt-3 space-y-3">
+          <div className="border-t border-[var(--win95-gray-dark)] pt-3 space-y-4">
+            <div className="win95-raised bg-card p-3 space-y-2">
+              <p className="text-win95-11 font-bold">Connect to Claude</p>
+              <p className="text-win95-11 text-slate-700">
+                On claude.ai: Settings → Connectors → Add custom connector. Paste this URL — no key
+                needed, you'll just log in and approve.
+              </p>
+              <div className="flex flex-wrap items-center gap-2">
+                <code className="text-win95-11 bg-white win95-inset px-2 py-1 break-all">
+                  {MCP_SERVER_URL}
+                </code>
+                <RetroButton onClick={handleCopyUrl}>{urlCopied ? "Copied!" : "Copy"}</RetroButton>
+              </div>
+              <p className="text-win95-11 text-slate-600">
+                Using Claude Desktop, Cursor, or another MCP client that needs a static config
+                instead? Use the same URL with an API key below.
+              </p>
+            </div>
+
             {newKey && (
               <div className="win95-raised bg-card p-3 space-y-2">
                 <p className="text-win95-11 font-bold text-red-800">
