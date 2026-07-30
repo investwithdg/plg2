@@ -14,6 +14,7 @@ export function useGoogleAutocomplete() {
   const apiKey = import.meta.env.VITE_GOOGLE_MAPS_API_KEY;
 
   useEffect(() => {
+    console.log("PLG Address Autocomplete: VITE_GOOGLE_MAPS_API_KEY detected =", !!apiKey);
     if (!apiKey) return;
 
     if (window.google?.maps?.places) {
