@@ -34,3 +34,17 @@ export function getCorsHeaders(req: Request): Record<string, string> {
     Vary: "Origin",
   };
 }
+
+// Public OAuth authorization-server endpoints (metadata discovery, dynamic
+// client registration, token exchange) and the MCP resource server's protected-
+// resource metadata must be reachable by arbitrary third-party MCP clients
+// (claude.ai, Claude Desktop, etc.) whose origins we can't allowlist in advance.
+// Unlike the rest of the app, CORS is not a security boundary for these routes —
+// they're protected by the OAuth mechanics themselves (PKCE, exact redirect_uri
+// matching, and the secrecy of codes/tokens), so a permissive "*" is intentional.
+export function getPublicCorsHeaders(): Record<string, string> {
+  return {
+    "Access-Control-Allow-Origin": "*",
+    "Access-Control-Allow-Headers": "authorization, content-type",
+  };
+}

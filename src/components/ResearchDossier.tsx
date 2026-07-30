@@ -10,6 +10,7 @@
  */
 import type {
   EnrichmentData,
+  FhaCategories,
   KeySource,
   PlaceEntryOrLegacyString,
 } from "@/hooks/usePropertyPolling";
@@ -179,11 +180,13 @@ export default function ResearchDossier({ enrichmentData, property }: ResearchDo
             </div>
             <div className="win95-raised px-2.5 py-1 text-center bg-card">
               <span className="text-[10px] block font-bold text-muted-foreground">FHA STATUS</span>
-              <span className={`text-win95-12 font-bold ${
-                property?.fha_compliance_score != null && property.fha_compliance_score < 100
-                  ? "text-[#800000]"
-                  : "text-[#008000]"
-              }`}>
+              <span
+                className={`text-win95-12 font-bold ${
+                  property?.fha_compliance_score != null && property.fha_compliance_score < 100
+                    ? "text-[#800000]"
+                    : "text-[#008000]"
+                }`}
+              >
                 {property?.fha_compliance_score != null
                   ? `${property.fha_compliance_score}% COMPLIANT`
                   : "VERIFIED COMPLIANT"}
@@ -271,11 +274,13 @@ export default function ResearchDossier({ enrichmentData, property }: ResearchDo
           {/* Category Audit Checklist */}
           {property?.fha_categories && (
             <div className="win95-inset bg-white p-3 space-y-2.5">
-              <div className="font-bold text-win95-12 text-slate-800 border-b pb-1.5">FHA Audit Checklist Breakdown</div>
+              <div className="font-bold text-win95-12 text-slate-800 border-b pb-1.5">
+                FHA Audit Checklist Breakdown
+              </div>
               <div className="space-y-3">
                 {/* Protected Classes */}
                 {(() => {
-                  const check = (property.fha_categories as any).protected_classes;
+                  const check = (property.fha_categories as FhaCategories).protected_classes;
                   if (!check) return null;
                   return (
                     <div className="text-win95-11 space-y-0.5">
@@ -283,16 +288,20 @@ export default function ResearchDossier({ enrichmentData, property }: ResearchDo
                         <span className={check.passed ? "text-[#008000]" : "text-[#800000]"}>
                           [{check.passed ? "PASSED" : "FAILED"}]
                         </span>
-                        <span className="text-slate-900">Protected Classes & Demographic Steering</span>
+                        <span className="text-slate-900">
+                          Protected Classes & Demographic Steering
+                        </span>
                       </div>
-                      <p className="text-muted-foreground pl-14 leading-relaxed">{check.reasoning}</p>
+                      <p className="text-muted-foreground pl-14 leading-relaxed">
+                        {check.reasoning}
+                      </p>
                     </div>
                   );
                 })()}
 
                 {/* Steering & Coded Language */}
                 {(() => {
-                  const check = (property.fha_categories as any).steering_coded_language;
+                  const check = (property.fha_categories as FhaCategories).steering_coded_language;
                   if (!check) return null;
                   return (
                     <div className="text-win95-11 space-y-0.5">
@@ -300,16 +309,20 @@ export default function ResearchDossier({ enrichmentData, property }: ResearchDo
                         <span className={check.passed ? "text-[#008000]" : "text-[#800000]"}>
                           [{check.passed ? "PASSED" : "FAILED"}]
                         </span>
-                        <span className="text-slate-900">Steering & Coded Phrasing (e.g., churches, families, walking distance)</span>
+                        <span className="text-slate-900">
+                          Steering & Coded Phrasing (e.g., churches, families, walking distance)
+                        </span>
                       </div>
-                      <p className="text-muted-foreground pl-14 leading-relaxed">{check.reasoning}</p>
+                      <p className="text-muted-foreground pl-14 leading-relaxed">
+                        {check.reasoning}
+                      </p>
                     </div>
                   );
                 })()}
 
                 {/* Demographics / Neighborhood Character */}
                 {(() => {
-                  const check = (property.fha_categories as any).demographics_character;
+                  const check = (property.fha_categories as FhaCategories).demographics_character;
                   if (!check) return null;
                   return (
                     <div className="text-win95-11 space-y-0.5">
@@ -317,9 +330,13 @@ export default function ResearchDossier({ enrichmentData, property }: ResearchDo
                         <span className={check.passed ? "text-[#008000]" : "text-[#800000]"}>
                           [{check.passed ? "PASSED" : "FAILED"}]
                         </span>
-                        <span className="text-slate-900">Neighborhood Demographics & Resident Profiling</span>
+                        <span className="text-slate-900">
+                          Neighborhood Demographics & Resident Profiling
+                        </span>
                       </div>
-                      <p className="text-muted-foreground pl-14 leading-relaxed">{check.reasoning}</p>
+                      <p className="text-muted-foreground pl-14 leading-relaxed">
+                        {check.reasoning}
+                      </p>
                     </div>
                   );
                 })()}
@@ -332,9 +349,7 @@ export default function ResearchDossier({ enrichmentData, property }: ResearchDo
       {/* ── 3. AT-A-GLANCE NEIGHBORHOOD & MARKET CARD ── */}
       <div className="win95-window">
         <div className="win95-titlebar">
-          <span className="font-bold text-win95-12 pl-1">
-            Local Market & Walkability Overview
-          </span>
+          <span className="font-bold text-win95-12 pl-1">Local Market & Walkability Overview</span>
         </div>
         <div className="p-3 bg-[var(--win95-gray)] space-y-3">
           {/* Top Row: Metric Stats Side by Side */}
@@ -353,7 +368,9 @@ export default function ResearchDossier({ enrichmentData, property }: ResearchDo
                 Walkability Score
               </span>
               <div className="flex items-center justify-center gap-1.5">
-                <span className="text-win95-16 font-bold text-[var(--win95-blue)]">{walkability_score ?? "N/A"}</span>
+                <span className="text-win95-16 font-bold text-[var(--win95-blue)]">
+                  {walkability_score ?? "N/A"}
+                </span>
                 <span className="text-[10px] font-bold text-muted-foreground">/ 100</span>
                 {walkability_score != null && (
                   <span className="text-[10px] font-bold px-1.5 py-0.2 bg-slate-200 text-slate-800 border border-[var(--win95-gray-dark)] ml-1">
@@ -366,7 +383,9 @@ export default function ResearchDossier({ enrichmentData, property }: ResearchDo
 
           {/* Bottom Row: Market Narrative */}
           <div className="win95-inset bg-white p-3 text-win95-11 leading-relaxed text-slate-800">
-            <div className="font-bold mb-1 text-slate-900 text-win95-11">Market Trends & Neighborhood Context:</div>
+            <div className="font-bold mb-1 text-slate-900 text-win95-11">
+              Market Trends & Neighborhood Context:
+            </div>
             {market_overview || "Neighborhood market trend data is being compiled."}
           </div>
         </div>

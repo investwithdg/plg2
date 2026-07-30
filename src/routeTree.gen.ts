@@ -18,6 +18,7 @@ import { Route as ExploreRouteImport } from './routes/explore'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as CompareIndexRouteImport } from './routes/compare/index'
 import { Route as BlogIndexRouteImport } from './routes/blog/index'
+import { Route as OauthAuthorizeRouteImport } from './routes/oauth/authorize'
 import { Route as ListingIdRouteImport } from './routes/listing/$id'
 import { Route as CompareZillowRouteImport } from './routes/compare/zillow'
 import { Route as CompareWritesonicRouteImport } from './routes/compare/writesonic'
@@ -82,6 +83,11 @@ const CompareIndexRoute = CompareIndexRouteImport.update({
 const BlogIndexRoute = BlogIndexRouteImport.update({
   id: '/blog/',
   path: '/blog/',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const OauthAuthorizeRoute = OauthAuthorizeRouteImport.update({
+  id: '/oauth/authorize',
+  path: '/oauth/authorize',
   getParentRoute: () => rootRouteImport,
 } as any)
 const ListingIdRoute = ListingIdRouteImport.update({
@@ -213,6 +219,7 @@ export interface FileRoutesByFullPath {
   '/compare/writesonic': typeof CompareWritesonicRoute
   '/compare/zillow': typeof CompareZillowRoute
   '/listing/$id': typeof ListingIdRoute
+  '/oauth/authorize': typeof OauthAuthorizeRoute
   '/blog/': typeof BlogIndexRoute
   '/compare/': typeof CompareIndexRoute
 }
@@ -244,6 +251,7 @@ export interface FileRoutesByTo {
   '/compare/writesonic': typeof CompareWritesonicRoute
   '/compare/zillow': typeof CompareZillowRoute
   '/listing/$id': typeof ListingIdRoute
+  '/oauth/authorize': typeof OauthAuthorizeRoute
   '/blog': typeof BlogIndexRoute
   '/compare': typeof CompareIndexRoute
 }
@@ -276,6 +284,7 @@ export interface FileRoutesById {
   '/compare/writesonic': typeof CompareWritesonicRoute
   '/compare/zillow': typeof CompareZillowRoute
   '/listing/$id': typeof ListingIdRoute
+  '/oauth/authorize': typeof OauthAuthorizeRoute
   '/blog/': typeof BlogIndexRoute
   '/compare/': typeof CompareIndexRoute
 }
@@ -309,6 +318,7 @@ export interface FileRouteTypes {
     | '/compare/writesonic'
     | '/compare/zillow'
     | '/listing/$id'
+    | '/oauth/authorize'
     | '/blog/'
     | '/compare/'
   fileRoutesByTo: FileRoutesByTo
@@ -340,6 +350,7 @@ export interface FileRouteTypes {
     | '/compare/writesonic'
     | '/compare/zillow'
     | '/listing/$id'
+    | '/oauth/authorize'
     | '/blog'
     | '/compare'
   id:
@@ -371,6 +382,7 @@ export interface FileRouteTypes {
     | '/compare/writesonic'
     | '/compare/zillow'
     | '/listing/$id'
+    | '/oauth/authorize'
     | '/blog/'
     | '/compare/'
   fileRoutesById: FileRoutesById
@@ -403,6 +415,7 @@ export interface RootRouteChildren {
   CompareWritesonicRoute: typeof CompareWritesonicRoute
   CompareZillowRoute: typeof CompareZillowRoute
   ListingIdRoute: typeof ListingIdRoute
+  OauthAuthorizeRoute: typeof OauthAuthorizeRoute
   BlogIndexRoute: typeof BlogIndexRoute
   CompareIndexRoute: typeof CompareIndexRoute
 }
@@ -470,6 +483,13 @@ declare module '@tanstack/react-router' {
       path: '/blog'
       fullPath: '/blog/'
       preLoaderRoute: typeof BlogIndexRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/oauth/authorize': {
+      id: '/oauth/authorize'
+      path: '/oauth/authorize'
+      fullPath: '/oauth/authorize'
+      preLoaderRoute: typeof OauthAuthorizeRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/listing/$id': {
@@ -643,6 +663,7 @@ const rootRouteChildren: RootRouteChildren = {
   CompareWritesonicRoute: CompareWritesonicRoute,
   CompareZillowRoute: CompareZillowRoute,
   ListingIdRoute: ListingIdRoute,
+  OauthAuthorizeRoute: OauthAuthorizeRoute,
   BlogIndexRoute: BlogIndexRoute,
   CompareIndexRoute: CompareIndexRoute,
 }
