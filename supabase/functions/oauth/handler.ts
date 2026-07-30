@@ -39,6 +39,10 @@ export interface StoredClient {
   clientId: string;
   clientSecretHash: string | null;
   clientName: string | null;
+  /** Shown on the consent screen alongside clientName so a user has something to verify
+   * the requesting app against — see getClientInfo below. */
+  clientUri: string | null;
+  logoUri: string | null;
   redirectUris: string[];
   grantTypes: string[];
   responseTypes: string[];
@@ -232,6 +236,54 @@ export function validateRegistration(body: unknown): RegistrationValidation {
       wantsSecret: tokenEndpointAuthMethod !== "none",
     },
   };
+}
+
+// Public, pre-consent lookup of a client's *display* identity only (name/uri/logo) — never
+// clientSecretHash or redirectUris. Lets the /oauth/authorize consent screen show the user
+// which app is asking for access before they approve, instead of a generic message that's
+// identical for every client_id. Dynamic client registration (handleRegister above) is
+// unauthenticated, so without this a phishing page can register its own client and get a
+// signed-in Pro/Elite user to approve it under a blank "An app is requesting access" prompt —
+// this endpoint is the minimum fix: informed consent needs the user to see *what* they're
+// approving. It intentionally does not require auth, matching how consent screens on other
+// OAuth providers (Google, GitHub) show the requesting app's name to anyone with a valid
+// client_id — the client_id itself is not a secret.
+async function handleClientInfo(req: Request, deps: OAuthDeps): Promise<Response> {
+  const corsHeaders = getCorsHeaders(req);
+  let body: unknown;
+  try {
+    body = await req.json();
+  } catch {
+    return json(
+      { error: "invalid_request", error_description: "Body must be JSON." },
+      400,
+      corsHeaders,
+    );
+  }
+  const b = (typeof body === "object" && body !== null ? body : {}) as Record<string, unknown>;
+  const clientId = typeof b.client_id === "string" ? b.client_id : "";
+  if (!clientId) {
+    return json(
+      { error: "invalid_request", error_description: "client_id is required." },
+      400,
+      corsHeaders,
+    );
+  }
+
+  const client = await deps.getClient(clientId);
+  if (!client) {
+    return json(
+      { error: "invalid_client", error_description: "Unknown client_id." },
+      404,
+      corsHeaders,
+    );
+  }
+
+  return json(
+    { client_id: client.clientId, client_name: client.clientName, client_uri: client.clientUri },
+    200,
+    corsHeaders,
+  );
 }
 
 async function handleRegister(req: Request, deps: OAuthDeps): Promise<Response> {
@@ -614,12 +666,18 @@ export async function handleRequest(
 
   if (req.method === "OPTIONS") {
     return new Response(null, {
-      headers: path.endsWith("/authorize") ? getCorsHeaders(req) : getPublicCorsHeaders(),
+      headers:
+        path.endsWith("/authorize") || path.endsWith("/client-info")
+          ? getCorsHeaders(req)
+          : getPublicCorsHeaders(),
     });
   }
 
   if (req.method === "GET" && path.endsWith("/.well-known/oauth-authorization-server")) {
     return json(buildAuthorizationServerMetadata(config), 200, getPublicCorsHeaders());
+  }
+  if (req.method === "POST" && path.endsWith("/client-info")) {
+    return handleClientInfo(req, deps);
   }
   if (req.method === "POST" && path.endsWith("/register")) {
     return handleRegister(req, deps);

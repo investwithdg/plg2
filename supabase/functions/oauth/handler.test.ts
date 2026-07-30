@@ -29,6 +29,8 @@ const REGISTERED_CLIENT: StoredClient = {
   clientId: "client-1",
   clientSecretHash: null,
   clientName: "Test MCP Client",
+  clientUri: "https://claude.ai",
+  logoUri: null,
   redirectUris: ["https://claude.ai/api/mcp/callback"],
   grantTypes: ["authorization_code"],
   responseTypes: ["code"],
@@ -57,6 +59,8 @@ function fakeDeps(overrides: Partial<OAuthDeps> = {}, clock = { now: 1_000_000 }
         clientId,
         clientSecretHash: null,
         clientName: input.clientName,
+        clientUri: input.clientUri,
+        logoUri: input.logoUri,
         redirectUris: input.redirectUris,
         grantTypes: input.grantTypes,
         responseTypes: input.responseTypes,
@@ -189,6 +193,68 @@ Deno.test("POST /register with malformed JSON returns invalid_client_metadata", 
   assertEquals(res.status, 400);
   const body = await res.json();
   assertEquals(body.error, "invalid_client_metadata");
+});
+
+// ---------- Client info (consent-screen identity disclosure) ----------
+//
+// Dynamic client registration (above) is unauthenticated, so anyone can register a client
+// pointing at their own redirect_uri. Without a way for the consent screen to show *which*
+// app is asking, a phishing page could register its own client and get a signed-in user to
+// approve it under a blank "an app wants access" prompt. These tests cover the fix: a public,
+// pre-consent lookup of the client's display identity only (never its secret hash).
+
+Deno.test(
+  "POST /client-info returns the client's display identity for a known client_id",
+  async () => {
+    const res = await handleRequest(
+      req("https://project.supabase.co/functions/v1/oauth/client-info", {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ client_id: REGISTERED_CLIENT.clientId }),
+      }),
+      fakeDeps(),
+      CONFIG,
+    );
+    assertEquals(res.status, 200);
+    const body = await res.json();
+    assertEquals(body.client_id, REGISTERED_CLIENT.clientId);
+    assertEquals(body.client_name, REGISTERED_CLIENT.clientName);
+    assertEquals(body.client_uri, REGISTERED_CLIENT.clientUri);
+    // Never the secret hash or anything else from the row.
+    assertEquals(Object.prototype.hasOwnProperty.call(body, "client_secret_hash"), false);
+    assertEquals(Object.prototype.hasOwnProperty.call(body, "redirect_uris"), false);
+  },
+);
+
+Deno.test(
+  "POST /client-info 404s for an unknown client_id rather than leaking existence info",
+  async () => {
+    const res = await handleRequest(
+      req("https://project.supabase.co/functions/v1/oauth/client-info", {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ client_id: "does-not-exist" }),
+      }),
+      fakeDeps(),
+      CONFIG,
+    );
+    assertEquals(res.status, 404);
+    const body = await res.json();
+    assertEquals(body.error, "invalid_client");
+  },
+);
+
+Deno.test("POST /client-info requires a client_id", async () => {
+  const res = await handleRequest(
+    req("https://project.supabase.co/functions/v1/oauth/client-info", {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({}),
+    }),
+    fakeDeps(),
+    CONFIG,
+  );
+  assertEquals(res.status, 400);
 });
 
 // ---------- Authorize (plan gate is the important part) ----------

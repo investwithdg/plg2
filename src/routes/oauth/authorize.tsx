@@ -1,5 +1,5 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { toast as sonnerToast } from "sonner";
 import { useAuth } from "@/hooks/useAuth";
 import { usePlanTier } from "@/hooks/usePlanTier";
@@ -43,6 +43,11 @@ export const Route = createFileRoute("/oauth/authorize")({
   component: OAuthAuthorizePage,
 });
 
+interface ClientInfo {
+  clientName: string | null;
+  clientUri: string | null;
+}
+
 function OAuthAuthorizePage() {
   const search = Route.useSearch();
   const { user, session, loading: authLoading, signIn, signUp } = useAuth();
@@ -51,8 +56,46 @@ function OAuthAuthorizePage() {
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [upgradeRequired, setUpgradeRequired] = useState(false);
+  const [clientInfo, setClientInfo] = useState<ClientInfo | null>(null);
+  const [clientInfoLoading, setClientInfoLoading] = useState(true);
+  const [clientNotFound, setClientNotFound] = useState(false);
 
   const missingParams = !search.client_id || !search.redirect_uri || !search.code_challenge;
+
+  // Dynamic client registration (oauth/register) is unauthenticated, so anyone can register a
+  // client and send a signed-in user an /authorize link. Fetch the requesting client's display
+  // identity BEFORE showing the consent screen, so "Approve" always names the app being
+  // authorized instead of a generic "an app wants access" prompt a phishing page could hide
+  // behind. This lookup is itself public (no auth) — the client_id in the URL isn't a secret,
+  // same as how Google/GitHub show an app's name on their consent screens to anyone with a
+  // valid client_id.
+  useEffect(() => {
+    if (missingParams || !search.client_id) return;
+    let cancelled = false;
+    setClientInfoLoading(true);
+    supabase.functions
+      .invoke("oauth/client-info", { body: { client_id: search.client_id } })
+      .then(({ data, error: invokeError }) => {
+        if (cancelled) return;
+        if (invokeError || !data || data.error) {
+          setClientNotFound(true);
+        } else {
+          setClientInfo({
+            clientName: data.client_name ?? null,
+            clientUri: data.client_uri ?? null,
+          });
+        }
+      })
+      .catch(() => {
+        if (!cancelled) setClientNotFound(true);
+      })
+      .finally(() => {
+        if (!cancelled) setClientInfoLoading(false);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [missingParams, search.client_id]);
 
   const handleAuth = async (email: string, password: string, mode: "signin" | "signup") => {
     const err =
@@ -115,6 +158,18 @@ function OAuthAuthorizePage() {
     );
   }
 
+  if (clientNotFound) {
+    return (
+      <CenteredWindow title="Unknown App">
+        <p className="text-win95-11 text-slate-700">
+          This connection request isn&apos;t coming from a recognized app and can&apos;t be
+          approved. If you followed a link to get here, don&apos;t approve it — ask whoever sent it
+          to you to verify the request.
+        </p>
+      </CenteredWindow>
+    );
+  }
+
   if (authLoading) {
     return (
       <CenteredWindow title="Connect an App">
@@ -169,16 +224,49 @@ function OAuthAuthorizePage() {
     );
   }
 
+  if (clientInfoLoading) {
+    return (
+      <CenteredWindow title="Connect an App">
+        <p className="text-win95-11 text-muted-foreground">
+          Verifying the app requesting access...
+        </p>
+      </CenteredWindow>
+    );
+  }
+
+  const requesterLabel = clientInfo?.clientName?.trim() || "An unverified app";
+
   return (
     <CenteredWindow title="Connect an App">
       <div className="space-y-3">
         <p className="text-win95-12 text-slate-900">
-          An app is requesting access to generate and check listing copy on behalf of your PLG
-          account (<span className="font-bold">{user.email}</span>).
+          <span className="font-bold">{requesterLabel}</span> is requesting access to generate and
+          check listing copy on behalf of your PLG account (
+          <span className="font-bold">{user.email}</span>).
         </p>
+        {clientInfo?.clientUri && (
+          <p className="text-win95-11 text-slate-600">
+            App website:{" "}
+            <a
+              href={clientInfo.clientUri}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="underline"
+            >
+              {clientInfo.clientUri}
+            </a>
+          </p>
+        )}
+        {!clientInfo?.clientName && (
+          <p className="text-win95-11 font-bold text-red-800">
+            This app didn&apos;t provide a name when it registered. Only approve this if you
+            recognize and trust exactly what sent you here.
+          </p>
+        )}
         <p className="text-win95-11 text-slate-700">
           It will be able to generate listings and run compliance checks using your Pro/Elite
-          access. You can revoke this at any time from your account hub.
+          access. Only approve apps you recognize — this connection stays active until it expires or
+          your plan changes.
         </p>
         {error && <p className="text-win95-11 text-[color:var(--destructive)]">{error}</p>}
         <div className="flex gap-2 justify-end pt-2">

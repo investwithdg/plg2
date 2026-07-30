@@ -31,6 +31,7 @@ interface ClientRow {
   response_types: string[];
   token_endpoint_auth_method: string;
   scope: string | null;
+  metadata: { client_uri?: string | null; logo_uri?: string | null } | null;
   created_at: string;
 }
 
@@ -39,6 +40,8 @@ function rowToStoredClient(row: ClientRow): StoredClient {
     clientId: row.client_id,
     clientSecretHash: row.client_secret_hash,
     clientName: row.client_name,
+    clientUri: row.metadata?.client_uri ?? null,
+    logoUri: row.metadata?.logo_uri ?? null,
     redirectUris: row.redirect_uris,
     grantTypes: row.grant_types,
     responseTypes: row.response_types,
