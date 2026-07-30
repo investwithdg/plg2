@@ -16,18 +16,18 @@ export function useGoogleAutocomplete() {
   useEffect(() => {
     if (!apiKey) return;
 
-    if (window.google?.maps?.places) {
+    if ((window as any).google?.maps?.places) {
       setIsLoaded(true);
-      autocompleteServiceRef.current = new window.google.maps.places.AutocompleteService();
-      sessionTokenRef.current = new window.google.maps.places.AutocompleteSessionToken();
+      autocompleteServiceRef.current = new (window as any).google.maps.places.AutocompleteService();
+      sessionTokenRef.current = new (window as any).google.maps.places.AutocompleteSessionToken();
       return;
     }
 
     const callbackName = "initGoogleMapsCallback";
     (window as any)[callbackName] = () => {
       setIsLoaded(true);
-      autocompleteServiceRef.current = new window.google.maps.places.AutocompleteService();
-      sessionTokenRef.current = new window.google.maps.places.AutocompleteSessionToken();
+      autocompleteServiceRef.current = new (window as any).google.maps.places.AutocompleteService();
+      sessionTokenRef.current = new (window as any).google.maps.places.AutocompleteSessionToken();
     };
 
     const script = document.createElement("script");
@@ -35,7 +35,10 @@ export function useGoogleAutocomplete() {
     script.async = true;
     script.defer = true;
     script.onerror = (err) => {
-      console.error("Google Maps API script failed to load. Check VITE_GOOGLE_MAPS_API_KEY value or connectivity:", err);
+      console.error(
+        "Google Maps API script failed to load. Check VITE_GOOGLE_MAPS_API_KEY value or connectivity:",
+        err,
+      );
     };
     document.head.appendChild(script);
 
@@ -69,7 +72,7 @@ export function useGoogleAutocomplete() {
             results.map((r: any) => ({
               description: r.description,
               placeId: r.place_id,
-            }))
+            })),
           );
         } else {
           if (status !== "ZERO_RESULTS") {
@@ -77,7 +80,7 @@ export function useGoogleAutocomplete() {
           }
           setPredictions([]);
         }
-      }
+      },
     );
   };
 
@@ -86,8 +89,8 @@ export function useGoogleAutocomplete() {
   };
 
   const refreshSessionToken = () => {
-    if (window.google?.maps?.places) {
-      sessionTokenRef.current = new window.google.maps.places.AutocompleteSessionToken();
+    if ((window as any).google?.maps?.places) {
+      sessionTokenRef.current = new (window as any).google.maps.places.AutocompleteSessionToken();
     }
   };
 
