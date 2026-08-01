@@ -3,6 +3,13 @@
 // implementations of McpDeps live in deps.ts.
 import { getCorsHeaders, getPublicCorsHeaders } from "../_shared/cors.ts";
 
+// tools/call results get JSON.stringify'd into a single text block below with no size control
+// of its own, so read-many tools have to bound themselves. A caller asking for 100 listings
+// with three long copy variants each is the worst case these two constants exist to cap.
+export const LISTINGS_DEFAULT_LIMIT = 20;
+export const LISTINGS_MAX_LIMIT = 100;
+export const LISTING_COPY_MAX_CHARS = 2000;
+
 export const TOOLS = [
   {
     name: "generate_listing",
@@ -34,6 +41,43 @@ export const TOOLS = [
       required: ["text", "channel"],
     },
   },
+  {
+    name: "list_listings",
+    description:
+      "List your own previously generated listings, newest first, with their MLS/social/email copy. " +
+      "This is how you retrieve a listing that generate_listing returned only a propertyId for " +
+      "because generation hadn't finished before its poll timed out.",
+    inputSchema: {
+      type: "object",
+      properties: {
+        propertyId: { type: "string", description: "Return just this one listing" },
+        limit: {
+          type: "number",
+          description: `Max listings to return (default ${LISTINGS_DEFAULT_LIMIT}, max ${LISTINGS_MAX_LIMIT})`,
+        },
+        since: { type: "string", description: "ISO date — only listings created at or after this" },
+      },
+    },
+  },
+  {
+    name: "get_property_research",
+    description:
+      "Neighborhood research PLG has already gathered for an area — schools, transit, amenities, " +
+      "walkability, market overview, median home value, and the sources behind them. Cached at " +
+      "city/state/zip level, so any address in the same zip returns the same research.",
+    inputSchema: {
+      type: "object",
+      properties: {
+        address: {
+          type: "string",
+          description: "Full address; only its city/state/zip portion is used to look up research",
+        },
+        city: { type: "string" },
+        state: { type: "string", description: "Two-letter state code, e.g. OH" },
+        zip: { type: "string" },
+      },
+    },
+  },
 ];
 
 export interface Violation {
@@ -43,6 +87,37 @@ export interface Violation {
 }
 
 export type PlanTier = "free" | "pro" | "elite";
+
+/** One row of list_listings: a `properties` row plus whichever `copy_generations` variants
+ * exist for it. copy_type in the DB is one of mls | social | email, hence exactly these three
+ * optional fields — a listing still generating simply has none of them yet. */
+export interface ListingSummary {
+  propertyId: string;
+  address: string;
+  status: string;
+  createdAt: string;
+  mls?: string;
+  social?: string;
+  email?: string;
+}
+
+/** Field names deliberately mirror the DB rather than being re-cased: these are exactly the
+ * keys inside `enrichment_cache.enrichment_data`, which are in turn exactly the column names
+ * on the per-property `enrichments` table. Keeping them identical means this tool's output can
+ * be matched up against either source without a translation table. */
+export interface PropertyResearch {
+  /** The `cache_key` row this matched — echoed back so a caller can see that a request for one
+   * address resolved to neighborhood-level ("city, state zip") research, not a per-address hit. */
+  matched_key: string;
+  researched_at: string;
+  schools: unknown;
+  transit_options: unknown;
+  nearby_amenities: unknown;
+  walkability_score: number | null;
+  market_overview: string;
+  median_home_value: number | null;
+  key_sources: unknown;
+}
 
 export interface McpDeps {
   /** Returns the resolved plan alongside userId (not just a boolean) so callers — chiefly
@@ -71,10 +146,57 @@ export interface McpDeps {
     plan: PlanTier,
     tool: string,
   ) => Promise<{ allowed: boolean; retryAfterSeconds?: number }>;
+  /** The caller's OWN listings, newest first. Every query in deps.ts runs through the SERVICE
+   * ROLE client, which bypasses RLS completely — so the `properties.user_id = userId` filter
+   * inside the implementation is the only thing keeping one user out of another's listings,
+   * with no database-side safety net behind it. userId is passed separately from the filters
+   * for exactly that reason: it is not a caller-supplied option, and `filters` (which IS
+   * caller-supplied) must never be able to widen the set of rows beyond that one user's. */
+  listListings: (
+    userId: string,
+    filters: { propertyId?: string; limit?: number; since?: string },
+  ) => Promise<ListingSummary[]>;
+  /** Neighborhood research from `enrichment_cache` — market data PLG already paid Perplexity
+   * for, cached at "city, state zip" granularity and shared across every user and property in
+   * that area. Unlike listListings there is deliberately no user scoping: nothing here is
+   * user-owned. Returns null when that area hasn't been researched yet. */
+  getPropertyResearch: (query: {
+    address?: string;
+    city?: string;
+    state?: string;
+    zip?: string;
+  }) => Promise<PropertyResearch | null>;
   /** RFC 9728 OAuth 2.0 Protected Resource Metadata for this MCP server, served
    * at GET .well-known/oauth-protected-resource so MCP clients (claude.ai etc.)
    * can discover the `oauth` edge function as the authorization server. */
   getProtectedResourceMetadata: () => Record<string, unknown>;
+}
+
+/** Clamp a caller-supplied `limit` into [1, LISTINGS_MAX_LIMIT], falling back to the default
+ * for anything non-numeric, non-finite, or <= 0. Applied here rather than only in deps.ts so
+ * the bound holds for any McpDeps implementation, not just the Supabase-backed one. */
+export function clampListingLimit(raw: unknown): number {
+  const n = typeof raw === "number" ? raw : Number(raw);
+  if (!Number.isFinite(n) || n <= 0) return LISTINGS_DEFAULT_LIMIT;
+  return Math.min(Math.floor(n), LISTINGS_MAX_LIMIT);
+}
+
+function truncateCopy(value: string | undefined): string | undefined {
+  if (typeof value !== "string" || value.length <= LISTING_COPY_MAX_CHARS) return value;
+  const dropped = value.length - LISTING_COPY_MAX_CHARS;
+  return `${value.slice(0, LISTING_COPY_MAX_CHARS)}… [truncated ${dropped} chars — full copy at /listing/]`;
+}
+
+/** Bound each listing's copy fields before they reach the single JSON.stringify'd text block.
+ * Listing copy is normally well under the cap; this exists so one pathological row (or a
+ * limit=100 request) can't produce a multi-megabyte tool result. */
+function truncateListing(listing: ListingSummary): ListingSummary {
+  return {
+    ...listing,
+    ...(listing.mls !== undefined ? { mls: truncateCopy(listing.mls) } : {}),
+    ...(listing.social !== undefined ? { social: truncateCopy(listing.social) } : {}),
+    ...(listing.email !== undefined ? { email: truncateCopy(listing.email) } : {}),
+  };
 }
 
 export async function runTool(
@@ -128,6 +250,40 @@ export async function runTool(
     }
     case "rewrite_for_channel":
       return { status: "not_wired", note: "TODO: call the rewrite pipeline", args };
+    case "list_listings": {
+      // caller.userId — never anything out of `args`. A caller-supplied user/owner argument is
+      // exactly the parameter this tool must not have: the whole point is that it can only ever
+      // see the listings belonging to the token that was just verified.
+      const listings = await deps.listListings(caller.userId, {
+        propertyId: typeof args.propertyId === "string" ? args.propertyId : undefined,
+        since: typeof args.since === "string" ? args.since : undefined,
+        limit: clampListingLimit(args.limit),
+      });
+      return { count: listings.length, listings: listings.map(truncateListing) };
+    }
+    case "get_property_research": {
+      const query = {
+        address: typeof args.address === "string" ? args.address : undefined,
+        city: typeof args.city === "string" ? args.city : undefined,
+        state: typeof args.state === "string" ? args.state : undefined,
+        zip: typeof args.zip === "string" ? args.zip : undefined,
+      };
+      if (!query.address && !query.city && !query.zip) {
+        return {
+          error: "invalid_arguments",
+          message: "Provide 'address', or at least one of 'city' / 'zip'.",
+        };
+      }
+      const research = await deps.getPropertyResearch(query);
+      if (!research) {
+        return {
+          status: "not_found",
+          message:
+            "No research cached for that area yet — it gets populated the first time a listing is generated there.",
+        };
+      }
+      return research;
+    }
     default:
       return { error: "unknown tool: " + String(name) };
   }
