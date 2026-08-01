@@ -1,10 +1,21 @@
 // Real (Supabase-backed) implementation of McpDeps. Kept separate from handler.ts
 // so the request-handling logic can be unit-tested without resolving supabase-js.
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
-import type { McpDeps, Violation } from "./handler.ts";
+import type { McpDeps, PlanTier, Violation } from "./handler.ts";
 import { hashApiKey, isApiKey } from "../_shared/apiKeys.ts";
 import { isMcpEligiblePlan, resolvePlanTier } from "../_shared/planTier.ts";
 import { sha256Hex } from "../_shared/oauthCrypto.ts";
+
+// Per-hour caps for Pro/Elite MCP callers. Pro/Elite skip every free-tier cap downstream in
+// receive-property (see its `hasProPlan` branch) on both the web AND the MCP path — this is
+// the ONLY throttle MCP traffic gets, so it needs to exist even though the equivalent web UI
+// has no matching limit (a human clicking buttons can't approach these rates; an agent can).
+const RATE_LIMITS: Record<string, Record<"pro" | "elite", number>> = {
+  generate_listing: { pro: 30, elite: 100 },
+  compliance_check: { pro: 120, elite: 300 },
+  rewrite_for_channel: { pro: 120, elite: 300 },
+};
+const RATE_LIMIT_WINDOW_MS = 60 * 60 * 1000;
 
 // Baseline fair-housing prohibited phrases (mirrors src/lib/compliance/index.ts —
 // duplicated rather than imported since Deno edge functions and the Vite/React
@@ -62,7 +73,7 @@ async function getPlanForUser(supabase: ReturnType<typeof createClient>, userId:
 async function verifyApiKey(
   supabase: ReturnType<typeof createClient>,
   token: string,
-): Promise<{ userId: string } | null> {
+): Promise<{ userId: string; plan: PlanTier } | null> {
   const keyHash = await hashApiKey(token);
   const { data: keyRow } = await apiKeysTable(supabase)
     .select("id, user_id, revoked_at")
@@ -82,13 +93,13 @@ async function verifyApiKey(
 
   const plan = await getPlanForUser(supabase, keyRow.user_id as string);
   if (!isMcpEligiblePlan(plan)) return null; // free tier: API key exists but MCP stays locked
-  return { userId: keyRow.user_id as string };
+  return { userId: keyRow.user_id as string, plan };
 }
 
 async function verifyOAuthToken(
   supabase: ReturnType<typeof createClient>,
   token: string,
-): Promise<{ userId: string } | null> {
+): Promise<{ userId: string; plan: PlanTier } | null> {
   const tokenHash = await sha256Hex(token);
   const { data } = await oauthTokensTable(supabase)
     .select("user_id, expires_at, revoked_at")
@@ -104,13 +115,13 @@ async function verifyOAuthToken(
   const plan = await getPlanForUser(supabase, userId);
   if (!isMcpEligiblePlan(plan)) return null;
 
-  return { userId };
+  return { userId, plan };
 }
 
 async function verifySessionJwt(
   supabase: ReturnType<typeof createClient>,
   token: string,
-): Promise<{ userId: string } | null> {
+): Promise<{ userId: string; plan: PlanTier } | null> {
   // Full Supabase user session JWT (browser-style auth). No known caller currently uses this
   // path from the website itself (generate_listing forwards into receive-property, which does
   // its own free-tier caps/Pro gating independently) — it exists so an MCP client can also
@@ -122,7 +133,7 @@ async function verifySessionJwt(
   const userId = data.claims.sub as string;
   const plan = await getPlanForUser(supabase, userId);
   if (!isMcpEligiblePlan(plan)) return null;
-  return { userId };
+  return { userId, plan };
 }
 
 export function defaultDeps(): McpDeps {
@@ -167,13 +178,54 @@ export function defaultDeps(): McpDeps {
       };
     },
 
-    async invokeReceiveProperty(args, authHeader) {
+    async invokeReceiveProperty(args, userId) {
+      // receive-property can only resolve a caller's identity from a real Supabase session
+      // JWT (supabase.auth.getClaims) — but MCP callers just as often authenticate via API
+      // key or an opaque OAuth token, neither of which is a JWT it could verify. verifyCaller
+      // has ALREADY authenticated and plan-gated this caller by the time we get here, so we
+      // pass the resolved userId over a shared-secret internal channel instead of forwarding
+      // the original bearer token — same pattern receive-property already uses to trust
+      // process-property (x-internal-secret / PROCESS_PROPERTY_SECRET).
       const { data, error } = await serviceClient().functions.invoke("receive-property", {
-        headers: { Authorization: authHeader },
+        headers: {
+          "x-mcp-internal-secret": Deno.env.get("MCP_INTERNAL_SECRET") ?? "",
+          "x-mcp-user-id": userId,
+        },
         body: args,
       });
       if (error) return { error: error.message };
       return data;
+    },
+
+    async checkRateLimit(userId, plan, tool) {
+      const limit = plan === "elite" || plan === "pro" ? RATE_LIMITS[tool]?.[plan] : undefined;
+      if (!limit) return { allowed: true }; // unrecognized tool: nothing to throttle here
+
+      const supabase = serviceClient();
+      const windowStart = new Date(Date.now() - RATE_LIMIT_WINDOW_MS).toISOString();
+      const { count, error } = await (supabase.from("mcp_tool_calls" as never) as any)
+        .select("id", { count: "exact", head: true })
+        .eq("user_id", userId)
+        .eq("tool", tool)
+        .gte("created_at", windowStart);
+
+      // Fail open: a rate-limit-check error shouldn't take down the whole tool call — this
+      // mirrors receive-property's usageCheckUnavailableResponse posture (degrade gracefully
+      // rather than block legitimate paid users over an infra hiccup).
+      if (error) return { allowed: true };
+      if ((count ?? 0) >= limit) return { allowed: false, retryAfterSeconds: 3600 };
+
+      // Record this call. Fire-and-forget, same as api_keys.last_used_at — the rate limit is
+      // a soft protection against runaway loops, not a security boundary, so a lost row under
+      // rare write-failure conditions just means one ungated call, not a broken gate.
+      (supabase.from("mcp_tool_calls" as never) as any)
+        .insert({ user_id: userId, tool })
+        .then(
+          () => {},
+          () => {},
+        );
+
+      return { allowed: true };
     },
 
     async waitForCompletion(propertyId) {

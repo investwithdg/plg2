@@ -247,12 +247,26 @@ serve(async (req) => {
     supabase = createClient(supabaseUrl, supabaseServiceKey);
 
     // Identify caller
-    const authHeader = req.headers.get("Authorization");
     let userId: string | null = null;
-    if (authHeader?.startsWith("Bearer ")) {
-      const token = authHeader.replace("Bearer ", "");
-      const { data: claimsData, error: claimsError } = await supabase.auth.getClaims(token);
-      if (!claimsError && claimsData?.claims) userId = claimsData.claims.sub as string;
+
+    // Trusted internal caller: the mcp/ edge function has ALREADY authenticated and
+    // plan-gated this request (via API key, OAuth token, or session JWT — see
+    // mcp/deps.ts's verifyCaller) before ever reaching us. None of those first two auth
+    // methods are Supabase session JWTs, so getClaims() below can't verify them itself —
+    // mcp/ instead passes the already-resolved user id over this shared-secret channel
+    // (same pattern as the x-internal-secret handoff to process-property further down).
+    const mcpInternalSecret = req.headers.get("x-mcp-internal-secret");
+    const expectedMcpSecret = Deno.env.get("MCP_INTERNAL_SECRET");
+    const mcpUserId = req.headers.get("x-mcp-user-id");
+    if (mcpInternalSecret && expectedMcpSecret && mcpInternalSecret === expectedMcpSecret && mcpUserId) {
+      userId = mcpUserId;
+    } else {
+      const authHeader = req.headers.get("Authorization");
+      if (authHeader?.startsWith("Bearer ")) {
+        const token = authHeader.replace("Bearer ", "");
+        const { data: claimsData, error: claimsError } = await supabase.auth.getClaims(token);
+        if (!claimsError && claimsData?.claims) userId = claimsData.claims.sub as string;
+      }
     }
 
     const ipRaw =

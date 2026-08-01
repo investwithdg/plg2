@@ -42,14 +42,35 @@ export interface Violation {
   guidance?: string;
 }
 
+export type PlanTier = "free" | "pro" | "elite";
+
 export interface McpDeps {
-  verifyCaller: (authHeader: string | null) => Promise<{ userId: string } | null>;
+  /** Returns the resolved plan alongside userId (not just a boolean) so callers — chiefly
+   * checkRateLimit below — don't need a second round-trip to re-derive "what plan is this
+   * user on" after verifyCaller already resolved it. */
+  verifyCaller: (authHeader: string | null) => Promise<{ userId: string; plan: PlanTier } | null>;
+  /** Runs generate_listing's downstream pipeline as the ALREADY-VERIFIED caller identified by
+   * userId — not by forwarding the caller's original bearer token. receive-property can only
+   * resolve identity from a real Supabase session JWT (supabase.auth.getClaims), but MCP
+   * callers authenticate via API key or opaque OAuth token just as often, neither of which
+   * receive-property can verify itself. Passing the pre-resolved userId (over a service-role
+   * / shared-secret channel — see deps.ts) is what makes generate_listing actually work for
+   * every MCP auth method, not just a copied browser session token. */
   invokeReceiveProperty: (
     args: Record<string, unknown>,
-    authHeader: string,
+    userId: string,
   ) => Promise<{ propertyId?: string; success?: boolean; message?: string; error?: string }>;
   waitForCompletion: (propertyId: string) => Promise<Record<string, unknown> | null>;
   checkCompliance: (text: string, board?: string) => Promise<{ passed: boolean; violations: Violation[] }>;
+  /** Pro/Elite users have no throttle at all downstream (receive-property's free-tier caps
+   * are skipped entirely for paid plans), and an agent can call tools far faster/more
+   * repetitively than a human clicking the website — this is the only throttle MCP traffic
+   * gets. Called once per tools/call, right after verifyCaller succeeds. */
+  checkRateLimit: (
+    userId: string,
+    plan: PlanTier,
+    tool: string,
+  ) => Promise<{ allowed: boolean; retryAfterSeconds?: number }>;
   /** RFC 9728 OAuth 2.0 Protected Resource Metadata for this MCP server, served
    * at GET .well-known/oauth-protected-resource so MCP clients (claude.ai etc.)
    * can discover the `oauth` edge function as the authorization server. */
@@ -67,6 +88,15 @@ export async function runTool(
     return { error: "unauthorized", message: "A valid PLG account Bearer token is required to call tools." };
   }
 
+  const rateLimit = await deps.checkRateLimit(caller.userId, caller.plan, name);
+  if (!rateLimit.allowed) {
+    return {
+      error: "rate_limited",
+      message: `Too many ${name} calls — try again in ${rateLimit.retryAfterSeconds ?? 60}s.`,
+      retryAfterSeconds: rateLimit.retryAfterSeconds,
+    };
+  }
+
   switch (name) {
     case "generate_listing": {
       const url = typeof args.url === "string" ? args.url : undefined;
@@ -76,7 +106,7 @@ export async function runTool(
       }
       const dispatch = await deps.invokeReceiveProperty(
         { url, address: url ? undefined : details, source: "mcp" },
-        authHeader as string,
+        caller.userId,
       );
       if (dispatch.error || !dispatch.propertyId) {
         return { error: dispatch.error ?? "dispatch_failed", message: dispatch.message };
@@ -205,6 +235,25 @@ export async function handleRequest(req: Request, deps: McpDeps): Promise<Respon
     );
     const unauthorized =
       !!result && typeof result === "object" && (result as { error?: string }).error === "unauthorized";
+    const rateLimited =
+      !!result && typeof result === "object" && (result as { error?: string }).error === "rate_limited";
+
+    if (rateLimited) {
+      const retryAfterSeconds = (result as { retryAfterSeconds?: number }).retryAfterSeconds;
+      const headers = {
+        ...corsHeaders,
+        ...(retryAfterSeconds ? { "Retry-After": String(retryAfterSeconds) } : {}),
+      };
+      return jsonRpcResponse(
+        {
+          jsonrpc: "2.0",
+          id,
+          error: { code: -32002, message: (result as { message?: string }).message ?? "Rate limited" },
+        },
+        429,
+        headers,
+      );
+    }
 
     if (unauthorized) {
       // MCP Authorization spec: a 401 MUST carry WWW-Authenticate pointing at

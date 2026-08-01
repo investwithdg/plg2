@@ -6,10 +6,11 @@ import { handleRequest, runTool, type McpDeps, type Violation } from "./handler.
 
 function fakeDeps(overrides: Partial<McpDeps> = {}): McpDeps {
   return {
-    verifyCaller: async () => ({ userId: "user-1" }),
+    verifyCaller: async () => ({ userId: "user-1", plan: "pro" }),
     invokeReceiveProperty: async () => ({ propertyId: "prop-1", success: true }),
     waitForCompletion: async () => ({ status: "complete", mls: "MLS copy", social: "Social copy" }),
     checkCompliance: async () => ({ passed: true, violations: [] as Violation[] }),
+    checkRateLimit: async () => ({ allowed: true }),
     getProtectedResourceMetadata: () => ({
       resource: "https://project.supabase.co/functions/v1/mcp",
       authorization_servers: ["https://project.supabase.co/functions/v1/oauth"],
@@ -133,6 +134,44 @@ Deno.test("tools/call compliance_check flags a baseline prohibited phrase", asyn
 Deno.test("tools/call for an unknown tool returns an error shape", async () => {
   const result = await runTool("delete_everything", {}, "Bearer test-jwt", fakeDeps());
   assertEquals((result as { error?: string }).error, "unknown tool: delete_everything");
+});
+
+Deno.test("generate_listing passes the resolved caller userId, not the raw bearer token, to invokeReceiveProperty", async () => {
+  const seen: unknown[] = [];
+  const deps = fakeDeps({
+    verifyCaller: async () => ({ userId: "resolved-user-id", plan: "pro" }),
+    invokeReceiveProperty: async (args, userId) => {
+      seen.push(userId);
+      return { propertyId: "prop-1", success: true };
+    },
+  });
+  await runTool("generate_listing", { details: "123 Main St" }, "Bearer plg_live_abc123", deps);
+  assertEquals(seen[0], "resolved-user-id");
+});
+
+Deno.test("a rate-limited caller gets a rate_limited error instead of the tool running", async () => {
+  const deps = fakeDeps({ checkRateLimit: async () => ({ allowed: false, retryAfterSeconds: 120 }) });
+  const result = await runTool("compliance_check", { text: "clean copy" }, "Bearer test-jwt", deps);
+  assertEquals((result as { error?: string }).error, "rate_limited");
+  assertEquals((result as { retryAfterSeconds?: number }).retryAfterSeconds, 120);
+});
+
+Deno.test("handleRequest tools/call surfaces a rate limit as 429 with Retry-After", async () => {
+  const deps = fakeDeps({ checkRateLimit: async () => ({ allowed: false, retryAfterSeconds: 45 }) });
+  const res = await handleRequest(
+    req({
+      jsonrpc: "2.0",
+      id: 9,
+      method: "tools/call",
+      params: { name: "compliance_check", arguments: { text: "clean copy" } },
+    }),
+    deps,
+  );
+  assertEquals(res.status, 429);
+  assertEquals(res.headers.get("Retry-After"), "45");
+  const body = await res.json();
+  assertEquals(body.id, 9);
+  assertEquals(body.error.code, -32002);
 });
 
 Deno.test("GET .well-known/oauth-protected-resource returns the OAuth resource metadata, no auth required", async () => {
