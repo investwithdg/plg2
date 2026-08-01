@@ -182,6 +182,12 @@ function Pricing() {
                   <li className="flex gap-2">
                     <span className="font-bold text-[var(--win95-blue)]">+</span>
                     <span>
+                      <strong>Connect PLG to Claude</strong> — generate listings from chat
+                    </span>
+                  </li>
+                  <li className="flex gap-2">
+                    <span className="font-bold text-[var(--win95-blue)]">+</span>
+                    <span>
                       <strong>Priority support</strong>
                     </span>
                   </li>
@@ -238,6 +244,12 @@ function Pricing() {
                     <span className="font-bold">+</span>
                     <span>
                       <strong>Vision+</strong> Photo analysis & feature extraction
+                    </span>
+                  </li>
+                  <li className="flex gap-2">
+                    <span className="font-bold">+</span>
+                    <span>
+                      <strong>API keys</strong> — connect Claude Desktop, Cursor & other MCP clients
                     </span>
                   </li>
                   <li className="flex gap-2">

@@ -1,6 +1,6 @@
 // Smoke tests for the manage-api-keys edge function. Real network/Supabase calls are never
 // exercised — handleRequest()/dispatch() take an injectable ManageApiKeysDeps so these test
-// the request/response contract, the auth gate, and (critically) the Pro/Elite plan gate on
+// the request/response contract, the auth gate, and (critically) the Elite-only plan gate on
 // key creation, without touching a live Supabase project.
 import { assertEquals } from "../_shared/testAssert.ts";
 import { dispatch, handleRequest, type ApiKeySummary, type ManageApiKeysDeps } from "./handler.ts";
@@ -56,9 +56,9 @@ Deno.test("handleRequest rejects an invalid session token", async () => {
 });
 
 Deno.test(
-  "dispatch create: a Pro user can create a key and receives the plaintext exactly once",
+  "dispatch create: an Elite user can create a key and receives the plaintext exactly once",
   async () => {
-    const deps = fakeDeps({ getUserPlan: async () => "pro" });
+    const deps = fakeDeps({ getUserPlan: async () => "elite" });
     const { status, body } = await dispatch("create", { name: "Claude Desktop" }, "user-1", deps);
     assertEquals(status, 200);
     assertEquals(body.key, "plg_live_abcd1234efghijklmnopqrstuvwxyz01");
@@ -68,11 +68,24 @@ Deno.test(
   },
 );
 
-Deno.test("dispatch create: an Elite user can also create a key", async () => {
-  const deps = fakeDeps({ getUserPlan: async () => "elite" });
-  const { status } = await dispatch("create", {}, "user-1", deps);
-  assertEquals(status, 200);
-});
+Deno.test(
+  "dispatch create: a Pro user is rejected — static keys are Elite-only, Pro connects via OAuth",
+  async () => {
+    let createCalled = false;
+    const deps = fakeDeps({
+      getUserPlan: async () => "pro",
+      createApiKey: async () => {
+        createCalled = true;
+        throw new Error("should not be called");
+      },
+    });
+    const { status, body } = await dispatch("create", {}, "user-1", deps);
+    assertEquals(status, 403);
+    assertEquals(body.error, "forbidden_plan");
+    assertEquals(body.message, "API key generation requires an Elite plan.");
+    assertEquals(createCalled, false);
+  },
+);
 
 Deno.test(
   "dispatch create: a free-tier user is rejected with a clear upgrade message, and no key is created",
@@ -88,7 +101,7 @@ Deno.test(
     const { status, body } = await dispatch("create", {}, "user-1", deps);
     assertEquals(status, 403);
     assertEquals(body.error, "forbidden_plan");
-    assertEquals(body.message, "API key generation requires a Pro or Elite plan.");
+    assertEquals(body.message, "API key generation requires an Elite plan.");
     assertEquals(createCalled, false);
   },
 );
@@ -103,6 +116,29 @@ Deno.test("dispatch list: returns key metadata only, never the hash or plaintext
   assertEquals(Object.prototype.hasOwnProperty.call(keys[0], "key"), false);
   assertEquals(Object.prototype.hasOwnProperty.call(keys[0], "keyHash"), false);
 });
+
+Deno.test(
+  "dispatch list/revoke: stay ungated by plan so a downgraded user can still see and revoke keys",
+  async () => {
+    let planChecked = false;
+    const deps = fakeDeps({
+      getUserPlan: async () => {
+        planChecked = true;
+        return "free";
+      },
+    });
+
+    const listed = await dispatch("list", {}, "user-1", deps);
+    assertEquals(listed.status, 200);
+    assertEquals((listed.body.keys as ApiKeySummary[]).length, 1);
+
+    const revoked = await dispatch("revoke", { id: "key-1" }, "user-1", deps);
+    assertEquals(revoked.status, 200);
+    assertEquals(revoked.body.ok, true);
+
+    assertEquals(planChecked, false);
+  },
+);
 
 Deno.test("dispatch revoke: requires an id", async () => {
   const { status, body } = await dispatch("revoke", {}, "user-1", fakeDeps());
