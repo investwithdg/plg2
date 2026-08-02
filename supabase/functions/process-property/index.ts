@@ -7,8 +7,20 @@ import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { z } from "https://deno.land/x/zod@v3.22.4/mod.ts";
 import { getCorsHeaders } from "../_shared/cors.ts";
 import { getProfile } from "../_shared/propertyProfiles.ts";
+import {
+  aggregatePhotoAnalyses,
+  PHOTO_FEATURES_PROMPT_ADDENDUM,
+} from "../_shared/photoAnalysis.ts";
 
-const BodySchema = z.object({ propertyId: z.string().uuid() });
+// `reason` is an optional caller-supplied tag for this run. The only value with behaviour
+// attached is "photo_enrichment" (sent by analyze-property-photos) — see the re-processing
+// guard in serve() below.
+const BodySchema = z.object({
+  propertyId: z.string().uuid(),
+  reason: z.string().optional(),
+});
+
+const PHOTO_ENRICHMENT_REASON = "photo_enrichment";
 
 const PERPLEXITY_URL = "https://api.perplexity.ai/chat/completions";
 const OPENAI_CHAT_URL = "https://api.openai.com/v1/chat/completions";
@@ -584,12 +596,43 @@ async function generateCopy(
   return { content: text, latencyMs: Date.now() - start, usage };
 }
 
-async function process(propertyId: string) {
+/**
+ * Loads every completed Vision+ photo analysis for this property and folds them into one
+ * `photo_features` block. Returns null when the property has no analyzed photos (the common
+ * case: non-Elite users, or the first, text-only pass before photos have been processed).
+ * Never throws — a photo lookup problem must not fail the whole listing generation.
+ */
+async function loadPhotoFeatures(
+  supabase: ReturnType<typeof createClient>,
+  propertyId: string,
+): Promise<ReturnType<typeof aggregatePhotoAnalyses>> {
+  try {
+    const { data, error } = await (supabase.from("property_photos" as never) as any)
+      .select("analysis")
+      .eq("property_id", propertyId)
+      .eq("status", "complete");
+    if (error) {
+      log(propertyId, "photo_features_load_failed", { error: error.message });
+      return null;
+    }
+    const analyses = (data ?? []).map(
+      (row: Record<string, unknown>) => row.analysis as Record<string, unknown> | null,
+    );
+    return aggregatePhotoAnalyses(analyses);
+  } catch (err) {
+    log(propertyId, "photo_features_load_failed", {
+      error: err instanceof Error ? err.message : "Unknown error",
+    });
+    return null;
+  }
+}
+
+async function process(propertyId: string, reason?: string) {
   const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
   const supabaseServiceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
   const supabase = createClient(supabaseUrl, supabaseServiceKey);
 
-  log(propertyId, "start");
+  log(propertyId, "start", reason ? { reason } : undefined);
   const totalStart = Date.now();
   let failedStep: string | null = null;
 
@@ -611,6 +654,16 @@ async function process(propertyId: string) {
     const propertyType = (property.property_type as string) || "sfr";
     const profile = getProfile(propertyType);
     log(propertyId, "profile_resolved", { propertyType, profileLabel: profile.label });
+
+    // Vision+ photo features (Elite-only, written by analyze-property-photos). Present only
+    // on a re-run triggered after photo analysis; null on the fast first pass.
+    const photoFeatures = await loadPhotoFeatures(supabase, propertyId);
+    if (photoFeatures) {
+      log(propertyId, "photo_features_loaded", {
+        photosAnalyzed: photoFeatures.photos_analyzed,
+        featureCount: photoFeatures.features.length,
+      });
+    }
 
     // 1) EXTRACTION
     failedStep = "extraction";
@@ -760,6 +813,7 @@ async function process(propertyId: string) {
           existing_compliant_details: fhaCompliantParts || undefined,
         },
         neighborhood: enrich,
+        ...(photoFeatures ? { photo_features: photoFeatures } : {}),
       },
       null,
       2,
@@ -775,7 +829,9 @@ async function process(propertyId: string) {
     // Compose system prompt with profile-specific voice directive
     const composedSystemPrompt =
       FHA_SYSTEM_PROMPT +
-      `\n\nProperty type context (${profile.label}):\n${profile.copy.voiceDirective}`;
+      `\n\nProperty type context (${profile.label}):\n${profile.copy.voiceDirective}` +
+      // Only added when there is actually a photo_features block in the context JSON.
+      (photoFeatures ? PHOTO_FEATURES_PROMPT_ADDENDUM : "");
 
     const results = await Promise.allSettled(
       copyTypes.map((c, i) =>
@@ -897,9 +953,15 @@ serve(async (req) => {
     }
     const body = BodySchema.parse(await req.json());
     // Re-processing guard: bail out early if this property is already complete.
+    //
+    // Narrow, named exception: a Vision+ photo-enrichment run (analyze-property-photos) is
+    // *expected* to arrive after the fast text-only listing already finished, and its whole
+    // purpose is to regenerate that copy with the photo features folded in. Every other
+    // caller still hits the guard.
+    const isPhotoEnrichment = body.reason === PHOTO_ENRICHMENT_REASON;
     const supabaseUrl = Deno.env.get("SUPABASE_URL");
     const supabaseServiceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY");
-    if (supabaseUrl && supabaseServiceKey) {
+    if (!isPhotoEnrichment && supabaseUrl && supabaseServiceKey) {
       const supabase = createClient(supabaseUrl, supabaseServiceKey);
       const { data: existing } = await supabase
         .from("properties")
@@ -914,7 +976,7 @@ serve(async (req) => {
       }
     }
     // @ts-expect-error EdgeRuntime is provided by Supabase Edge Runtime
-    EdgeRuntime.waitUntil(process(body.propertyId));
+    EdgeRuntime.waitUntil(process(body.propertyId, body.reason));
     return new Response(JSON.stringify({ accepted: true }), {
       status: 202,
       headers: { ...corsHeaders, "Content-Type": "application/json" },

@@ -28,3 +28,12 @@ export function resolvePlanTier(rows: SubscriptionRow[] | null | undefined): Pla
 export function isMcpEligiblePlan(plan: PlanTier | string | null | undefined): boolean {
   return plan === "pro" || plan === "elite";
 }
+
+/**
+ * Vision+ (property photo analysis) is an Elite-EXCLUSIVE feature per product decision.
+ * Deliberately narrower than isMcpEligiblePlan: Pro is NOT eligible here. Kept as its own
+ * named helper so the two gates can never drift into each other by accident.
+ */
+export function isEliteOnlyPlan(plan: PlanTier | string | null | undefined): boolean {
+  return plan === "elite";
+}
