@@ -5,10 +5,11 @@
  *
  * Two states, mirroring the server-side gate in supabase/functions/manage-api-keys/handler.ts:
  *   free        — upgrade prompt for the Pro "Connect to Claude" OAuth flow.
- *   pro/elite   — OAuth connect flow (no key needed, the primary path for both plans) + API key
- *                 generation for static-config clients (Claude Desktop, Cursor). Deliberately NOT
- *                 Elite-exclusive — most agents don't want to manage keys either way, so this
- *                 isn't the axis Elite differentiates on.
+ *   pro/elite   — OAuth connect flow (no key needed, the primary and only path most users ever
+ *                 see) + API key generation for static-config clients (Claude Desktop, Cursor),
+ *                 tucked behind an "Advanced" toggle so it never reads as the primary option.
+ *                 Deliberately Pro+Elite, not Elite-exclusive — most agents don't want to manage
+ *                 keys either way, so this isn't the axis Elite differentiates on.
  */
 import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
@@ -42,6 +43,7 @@ export default function ApiKeysPanel({ plan }: ApiKeysPanelProps) {
   const [newKey, setNewKey] = useState<string | null>(null);
   const [copied, setCopied] = useState(false);
   const [urlCopied, setUrlCopied] = useState(false);
+  const [showAdvanced, setShowAdvanced] = useState(false);
 
   const isPaidUser = plan === "pro" || plan === "elite";
 
@@ -61,9 +63,11 @@ export default function ApiKeysPanel({ plan }: ApiKeysPanelProps) {
     }
   };
 
+  // Keys are only fetched once the Advanced section is actually opened — most users never
+  // touch this, so there's no reason to hit manage-api-keys on every hub page load.
   useEffect(() => {
-    if (isPaidUser) loadKeys();
-  }, [isPaidUser]);
+    if (isPaidUser && showAdvanced && keys === null) loadKeys();
+  }, [isPaidUser, showAdvanced, keys]);
 
   const handleCreate = async () => {
     setCreating(true);
@@ -154,69 +158,90 @@ export default function ApiKeysPanel({ plan }: ApiKeysPanelProps) {
                 <RetroButton onClick={handleCopyUrl}>{urlCopied ? "Copied!" : "Copy"}</RetroButton>
               </div>
               <p className="text-win95-11 text-slate-600">
-                Using Claude Desktop, Cursor, or another MCP client that needs a static config
-                instead? Use the same URL with an API key below.
+                Not sure what to type once it's connected?{" "}
+                <Link to="/docs/claude" className="underline">
+                  See setup steps &amp; example prompts
+                </Link>
+                .
               </p>
             </div>
 
-            {newKey && (
-              <div className="win95-raised bg-card p-3 space-y-2">
-                <p className="text-win95-11 font-bold text-red-800">
-                  Copy this key now — it will not be shown again.
+            <button
+              type="button"
+              onClick={() => setShowAdvanced((v) => !v)}
+              className="text-win95-11 text-slate-600 underline text-left"
+            >
+              {showAdvanced ? "▾" : "▸"} Advanced: static API keys for Claude Desktop, Cursor &amp;
+              other config-file clients
+            </button>
+
+            {showAdvanced && (
+              <div className="space-y-4">
+                <p className="text-win95-11 text-slate-600">
+                  Only needed for MCP clients that can't do the OAuth flow above and instead take a
+                  bearer token in a config file. Use the same URL with a key below.
                 </p>
+
+                {newKey && (
+                  <div className="win95-raised bg-card p-3 space-y-2">
+                    <p className="text-win95-11 font-bold text-red-800">
+                      Copy this key now — it will not be shown again.
+                    </p>
+                    <div className="flex flex-wrap items-center gap-2">
+                      <code className="text-win95-11 bg-white win95-inset px-2 py-1 break-all">
+                        {newKey}
+                      </code>
+                      <RetroButton onClick={handleCopy}>{copied ? "Copied!" : "Copy"}</RetroButton>
+                    </div>
+                  </div>
+                )}
+
                 <div className="flex flex-wrap items-center gap-2">
-                  <code className="text-win95-11 bg-white win95-inset px-2 py-1 break-all">
-                    {newKey}
-                  </code>
-                  <RetroButton onClick={handleCopy}>{copied ? "Copied!" : "Copy"}</RetroButton>
+                  <RetroInput
+                    placeholder="Key name (e.g. Claude Desktop)"
+                    value={name}
+                    onChange={(e) => setName(e.target.value)}
+                    className="max-w-xs"
+                    maxLength={200}
+                  />
+                  <RetroButton onClick={handleCreate} disabled={creating} variant="primary">
+                    {creating ? "Generating..." : "Generate New Key"}
+                  </RetroButton>
+                </div>
+
+                <div className="space-y-2">
+                  {loading && <p className="text-win95-11 text-slate-600">Loading keys...</p>}
+                  {!loading && keys && keys.length === 0 && (
+                    <p className="text-win95-11 text-slate-600">No API keys yet.</p>
+                  )}
+                  {!loading &&
+                    keys?.map((k) => (
+                      <div
+                        key={k.id}
+                        className="win95-raised bg-card px-3 py-2 flex flex-wrap items-center justify-between gap-2"
+                      >
+                        <div>
+                          <span className="text-win95-11 font-bold block">
+                            {k.name || "Unnamed key"}
+                          </span>
+                          <span className="text-win95-11 text-slate-600">
+                            {k.keyPrefix}... · created {new Date(k.createdAt).toLocaleDateString()}
+                            {k.lastUsedAt
+                              ? ` · last used ${new Date(k.lastUsedAt).toLocaleDateString()}`
+                              : ""}
+                            {k.revokedAt ? " · REVOKED" : ""}
+                          </span>
+                        </div>
+                        {!k.revokedAt && (
+                          <RetroButton onClick={() => handleRevoke(k.id)} className="text-red-800">
+                            Revoke
+                          </RetroButton>
+                        )}
+                      </div>
+                    ))}
                 </div>
               </div>
             )}
-
-            <div className="flex flex-wrap items-center gap-2">
-              <RetroInput
-                placeholder="Key name (e.g. Claude Desktop)"
-                value={name}
-                onChange={(e) => setName(e.target.value)}
-                className="max-w-xs"
-                maxLength={200}
-              />
-              <RetroButton onClick={handleCreate} disabled={creating} variant="primary">
-                {creating ? "Generating..." : "Generate New Key"}
-              </RetroButton>
-            </div>
-
-            <div className="space-y-2">
-              {loading && <p className="text-win95-11 text-slate-600">Loading keys...</p>}
-              {!loading && keys && keys.length === 0 && (
-                <p className="text-win95-11 text-slate-600">No API keys yet.</p>
-              )}
-              {!loading &&
-                keys?.map((k) => (
-                  <div
-                    key={k.id}
-                    className="win95-raised bg-card px-3 py-2 flex flex-wrap items-center justify-between gap-2"
-                  >
-                    <div>
-                      <span className="text-win95-11 font-bold block">
-                        {k.name || "Unnamed key"}
-                      </span>
-                      <span className="text-win95-11 text-slate-600">
-                        {k.keyPrefix}... · created {new Date(k.createdAt).toLocaleDateString()}
-                        {k.lastUsedAt
-                          ? ` · last used ${new Date(k.lastUsedAt).toLocaleDateString()}`
-                          : ""}
-                        {k.revokedAt ? " · REVOKED" : ""}
-                      </span>
-                    </div>
-                    {!k.revokedAt && (
-                      <RetroButton onClick={() => handleRevoke(k.id)} className="text-red-800">
-                        Revoke
-                      </RetroButton>
-                    )}
-                  </div>
-                ))}
-            </div>
           </div>
         )}
       </div>
