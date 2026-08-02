@@ -1,5 +1,5 @@
 import { assertEquals } from "./testAssert.ts";
-import { isMcpEligiblePlan, resolvePlanTier } from "./planTier.ts";
+import { isEliteOnlyPlan, isMcpEligiblePlan, resolvePlanTier } from "./planTier.ts";
 
 Deno.test("resolvePlanTier: no rows -> free", () => {
   assertEquals(resolvePlanTier(null), "free");
@@ -30,4 +30,13 @@ Deno.test("isMcpEligiblePlan: pro and elite are eligible, free is not", () => {
   assertEquals(isMcpEligiblePlan(null), false);
   assertEquals(isMcpEligiblePlan(undefined), false);
   assertEquals(isMcpEligiblePlan("bogus"), false);
+});
+
+Deno.test("isEliteOnlyPlan: only elite passes — Pro is deliberately excluded", () => {
+  assertEquals(isEliteOnlyPlan("elite"), true);
+  assertEquals(isEliteOnlyPlan("pro"), false);
+  assertEquals(isEliteOnlyPlan("free"), false);
+  assertEquals(isEliteOnlyPlan(null), false);
+  assertEquals(isEliteOnlyPlan(undefined), false);
+  assertEquals(isEliteOnlyPlan("bogus"), false);
 });
