@@ -58,17 +58,20 @@ export async function dispatch(
 ): Promise<{ status: number; body: Record<string, unknown> }> {
   switch (action) {
     case "create": {
-      // Elite-only gate. MCP/agent access itself is a Pro+Elite feature, but Pro reaches it
-      // through the OAuth "Add custom connector" flow (no key needed). Long-lived static keys —
-      // for Claude Desktop, Cursor, and other config-file MCP clients — are an Elite add-on.
-      // Reject up front with a clear message rather than silently minting a key.
+      // Paid-tier gate: MCP/agent access (and therefore API keys, which exist only to reach
+      // it) is a Pro+Elite incentive, not a free-tier feature. Reject up front with a clear
+      // message rather than silently minting a key that verifyCaller will refuse at call time.
+      // Deliberately NOT Elite-only: OAuth is the primary, no-setup path for everyone, but
+      // static API keys (Claude Desktop, Cursor, etc.) stay available on Pro too — most real
+      // estate agents aren't going to want to deal with key management either way, so this
+      // isn't the axis Elite differentiates on.
       const plan = await deps.getUserPlan(userId);
-      if (plan !== "elite") {
+      if (plan !== "pro" && plan !== "elite") {
         return {
           status: 403,
           body: {
             error: "forbidden_plan",
-            message: "API key generation requires an Elite plan.",
+            message: "API key generation requires a Pro or Elite plan.",
           },
         };
       }

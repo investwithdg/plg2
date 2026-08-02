@@ -248,12 +248,6 @@ function Pricing() {
                   </li>
                   <li className="flex gap-2">
                     <span className="font-bold">+</span>
-                    <span>
-                      <strong>API keys</strong> — connect Claude Desktop, Cursor & other MCP clients
-                    </span>
-                  </li>
-                  <li className="flex gap-2">
-                    <span className="font-bold">+</span>
                     <span>Custom brand voice training</span>
                   </li>
                   <li className="flex gap-2">
