@@ -8,6 +8,39 @@ export type Database = {
   };
   public: {
     Tables: {
+      api_keys: {
+        Row: {
+          created_at: string;
+          id: string;
+          key_hash: string;
+          key_prefix: string;
+          last_used_at: string | null;
+          name: string | null;
+          revoked_at: string | null;
+          user_id: string;
+        };
+        Insert: {
+          created_at?: string;
+          id?: string;
+          key_hash: string;
+          key_prefix: string;
+          last_used_at?: string | null;
+          name?: string | null;
+          revoked_at?: string | null;
+          user_id: string;
+        };
+        Update: {
+          created_at?: string;
+          id?: string;
+          key_hash?: string;
+          key_prefix?: string;
+          last_used_at?: string | null;
+          name?: string | null;
+          revoked_at?: string | null;
+          user_id?: string;
+        };
+        Relationships: [];
+      };
       compliance_checks: {
         Row: {
           board: string;
@@ -186,6 +219,10 @@ export type Database = {
           extraction_input_tokens: number | null;
           extraction_output_tokens: number | null;
           id: string;
+          photo_analysis_cost_usd: number | null;
+          photo_analysis_input_tokens: number | null;
+          photo_analysis_model_version: string | null;
+          photo_analysis_output_tokens: number | null;
           property_id: string;
           total_cost_usd: number | null;
           total_input_tokens: number | null;
@@ -204,6 +241,10 @@ export type Database = {
           extraction_input_tokens?: number | null;
           extraction_output_tokens?: number | null;
           id?: string;
+          photo_analysis_cost_usd?: number | null;
+          photo_analysis_input_tokens?: number | null;
+          photo_analysis_model_version?: string | null;
+          photo_analysis_output_tokens?: number | null;
           property_id: string;
           total_cost_usd?: number | null;
           total_input_tokens?: number | null;
@@ -222,6 +263,10 @@ export type Database = {
           extraction_input_tokens?: number | null;
           extraction_output_tokens?: number | null;
           id?: string;
+          photo_analysis_cost_usd?: number | null;
+          photo_analysis_input_tokens?: number | null;
+          photo_analysis_model_version?: string | null;
+          photo_analysis_output_tokens?: number | null;
           property_id?: string;
           total_cost_usd?: number | null;
           total_input_tokens?: number | null;
@@ -283,6 +328,27 @@ export type Database = {
           },
         ];
       };
+      mcp_tool_calls: {
+        Row: {
+          created_at: string;
+          id: string;
+          tool: string;
+          user_id: string;
+        };
+        Insert: {
+          created_at?: string;
+          id?: string;
+          tool: string;
+          user_id: string;
+        };
+        Update: {
+          created_at?: string;
+          id?: string;
+          tool?: string;
+          user_id?: string;
+        };
+        Relationships: [];
+      };
       mls_rules: {
         Row: {
           active: boolean;
@@ -319,6 +385,139 @@ export type Database = {
           severity?: string;
           updated_at?: string;
           version?: number;
+        };
+        Relationships: [];
+      };
+      oauth_access_tokens: {
+        Row: {
+          client_id: string;
+          created_at: string;
+          expires_at: string;
+          id: string;
+          revoked_at: string | null;
+          scope: string | null;
+          token_hash: string;
+          user_id: string;
+        };
+        Insert: {
+          client_id: string;
+          created_at?: string;
+          expires_at: string;
+          id?: string;
+          revoked_at?: string | null;
+          scope?: string | null;
+          token_hash: string;
+          user_id: string;
+        };
+        Update: {
+          client_id?: string;
+          created_at?: string;
+          expires_at?: string;
+          id?: string;
+          revoked_at?: string | null;
+          scope?: string | null;
+          token_hash?: string;
+          user_id?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "oauth_access_tokens_client_id_fkey";
+            columns: ["client_id"];
+            isOneToOne: false;
+            referencedRelation: "oauth_clients";
+            referencedColumns: ["client_id"];
+          },
+        ];
+      };
+      oauth_authorization_codes: {
+        Row: {
+          client_id: string;
+          code_challenge: string;
+          code_challenge_method: string;
+          code_hash: string;
+          created_at: string;
+          expires_at: string;
+          id: string;
+          redirect_uri: string;
+          resource: string | null;
+          scope: string | null;
+          used_at: string | null;
+          user_id: string;
+        };
+        Insert: {
+          client_id: string;
+          code_challenge: string;
+          code_challenge_method?: string;
+          code_hash: string;
+          created_at?: string;
+          expires_at: string;
+          id?: string;
+          redirect_uri: string;
+          resource?: string | null;
+          scope?: string | null;
+          used_at?: string | null;
+          user_id: string;
+        };
+        Update: {
+          client_id?: string;
+          code_challenge?: string;
+          code_challenge_method?: string;
+          code_hash?: string;
+          created_at?: string;
+          expires_at?: string;
+          id?: string;
+          redirect_uri?: string;
+          resource?: string | null;
+          scope?: string | null;
+          used_at?: string | null;
+          user_id?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "oauth_authorization_codes_client_id_fkey";
+            columns: ["client_id"];
+            isOneToOne: false;
+            referencedRelation: "oauth_clients";
+            referencedColumns: ["client_id"];
+          },
+        ];
+      };
+      oauth_clients: {
+        Row: {
+          client_id: string;
+          client_name: string | null;
+          client_secret_hash: string | null;
+          created_at: string;
+          grant_types: Json;
+          metadata: Json;
+          redirect_uris: Json;
+          response_types: Json;
+          scope: string | null;
+          token_endpoint_auth_method: string;
+        };
+        Insert: {
+          client_id?: string;
+          client_name?: string | null;
+          client_secret_hash?: string | null;
+          created_at?: string;
+          grant_types?: Json;
+          metadata?: Json;
+          redirect_uris: Json;
+          response_types?: Json;
+          scope?: string | null;
+          token_endpoint_auth_method?: string;
+        };
+        Update: {
+          client_id?: string;
+          client_name?: string | null;
+          client_secret_hash?: string | null;
+          created_at?: string;
+          grant_types?: Json;
+          metadata?: Json;
+          redirect_uris?: Json;
+          response_types?: Json;
+          scope?: string | null;
+          token_endpoint_auth_method?: string;
         };
         Relationships: [];
       };
