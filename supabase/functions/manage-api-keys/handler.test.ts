@@ -104,6 +104,29 @@ Deno.test("dispatch list: returns key metadata only, never the hash or plaintext
   assertEquals(Object.prototype.hasOwnProperty.call(keys[0], "keyHash"), false);
 });
 
+Deno.test(
+  "dispatch list/revoke: stay ungated by plan so a downgraded user can still see and revoke keys",
+  async () => {
+    let planChecked = false;
+    const deps = fakeDeps({
+      getUserPlan: async () => {
+        planChecked = true;
+        return "free";
+      },
+    });
+
+    const listed = await dispatch("list", {}, "user-1", deps);
+    assertEquals(listed.status, 200);
+    assertEquals((listed.body.keys as ApiKeySummary[]).length, 1);
+
+    const revoked = await dispatch("revoke", { id: "key-1" }, "user-1", deps);
+    assertEquals(revoked.status, 200);
+    assertEquals(revoked.body.ok, true);
+
+    assertEquals(planChecked, false);
+  },
+);
+
 Deno.test("dispatch revoke: requires an id", async () => {
   const { status, body } = await dispatch("revoke", {}, "user-1", fakeDeps());
   assertEquals(status, 400);
@@ -149,7 +172,7 @@ Deno.test("end-to-end: OPTIONS preflight and a full authenticated create round-t
 
   const res = await handleRequest(
     req({ action: "create", name: "Cursor" }, { Authorization: "Bearer test-jwt" }),
-    fakeDeps({ getUserPlan: async () => "elite" }),
+    fakeDeps({ getUserPlan: async () => "pro" }),
   );
   assertEquals(res.status, 200);
   const body = await res.json();

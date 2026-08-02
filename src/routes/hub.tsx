@@ -152,8 +152,8 @@ function UserHubPage() {
           </div>
         </RetroWindow>
 
-        {/* MCP API keys for agent/Claude Desktop/Cursor access (Pro+Elite only) */}
-        <ApiKeysPanel isProUser={isProUser} />
+        {/* Claude/MCP connection: OAuth connector on Pro+Elite, static API keys on Elite only */}
+        <ApiKeysPanel plan={plan} />
 
         {/* Listings history rendering inside the Hub */}
         <ListingHistory userId={user.id} isProUser={isProUser} />

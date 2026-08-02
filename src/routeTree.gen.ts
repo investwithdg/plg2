@@ -20,6 +20,7 @@ import { Route as CompareIndexRouteImport } from './routes/compare/index'
 import { Route as BlogIndexRouteImport } from './routes/blog/index'
 import { Route as OauthAuthorizeRouteImport } from './routes/oauth/authorize'
 import { Route as ListingIdRouteImport } from './routes/listing/$id'
+import { Route as DocsClaudeRouteImport } from './routes/docs/claude'
 import { Route as CompareZillowRouteImport } from './routes/compare/zillow'
 import { Route as CompareWritesonicRouteImport } from './routes/compare/writesonic'
 import { Route as CompareVirtualstagingaiRouteImport } from './routes/compare/virtualstagingai'
@@ -93,6 +94,11 @@ const OauthAuthorizeRoute = OauthAuthorizeRouteImport.update({
 const ListingIdRoute = ListingIdRouteImport.update({
   id: '/listing/$id',
   path: '/listing/$id',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const DocsClaudeRoute = DocsClaudeRouteImport.update({
+  id: '/docs/claude',
+  path: '/docs/claude',
   getParentRoute: () => rootRouteImport,
 } as any)
 const CompareZillowRoute = CompareZillowRouteImport.update({
@@ -218,6 +224,7 @@ export interface FileRoutesByFullPath {
   '/compare/virtualstagingai': typeof CompareVirtualstagingaiRoute
   '/compare/writesonic': typeof CompareWritesonicRoute
   '/compare/zillow': typeof CompareZillowRoute
+  '/docs/claude': typeof DocsClaudeRoute
   '/listing/$id': typeof ListingIdRoute
   '/oauth/authorize': typeof OauthAuthorizeRoute
   '/blog/': typeof BlogIndexRoute
@@ -250,6 +257,7 @@ export interface FileRoutesByTo {
   '/compare/virtualstagingai': typeof CompareVirtualstagingaiRoute
   '/compare/writesonic': typeof CompareWritesonicRoute
   '/compare/zillow': typeof CompareZillowRoute
+  '/docs/claude': typeof DocsClaudeRoute
   '/listing/$id': typeof ListingIdRoute
   '/oauth/authorize': typeof OauthAuthorizeRoute
   '/blog': typeof BlogIndexRoute
@@ -283,6 +291,7 @@ export interface FileRoutesById {
   '/compare/virtualstagingai': typeof CompareVirtualstagingaiRoute
   '/compare/writesonic': typeof CompareWritesonicRoute
   '/compare/zillow': typeof CompareZillowRoute
+  '/docs/claude': typeof DocsClaudeRoute
   '/listing/$id': typeof ListingIdRoute
   '/oauth/authorize': typeof OauthAuthorizeRoute
   '/blog/': typeof BlogIndexRoute
@@ -317,6 +326,7 @@ export interface FileRouteTypes {
     | '/compare/virtualstagingai'
     | '/compare/writesonic'
     | '/compare/zillow'
+    | '/docs/claude'
     | '/listing/$id'
     | '/oauth/authorize'
     | '/blog/'
@@ -349,6 +359,7 @@ export interface FileRouteTypes {
     | '/compare/virtualstagingai'
     | '/compare/writesonic'
     | '/compare/zillow'
+    | '/docs/claude'
     | '/listing/$id'
     | '/oauth/authorize'
     | '/blog'
@@ -381,6 +392,7 @@ export interface FileRouteTypes {
     | '/compare/virtualstagingai'
     | '/compare/writesonic'
     | '/compare/zillow'
+    | '/docs/claude'
     | '/listing/$id'
     | '/oauth/authorize'
     | '/blog/'
@@ -414,6 +426,7 @@ export interface RootRouteChildren {
   CompareVirtualstagingaiRoute: typeof CompareVirtualstagingaiRoute
   CompareWritesonicRoute: typeof CompareWritesonicRoute
   CompareZillowRoute: typeof CompareZillowRoute
+  DocsClaudeRoute: typeof DocsClaudeRoute
   ListingIdRoute: typeof ListingIdRoute
   OauthAuthorizeRoute: typeof OauthAuthorizeRoute
   BlogIndexRoute: typeof BlogIndexRoute
@@ -497,6 +510,13 @@ declare module '@tanstack/react-router' {
       path: '/listing/$id'
       fullPath: '/listing/$id'
       preLoaderRoute: typeof ListingIdRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/docs/claude': {
+      id: '/docs/claude'
+      path: '/docs/claude'
+      fullPath: '/docs/claude'
+      preLoaderRoute: typeof DocsClaudeRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/compare/zillow': {
@@ -662,6 +682,7 @@ const rootRouteChildren: RootRouteChildren = {
   CompareVirtualstagingaiRoute: CompareVirtualstagingaiRoute,
   CompareWritesonicRoute: CompareWritesonicRoute,
   CompareZillowRoute: CompareZillowRoute,
+  DocsClaudeRoute: DocsClaudeRoute,
   ListingIdRoute: ListingIdRoute,
   OauthAuthorizeRoute: OauthAuthorizeRoute,
   BlogIndexRoute: BlogIndexRoute,

@@ -61,6 +61,10 @@ export async function dispatch(
       // Paid-tier gate: MCP/agent access (and therefore API keys, which exist only to reach
       // it) is a Pro+Elite incentive, not a free-tier feature. Reject up front with a clear
       // message rather than silently minting a key that verifyCaller will refuse at call time.
+      // Deliberately NOT Elite-only: OAuth is the primary, no-setup path for everyone, but
+      // static API keys (Claude Desktop, Cursor, etc.) stay available on Pro too — most real
+      // estate agents aren't going to want to deal with key management either way, so this
+      // isn't the axis Elite differentiates on.
       const plan = await deps.getUserPlan(userId);
       if (plan !== "pro" && plan !== "elite") {
         return {
