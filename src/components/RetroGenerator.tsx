@@ -12,8 +12,10 @@ import GenerationProgressModal from "@/components/GenerationProgressModal";
 import AuthModal from "@/components/AuthModal";
 import ListingHistory from "@/components/ListingHistory";
 import TurnstileWidget from "@/components/TurnstileWidget";
+import PhotoAttachmentTray from "@/components/PhotoAttachmentTray";
 import { RetroButton, RetroInput, RetroWindow } from "@/components/retro";
 import ResearchDossier from "@/components/ResearchDossier";
+import { analyzePropertyPhotos, uploadPropertyPhotos } from "@/lib/propertyPhotos";
 import { describeFunctionInvokeError, parsePropertyInput } from "@/lib/parsePropertyInput";
 import { track } from "@/lib/posthog";
 import { useGoogleAutocomplete } from "@/hooks/useGoogleAutocomplete";
@@ -32,6 +34,9 @@ type PropertyType =
   | "row";
 
 type PaywallReason = "free_limit" | "pro_tier_limit" | "upgrade_intent";
+
+/** Vision+ background photo pipeline state (Elite only). */
+type PhotoEnhancementStatus = "idle" | "uploading" | "analyzing" | "complete" | "error";
 
 const MAX_GENERATIONS = 10;
 const FREE_PRO_TIER_LIMIT = 1;
@@ -145,6 +150,18 @@ export default function RetroGenerator() {
   const [showMismatchWarning, setShowMismatchWarning] = useState(false);
   const { plan } = usePlanTier(user);
   const isProUser = plan === "pro" || plan === "elite";
+  // Vision+ is Elite-exclusive. Non-Elite users don't see the tray at all —
+  // this stays a clean upsell surface rather than a locked/disabled control.
+  const isEliteUser = plan === "elite" && !!user;
+
+  // Files currently sitting in the attachment tray (pre-upload), plus a key we
+  // bump to remount — and therefore clear — the tray after a successful submit.
+  const [attachedPhotos, setAttachedPhotos] = useState<File[]>([]);
+  const [photoTrayKey, setPhotoTrayKey] = useState(0);
+  const [photoEnhancement, setPhotoEnhancement] = useState<{
+    status: PhotoEnhancementStatus;
+    count: number;
+  }>({ status: "idle", count: 0 });
 
   const {
     status,
@@ -186,6 +203,54 @@ export default function RetroGenerator() {
     },
     [user?.email],
   );
+
+  /**
+   * Vision+ background pipeline. Runs only after `receive-property` has handed
+   * back a real propertyId (the photos need a property_id to attach to), and is
+   * never awaited by the generation flow — the fast text-only listing renders on
+   * its normal ~15s timeline regardless of what happens in here. Any failure
+   * (bucket/table/function not deployed yet, RLS, network) is swallowed into a
+   * non-blocking toast.
+   */
+  const attachPhotos = useCallback(async (propId: string, userId: string, files: File[]) => {
+    setPhotoEnhancement({ status: "uploading", count: files.length });
+    try {
+      const { uploaded, failed } = await uploadPropertyPhotos({
+        propertyId: propId,
+        userId,
+        files,
+      });
+
+      if (uploaded === 0) {
+        setPhotoEnhancement({ status: "error", count: 0 });
+        sonnerToast.error("Couldn't attach your photos", {
+          description: "Your listing was generated without them.",
+        });
+        return;
+      }
+
+      if (failed > 0) {
+        sonnerToast.error(`${failed} photo${failed === 1 ? "" : "s"} failed to upload`, {
+          description: `Continuing with ${uploaded}.`,
+        });
+      }
+
+      setPhotoEnhancement({ status: "analyzing", count: uploaded });
+      track("vision_photos_uploaded", { property_id: propId, photo_count: uploaded });
+
+      await analyzePropertyPhotos(propId);
+
+      setPhotoEnhancement({ status: "complete", count: uploaded });
+      // Cheap refresh so the photo-enhanced copy shows up in listing history.
+      setHistoryKey((k) => k + 1);
+    } catch (err) {
+      console.error("Vision+ photo enhancement failed:", err);
+      setPhotoEnhancement({ status: "error", count: files.length });
+      sonnerToast.error("Photo enhancement unavailable", {
+        description: await describeFunctionInvokeError(err),
+      });
+    }
+  }, []);
 
   // --- Social proof: total generation count ---
   useEffect(() => {
@@ -293,6 +358,7 @@ export default function RetroGenerator() {
 
     setOutputs(null);
     setPropertyId(null);
+    setPhotoEnhancement({ status: "idle", count: 0 });
     setShowProgress(true);
     isGeneratingRef.current = true;
 
@@ -337,6 +403,16 @@ export default function RetroGenerator() {
 
       if (data?.propertyId) {
         setPropertyId(data.propertyId);
+
+        // Vision+: the property row now exists, so photos have something to
+        // attach to. Fire-and-forget — never awaited, never blocks the listing.
+        if (isEliteUser && user && attachedPhotos.length > 0) {
+          const pendingPhotos = attachedPhotos;
+          setAttachedPhotos([]);
+          setPhotoTrayKey((k) => k + 1); // remount the tray => clears its state
+          void attachPhotos(data.propertyId as string, user.id, pendingPhotos);
+        }
+
         if (!user) {
           setGenerationsUsed((prev) => prev + 1);
           if (selectedProTier) setProTierGenerationsUsed((prev) => prev + 1);
@@ -543,6 +619,10 @@ export default function RetroGenerator() {
               </RetroButton>
             </div>
 
+            {isEliteUser && (
+              <PhotoAttachmentTray key={photoTrayKey} onPhotosChange={setAttachedPhotos} />
+            )}
+
             <PropertyTypeToggle
               value={propertyType}
               onChange={setPropertyType}
@@ -573,6 +653,32 @@ export default function RetroGenerator() {
             </div>
           </div>
         </RetroWindow>
+
+        {photoEnhancement.status !== "idle" && (
+          <div className="w-full max-w-3xl">
+            <div className="win95-raised bg-card px-3 py-2 flex items-center justify-between gap-2 flex-wrap">
+              <span className="text-win95-11">
+                {photoEnhancement.status === "uploading" &&
+                  `Uploading ${photoEnhancement.count} photo${
+                    photoEnhancement.count === 1 ? "" : "s"
+                  }...`}
+                {photoEnhancement.status === "analyzing" &&
+                  `Enhancing with your photos... (${photoEnhancement.count} analyzing in the background)`}
+                {photoEnhancement.status === "complete" &&
+                  "Photo enhancement complete — reopen this listing to see the photo-aware copy."}
+                {photoEnhancement.status === "error" &&
+                  "Photo enhancement didn't run. Your listing copy is unaffected."}
+              </span>
+              <button
+                className="win95-control-btn"
+                aria-label="Dismiss"
+                onClick={() => setPhotoEnhancement({ status: "idle", count: 0 })}
+              >
+                x
+              </button>
+            </div>
+          </div>
+        )}
 
         {outputs && (
           <div className="w-full max-w-3xl">

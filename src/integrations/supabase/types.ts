@@ -418,6 +418,47 @@ export type Database = {
         };
         Relationships: [];
       };
+      property_photos: {
+        Row: {
+          analysis: Json | null;
+          created_at: string;
+          error_message: string | null;
+          id: string;
+          property_id: string;
+          status: string;
+          storage_path: string;
+          user_id: string;
+        };
+        Insert: {
+          analysis?: Json | null;
+          created_at?: string;
+          error_message?: string | null;
+          id?: string;
+          property_id: string;
+          status?: string;
+          storage_path: string;
+          user_id: string;
+        };
+        Update: {
+          analysis?: Json | null;
+          created_at?: string;
+          error_message?: string | null;
+          id?: string;
+          property_id?: string;
+          status?: string;
+          storage_path?: string;
+          user_id?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "property_photos_property_id_fkey";
+            columns: ["property_id"];
+            isOneToOne: false;
+            referencedRelation: "properties";
+            referencedColumns: ["id"];
+          },
+        ];
+      };
       subscriptions: {
         Row: {
           cancel_at_period_end: boolean;
