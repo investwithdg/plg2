@@ -26,11 +26,15 @@ const envBackup = {
   STRIPE_SECRET_KEY: Deno.env.get("STRIPE_SECRET_KEY"),
   STRIPE_PRICE_MONTHLY: Deno.env.get("STRIPE_PRICE_MONTHLY"),
   STRIPE_PRICE_ANNUAL: Deno.env.get("STRIPE_PRICE_ANNUAL"),
+  STRIPE_PRICE_ELITE_MONTHLY: Deno.env.get("STRIPE_PRICE_ELITE_MONTHLY"),
+  STRIPE_PRICE_ELITE_ANNUAL: Deno.env.get("STRIPE_PRICE_ELITE_ANNUAL"),
 };
 function setStripeEnv() {
   Deno.env.set("STRIPE_SECRET_KEY", "sk_test_fake");
   Deno.env.set("STRIPE_PRICE_MONTHLY", "price_monthly_fake");
   Deno.env.set("STRIPE_PRICE_ANNUAL", "price_annual_fake");
+  Deno.env.set("STRIPE_PRICE_ELITE_MONTHLY", "price_elite_monthly_fake");
+  Deno.env.set("STRIPE_PRICE_ELITE_ANNUAL", "price_elite_annual_fake");
 }
 function restoreEnv() {
   for (const [k, v] of Object.entries(envBackup)) {
@@ -103,6 +107,78 @@ Deno.test("successful checkout returns the Stripe session url and forwards user 
   assertEquals(capturedParams?.get("client_reference_id"), "user-1");
   assertEquals(capturedParams?.get("customer_email"), "agent@example.com");
   assertEquals(capturedParams?.get("line_items[0][price]"), "price_annual_fake");
+  restoreEnv();
+});
+
+Deno.test("plan defaults to 'pro' when omitted, for backward compatibility", async () => {
+  setStripeEnv();
+  let capturedParams: URLSearchParams | undefined;
+  const deps = fakeDeps({
+    createStripeSession: async (params) => {
+      capturedParams = params;
+      return { ok: true, session: { id: "cs_test_1", url: "https://checkout.stripe.com/cs_test_1" } };
+    },
+  });
+  const res = await handleRequest(req({ interval: "month" }, { Authorization: "Bearer good" }), deps);
+  assertEquals(res.status, 200);
+  assertEquals(capturedParams?.get("line_items[0][price]"), "price_monthly_fake");
+  assertEquals(capturedParams?.get("metadata[plan]"), "pro");
+  assertEquals(capturedParams?.get("subscription_data[metadata][plan]"), "pro");
+  restoreEnv();
+});
+
+Deno.test("plan: 'elite' selects the Elite price pair and stamps plan into metadata", async () => {
+  setStripeEnv();
+  let capturedParams: URLSearchParams | undefined;
+  const deps = fakeDeps({
+    createStripeSession: async (params) => {
+      capturedParams = params;
+      return { ok: true, session: { id: "cs_test_1", url: "https://checkout.stripe.com/cs_test_1" } };
+    },
+  });
+  const res = await handleRequest(
+    req({ plan: "elite", interval: "year" }, { Authorization: "Bearer good" }),
+    deps,
+  );
+  assertEquals(res.status, 200);
+  assertEquals(capturedParams?.get("line_items[0][price]"), "price_elite_annual_fake");
+  assertEquals(capturedParams?.get("metadata[plan]"), "elite");
+  assertEquals(capturedParams?.get("subscription_data[metadata][plan]"), "elite");
+  restoreEnv();
+});
+
+Deno.test("missing Elite price id fails closed even when the Pro prices are configured", async () => {
+  Deno.env.set("STRIPE_SECRET_KEY", "sk_test_fake");
+  Deno.env.set("STRIPE_PRICE_MONTHLY", "price_monthly_fake");
+  Deno.env.set("STRIPE_PRICE_ANNUAL", "price_annual_fake");
+  Deno.env.delete("STRIPE_PRICE_ELITE_MONTHLY");
+  Deno.env.delete("STRIPE_PRICE_ELITE_ANNUAL");
+  const res = await handleRequest(
+    req({ plan: "elite", interval: "month" }, { Authorization: "Bearer good" }),
+    fakeDeps(),
+  );
+  assertEquals(res.status, 500);
+  const body = await res.json();
+  assertEquals(body.error, "Payment plan not configured");
+  restoreEnv();
+});
+
+Deno.test("an unrecognized plan value falls back to 'pro' rather than erroring", async () => {
+  setStripeEnv();
+  let capturedParams: URLSearchParams | undefined;
+  const deps = fakeDeps({
+    createStripeSession: async (params) => {
+      capturedParams = params;
+      return { ok: true, session: { id: "cs_test_1", url: "https://checkout.stripe.com/cs_test_1" } };
+    },
+  });
+  const res = await handleRequest(
+    req({ plan: "ultra-mega-plan", interval: "month" }, { Authorization: "Bearer good" }),
+    deps,
+  );
+  assertEquals(res.status, 200);
+  assertEquals(capturedParams?.get("line_items[0][price]"), "price_monthly_fake");
+  assertEquals(capturedParams?.get("metadata[plan]"), "pro");
   restoreEnv();
 });
 
