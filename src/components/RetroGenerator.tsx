@@ -19,6 +19,7 @@ import { analyzePropertyPhotos, uploadPropertyPhotos } from "@/lib/propertyPhoto
 import { describeFunctionInvokeError, parsePropertyInput } from "@/lib/parsePropertyInput";
 import { track } from "@/lib/posthog";
 import { useGoogleAutocomplete } from "@/hooks/useGoogleAutocomplete";
+import { getLanguageLabel, SUPPORTED_LANGUAGES } from "@/lib/languages";
 
 type PropertyType =
   | "sfr"
@@ -163,6 +164,13 @@ export default function RetroGenerator() {
     count: number;
   }>({ status: "idle", count: 0 });
 
+  // Bilingual generation (Elite): null means English-only. Persists across a regenerate
+  // so switching properties doesn't reset the agent's language preference.
+  const [secondaryLanguage, setSecondaryLanguage] = useState<string | null>(null);
+  // Which language's copies are currently shown in the output tabs. Only meaningful once
+  // a translated batch has actually come back — defaults to English.
+  const [outputLanguage, setOutputLanguage] = useState<string>("en");
+
   const {
     status,
     enrichmentStep,
@@ -278,6 +286,10 @@ export default function RetroGenerator() {
     window.localStorage.setItem(PRO_TIER_STORAGE_KEY, String(proTierGenerationsUsed));
   }, [proTierGenerationsUsed]);
 
+  // Distinct languages actually present in this generation's copies — usually just
+  // ["en"], or ["en", "es"] once a bilingual translation batch has landed.
+  const availableOutputLanguages = Array.from(new Set(copies.map((c) => c.language || "en")));
+
   useEffect(() => {
     if (status === "complete" && copies.length > 0) {
       const outputMap: Partial<Record<OutputTabKey, ReactNode>> = {
@@ -285,10 +297,12 @@ export default function RetroGenerator() {
         social: "",
         email: "",
       };
-      copies.forEach((copy: CopyGeneration) => {
-        const key = copy.copy_type as OutputTabKey;
-        if (key in outputMap) outputMap[key] = copy.content;
-      });
+      copies
+        .filter((copy: CopyGeneration) => (copy.language || "en") === outputLanguage)
+        .forEach((copy: CopyGeneration) => {
+          const key = copy.copy_type as OutputTabKey;
+          if (key in outputMap) outputMap[key] = copy.content;
+        });
 
       if (isProUser && enrichmentData && enrichmentData.perplexity_raw_response) {
         outputMap.research = (
@@ -326,6 +340,7 @@ export default function RetroGenerator() {
     propertyType,
     propertyId,
     fireLoopsEvent,
+    outputLanguage,
   ]);
 
   const handleGenerate = async () => {
@@ -359,6 +374,7 @@ export default function RetroGenerator() {
     setOutputs(null);
     setPropertyId(null);
     setPhotoEnhancement({ status: "idle", count: 0 });
+    setOutputLanguage("en");
     setShowProgress(true);
     isGeneratingRef.current = true;
 
@@ -383,6 +399,10 @@ export default function RetroGenerator() {
                 turnstileToken,
               }
             : {}),
+          // Bilingual (Elite-only — receive-property re-checks the plan server-side and
+          // silently drops this for anyone else, so there's nothing to gate client-side here
+          // beyond not showing the picker).
+          ...(isEliteUser && secondaryLanguage ? { secondaryLanguage } : {}),
         },
       });
 
@@ -623,6 +643,27 @@ export default function RetroGenerator() {
               <PhotoAttachmentTray key={photoTrayKey} onPhotosChange={setAttachedPhotos} />
             )}
 
+            {isEliteUser && (
+              <div className="flex items-center gap-2">
+                <label htmlFor="secondary-language" className="text-win95-11 font-bold">
+                  Also generate in:
+                </label>
+                <select
+                  id="secondary-language"
+                  value={secondaryLanguage ?? ""}
+                  onChange={(e) => setSecondaryLanguage(e.target.value || null)}
+                  className="win95-inset bg-white text-win95-11 px-1 py-0.5"
+                >
+                  <option value="">English only</option>
+                  {SUPPORTED_LANGUAGES.map((lang) => (
+                    <option key={lang.code} value={lang.code}>
+                      English + {lang.label}
+                    </option>
+                  ))}
+                </select>
+              </div>
+            )}
+
             <PropertyTypeToggle
               value={propertyType}
               onChange={setPropertyType}
@@ -677,6 +718,22 @@ export default function RetroGenerator() {
                 x
               </button>
             </div>
+          </div>
+        )}
+
+        {outputs && availableOutputLanguages.length > 1 && (
+          <div className="w-full max-w-3xl flex gap-1 justify-end">
+            {availableOutputLanguages.map((code) => (
+              <button
+                key={code}
+                onClick={() => setOutputLanguage(code)}
+                className={`px-2 py-0.5 text-win95-11 font-bold cursor-pointer ${
+                  outputLanguage === code ? "win95-pressed bg-input" : "win95-raised bg-card"
+                }`}
+              >
+                {code === "en" ? "English" : getLanguageLabel(code)}
+              </button>
+            ))}
           </div>
         )}
 

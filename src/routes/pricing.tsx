@@ -1,8 +1,9 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { useAuth } from "@/hooks/useAuth";
 import { usePlanTier } from "@/hooks/usePlanTier";
 import { supabase } from "@/integrations/supabase/client";
+import { RetroButton, RetroInput } from "@/components/retro";
 
 export const Route = createFileRoute("/pricing")({
   head: () => ({
@@ -28,6 +29,32 @@ function Pricing() {
   const { user } = useAuth();
   const { plan } = usePlanTier(user);
   const isProUser = plan === "pro" || plan === "elite";
+
+  const [waitlistEmail, setWaitlistEmail] = useState(user?.email ?? "");
+  const [waitlistSubmitting, setWaitlistSubmitting] = useState(false);
+  const [waitlistJoined, setWaitlistJoined] = useState(false);
+  const [waitlistError, setWaitlistError] = useState<string | null>(null);
+
+  const handleJoinWaitlist = async () => {
+    const email = waitlistEmail.trim();
+    if (!email) {
+      setWaitlistError("Enter an email address.");
+      return;
+    }
+    setWaitlistSubmitting(true);
+    setWaitlistError(null);
+    try {
+      const { error } = await supabase.from("elite_waitlist").insert({ email });
+      // Unique-violation on email — they're already on the list, treat as success.
+      if (error && error.code !== "23505") throw error;
+      setWaitlistJoined(true);
+    } catch (err) {
+      console.error("Failed to join Elite waitlist:", err);
+      setWaitlistError("Something went wrong. Try again in a moment.");
+    } finally {
+      setWaitlistSubmitting(false);
+    }
+  };
 
   return (
     <div className="min-h-screen bg-[var(--background)] p-4 flex flex-col items-center">
@@ -256,14 +283,37 @@ function Pricing() {
                   </li>
                 </ul>
               </div>
-              <div className="text-center pt-1 mt-auto">
-                <button
-                  type="button"
-                  disabled
-                  className="win95-raised px-4 py-1 text-win95-12 font-bold cursor-not-allowed opacity-50"
-                >
-                  Coming Soon
-                </button>
+              <div className="pt-1 mt-auto">
+                {waitlistJoined ? (
+                  <p className="text-win95-11 text-center font-bold text-[var(--win95-blue)]">
+                    You're on the list — we'll email you when Elite opens up.
+                  </p>
+                ) : (
+                  <div className="space-y-1.5">
+                    <RetroInput
+                      type="email"
+                      placeholder="you@brokerage.com"
+                      value={waitlistEmail}
+                      onChange={(e) => setWaitlistEmail(e.target.value)}
+                      onKeyDown={(e) => {
+                        if (e.key === "Enter") handleJoinWaitlist();
+                      }}
+                      className="w-full"
+                      maxLength={320}
+                    />
+                    <RetroButton
+                      variant="primary"
+                      onClick={handleJoinWaitlist}
+                      disabled={waitlistSubmitting}
+                      className="w-full"
+                    >
+                      {waitlistSubmitting ? "Joining..." : "Join the Elite Waitlist"}
+                    </RetroButton>
+                    {waitlistError && (
+                      <p className="text-win95-11 text-red-800 text-center">{waitlistError}</p>
+                    )}
+                  </div>
+                )}
               </div>
             </div>
           </div>

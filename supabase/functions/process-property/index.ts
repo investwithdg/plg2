@@ -11,6 +11,7 @@ import {
   aggregatePhotoAnalyses,
   PHOTO_FEATURES_PROMPT_ADDENDUM,
 } from "../_shared/photoAnalysis.ts";
+import { getLanguageLabel, isSupportedLanguage } from "../_shared/languages.ts";
 
 // `reason` is an optional caller-supplied tag for this run. The only value with behaviour
 // attached is "photo_enrichment" (sent by analyze-property-photos) — see the re-processing
@@ -622,6 +623,58 @@ function pruneEmpty(value: unknown): unknown {
 }
 
 /**
+ * Bilingual generation (Elite): translates one already-generated, already-FHA-compliant
+ * English copy into the target language. Deliberately a translation of the finished text
+ * rather than a second from-scratch generation against the raw context — that guarantees
+ * the two languages say the same thing and never drift apart on facts or compliance.
+ */
+async function translateCopy(
+  openaiKey: string,
+  propertyId: string,
+  englishContent: string,
+  languageLabel: string,
+  copyType: string,
+): Promise<{ content: string; latencyMs: number; usage: TokenUsage }> {
+  const start = Date.now();
+  const res = await fetchWithRetry(
+    OPENAI_CHAT_URL,
+    {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${openaiKey}`,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        model: "gpt-4o-mini",
+        temperature: 0.3,
+        messages: [
+          {
+            role: "system",
+            content: `You translate real estate marketing copy into ${languageLabel}, adapting idiom and phrasing naturally rather than translating word-for-word. Preserve every fact exactly — do not add, remove, or embellish anything beyond what the English source says. Keep the same Fair Housing compliance posture as the source: no protected-class references, no coded language, no invented details. Output ONLY the translated ${languageLabel} text, nothing else — no preamble, no notes, no the-original-followed-by-translation.`,
+          },
+          {
+            role: "user",
+            content: englishContent,
+          },
+        ],
+      }),
+    },
+    `openai_translate_${copyType}`,
+    propertyId,
+  );
+  if (!res.ok) throw new Error(`OpenAI translate ${copyType} failed [${res.status}]: ${await res.text()}`);
+  const data = await res.json();
+  const text = data.choices?.[0]?.message?.content?.trim() ?? "";
+  if (!text) throw new Error(`OpenAI translate ${copyType} returned empty content`);
+  const usage = computeCost(
+    "gpt-4o-mini",
+    data.usage?.prompt_tokens ?? 0,
+    data.usage?.completion_tokens ?? 0,
+  );
+  return { content: text, latencyMs: Date.now() - start, usage };
+}
+
+/**
  * Loads every completed Vision+ photo analysis for this property and folds them into one
  * `photo_features` block. Returns null when the property has no analyzed photos (the common
  * case: non-Elite users, or the first, text-only pass before photos have been processed).
@@ -873,6 +926,13 @@ async function process(propertyId: string, reason?: string) {
     let copyInputTokens = 0;
     let copyOutputTokens = 0;
     let copyCostUsd = 0;
+    // Tracked so the bilingual pass below has the finished English text to translate,
+    // without re-querying what was just inserted.
+    const englishCopies: Array<{
+      copy_type: "mls" | "social" | "email";
+      generation_number: number;
+      content: string;
+    }> = [];
 
     for (const r of results) {
       if (r.status !== "fulfilled") {
@@ -900,15 +960,68 @@ async function process(propertyId: string, reason?: string) {
         model_used: "gpt-4o-mini",
         fha_compliance_check: true,
         generation_latency_ms: r.value.latencyMs,
+        language: "en",
       });
       if (insErr) {
         log(propertyId, "copy_insert_failed", { error: insErr.message });
         continue;
       }
       successCount++;
+      englishCopies.push({
+        copy_type: r.value.copy_type,
+        generation_number: r.value.generation_number,
+        content: r.value.content,
+      });
     }
 
     if (successCount === 0) throw new Error("All copy generations failed");
+
+    // Bilingual generation (Elite): translate each successful English copy into the
+    // requested secondary language and insert alongside it. Never fails the whole
+    // generation — English copy has already succeeded and been saved above.
+    const secondaryLanguage = property.secondary_language as string | null;
+    if (isSupportedLanguage(secondaryLanguage)) {
+      const languageLabel = getLanguageLabel(secondaryLanguage);
+      const translationResults = await Promise.allSettled(
+        englishCopies.map((c) =>
+          translateCopy(openaiKey, propertyId, c.content, languageLabel, c.copy_type).then(
+            (r) => ({ ...r, copy_type: c.copy_type, generation_number: c.generation_number }),
+          ),
+        ),
+      );
+      for (const r of translationResults) {
+        if (r.status !== "fulfilled") {
+          log(propertyId, "translation_failed", {
+            language: secondaryLanguage,
+            error: String(r.reason).slice(0, 300),
+          });
+          continue;
+        }
+        copyInputTokens += r.value.usage.inputTokens;
+        copyOutputTokens += r.value.usage.outputTokens;
+        copyCostUsd += r.value.usage.costUsd;
+        const { error: insErr } = await supabase.from("copy_generations").insert({
+          property_id: propertyId,
+          user_id: userId,
+          batch_id: batchId,
+          copy_type: r.value.copy_type,
+          generation_number: r.value.generation_number,
+          content: r.value.content,
+          model_used: "gpt-4o-mini",
+          fha_compliance_check: true,
+          generation_latency_ms: r.value.latencyMs,
+          language: secondaryLanguage,
+        });
+        if (insErr) {
+          log(propertyId, "translation_insert_failed", { error: insErr.message });
+          continue;
+        }
+        log(propertyId, "translation_done", {
+          copy_type: r.value.copy_type,
+          language: secondaryLanguage,
+        });
+      }
+    }
 
     // Record costs
     const totalCost =

@@ -6,6 +6,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { RetroButton, RetroWindow } from "@/components/retro";
 import ListingHistory from "@/components/ListingHistory";
 import ApiKeysPanel from "@/components/ApiKeysPanel";
+import EliteSocialPanel from "@/components/EliteSocialPanel";
 import { toast as sonnerToast } from "sonner";
 
 export const Route = createFileRoute("/hub")({
@@ -154,6 +155,8 @@ function UserHubPage() {
 
         {/* Claude/MCP connection: OAuth connector on Pro+Elite, static API keys on Elite only */}
         <ApiKeysPanel plan={plan} />
+
+        {plan === "elite" && <EliteSocialPanel />}
 
         {/* Listings history rendering inside the Hub */}
         <ListingHistory userId={user.id} isProUser={isProUser} />

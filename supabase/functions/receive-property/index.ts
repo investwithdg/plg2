@@ -5,6 +5,7 @@ import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { z } from "https://deno.land/x/zod@v3.22.4/mod.ts";
 import { getCorsHeaders } from "../_shared/cors.ts";
+import { isSupportedLanguage } from "../_shared/languages.ts";
 
 const FREE_LIMIT = 10;
 const FREE_WINDOW_DAYS = 30;
@@ -22,6 +23,9 @@ const propertyInputSchema = z
     anonymousId: z.string().trim().min(16).max(128).optional(),
     turnstileToken: z.string().trim().max(4096).optional(),
     regenerate: z.boolean().optional(),
+    // Bilingual generation (Elite-only, enforced below — a non-Elite value here is
+    // silently dropped rather than rejected, since this is a plan gate, not a validation error).
+    secondaryLanguage: z.string().trim().max(10).optional(),
   })
   .refine((d) => d.url || d.address, {
     message: "Either 'url' or 'address' must be provided",
@@ -342,6 +346,7 @@ serve(async (req) => {
 
     // 2) Subscription check. Active Pro or Elite users are unlimited.
     let hasProPlan = false;
+    let hasElitePlan = false;
     if (userId) {
       const { data: sub } = await supabase
         .from("subscriptions")
@@ -351,7 +356,15 @@ serve(async (req) => {
         .in("plan", ["pro", "elite"])
         .limit(1);
       hasProPlan = (sub && sub.length > 0) ?? false;
+      hasElitePlan = sub?.[0]?.plan === "elite";
     }
+
+    // Bilingual generation is Elite-exclusive. A non-Elite caller's request is dropped
+    // here rather than erroring, so the UI never needs to special-case a rejected value.
+    const secondaryLanguage =
+      hasElitePlan && isSupportedLanguage(validatedInput.secondaryLanguage)
+        ? validatedInput.secondaryLanguage
+        : null;
 
     const sinceWindow = new Date(Date.now() - FREE_WINDOW_DAYS * 86400_000).toISOString();
 
@@ -466,6 +479,7 @@ serve(async (req) => {
         enrichment_step: "started",
         dedupe_key: dedupeKey,
         ip_hash: ipHash,
+        secondary_language: secondaryLanguage,
       })
       .select()
       .single();
