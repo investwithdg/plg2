@@ -70,6 +70,7 @@ Voice rules:
 - If the property_type is 'lux', 'luxury', or 'estate', adopt a highly sophisticated, editorial tone. Emphasize bespoke details, architectural pedigree, and premium finishes. Avoid cliché terms like 'bling' or 'fancy'. Keep the copy elegant and restrained.
 - LUXURY GUARDRAIL: If the user selects a Luxury or Estate property type but the verifiable facts and property data do not support a luxury classification, do NOT exaggerate or invent luxury features. Maintain a professional tone but stick strictly to the facts.
 - No generic filler: never use "nestled," "boasts," "perfect for," "don't miss out," "rare find," "priced to sell"
+- Never state the list price as a dollar figure in the copy, even when it's present in the data. Price is tracked and displayed as its own field elsewhere and changes independently of this copy — baking a number into the narrative text makes it go stale. Sell the property on its merits, not its price.
 
 FHA compliance rules (non-negotiable):
 - Never reference race, color, religion, sex, handicap, familial status, or national origin — direct or indirect
@@ -77,7 +78,7 @@ FHA compliance rules (non-negotiable):
 - Use "primary bedroom" — never "master bedroom"
 - Never describe neighborhood character, demographics, or vibe of residents
 - Stick to property features and verifiable location facts only: distances, named amenities, transit lines, school names without quality judgments
-- Do not invent facts. If a field is missing from the provided JSON, omit it
+- Do not invent facts. If a field is missing from the provided JSON, omit it completely — never mention that data is missing, unavailable, unknown, or that the property "lacks" something. Do NOT write things like "no walkability score is available," "there are no notable transit options nearby," or "schools were not found." If it isn't in the dataset, write as if the topic was never raised — silence, not a caveat.
 - Output ONLY the requested copy. No preamble, no headings, no markdown unless requested.
 
 Source Copy Integration (Critical):
@@ -597,6 +598,30 @@ async function generateCopy(
 }
 
 /**
+ * Recursively strips null/undefined/empty-string values, and empty arrays/objects, from a
+ * value bound for the copy-generation context JSON. Belt-and-suspenders alongside the
+ * FHA_SYSTEM_PROMPT "omit missing fields" rule: if the model never sees `"walkability_score":
+ * null` or `"transit_options": []` in the first place, it has nothing to comment on the
+ * absence of.
+ */
+function pruneEmpty(value: unknown): unknown {
+  if (Array.isArray(value)) {
+    const filtered = value.map(pruneEmpty).filter((v) => v !== undefined);
+    return filtered.length > 0 ? filtered : undefined;
+  }
+  if (value !== null && typeof value === "object") {
+    const out: Record<string, unknown> = {};
+    for (const [key, v] of Object.entries(value as Record<string, unknown>)) {
+      const pruned = pruneEmpty(v);
+      if (pruned !== undefined) out[key] = pruned;
+    }
+    return Object.keys(out).length > 0 ? out : undefined;
+  }
+  if (value === null || value === "") return undefined;
+  return value;
+}
+
+/**
  * Loads every completed Vision+ photo analysis for this property and folds them into one
  * `photo_features` block. Returns null when the property has no analyzed photos (the common
  * case: non-Elite users, or the first, text-only pass before photos have been processed).
@@ -800,7 +825,7 @@ async function process(propertyId: string, reason?: string) {
     await updateStep(supabase, propertyId, "generating_copy");
     const batchId = crypto.randomUUID();
     const context = JSON.stringify(
-      {
+      pruneEmpty({
         property: {
           address: extracted.address || property.address,
           beds: extracted.beds,
@@ -814,7 +839,7 @@ async function process(propertyId: string, reason?: string) {
         },
         neighborhood: enrich,
         ...(photoFeatures ? { photo_features: photoFeatures } : {}),
-      },
+      }) ?? {},
       null,
       2,
     );
