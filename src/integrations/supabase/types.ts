@@ -86,6 +86,7 @@ export type Database = {
           generation_latency_ms: number | null;
           generation_number: number | null;
           id: string;
+          language: string;
           model_used: string | null;
           property_id: string;
           user_id: string | null;
@@ -99,6 +100,7 @@ export type Database = {
           generation_latency_ms?: number | null;
           generation_number?: number | null;
           id?: string;
+          language?: string;
           model_used?: string | null;
           property_id: string;
           user_id?: string | null;
@@ -112,6 +114,7 @@ export type Database = {
           generation_latency_ms?: number | null;
           generation_number?: number | null;
           id?: string;
+          language?: string;
           model_used?: string | null;
           property_id?: string;
           user_id?: string | null;
@@ -125,6 +128,27 @@ export type Database = {
             referencedColumns: ["id"];
           },
         ];
+      };
+      elite_waitlist: {
+        Row: {
+          created_at: string;
+          email: string;
+          id: string;
+          name: string | null;
+        };
+        Insert: {
+          created_at?: string;
+          email: string;
+          id?: string;
+          name?: string | null;
+        };
+        Update: {
+          created_at?: string;
+          email?: string;
+          id?: string;
+          name?: string | null;
+        };
+        Relationships: [];
       };
       enrichment_cache: {
         Row: {
@@ -547,6 +571,7 @@ export type Database = {
           perplexity_extract_raw: Json | null;
           price: number | null;
           property_type: string | null;
+          secondary_language: string | null;
           source: string | null;
           source_url: string | null;
           sqft: number | null;
@@ -578,6 +603,7 @@ export type Database = {
           perplexity_extract_raw?: Json | null;
           price?: number | null;
           property_type?: string | null;
+          secondary_language?: string | null;
           source?: string | null;
           source_url?: string | null;
           sqft?: number | null;
@@ -609,6 +635,7 @@ export type Database = {
           perplexity_extract_raw?: Json | null;
           price?: number | null;
           property_type?: string | null;
+          secondary_language?: string | null;
           source?: string | null;
           source_url?: string | null;
           sqft?: number | null;

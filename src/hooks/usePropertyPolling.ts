@@ -46,6 +46,7 @@ export interface CopyGeneration {
   id: string;
   copy_type: string;
   content: string;
+  language: string;
   created_at: string;
 }
 
@@ -127,7 +128,7 @@ export function usePropertyPolling(propertyId: string | null): UsePropertyPollin
     const [copiesRes, enrichmentsRes] = await Promise.all([
       supabase
         .from("copy_generations")
-        .select("id, copy_type, content, created_at")
+        .select("id, copy_type, content, language, created_at")
         .eq("property_id", propId)
         .order("created_at", { ascending: false }),
       supabase
