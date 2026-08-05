@@ -40,6 +40,7 @@ export async function handleRequest(req: Request, deps: CreateCheckoutDeps): Pro
 
     const body = await req.json();
     const interval = body.interval === "year" ? "year" : "month";
+    const plan = body.plan === "elite" ? "elite" : "pro";
 
     const stripeKey = Deno.env.get("STRIPE_SECRET_KEY");
     if (!stripeKey) {
@@ -47,11 +48,20 @@ export async function handleRequest(req: Request, deps: CreateCheckoutDeps): Pro
       return json({ error: "Payment not configured" }, 500, corsHeaders);
     }
 
-    const priceId =
-      interval === "year" ? Deno.env.get("STRIPE_PRICE_ANNUAL") : Deno.env.get("STRIPE_PRICE_MONTHLY");
+    // Elite uses its own price pair (STRIPE_PRICE_ELITE_MONTHLY/ANNUAL); Pro's env var names
+    // are unchanged from before Elite existed, so existing Pro checkout config keeps working.
+    const priceEnvVar =
+      plan === "elite"
+        ? interval === "year"
+          ? "STRIPE_PRICE_ELITE_ANNUAL"
+          : "STRIPE_PRICE_ELITE_MONTHLY"
+        : interval === "year"
+          ? "STRIPE_PRICE_ANNUAL"
+          : "STRIPE_PRICE_MONTHLY";
+    const priceId = Deno.env.get(priceEnvVar);
 
     if (!priceId) {
-      deps.log("missing_price_id", { interval });
+      deps.log("missing_price_id", { plan, interval });
       return json({ error: "Payment plan not configured" }, 500, corsHeaders);
     }
 
@@ -65,7 +75,9 @@ export async function handleRequest(req: Request, deps: CreateCheckoutDeps): Pro
     params.set("line_items[0][price]", priceId);
     params.set("line_items[0][quantity]", "1");
     params.set("metadata[user_id]", userId);
+    params.set("metadata[plan]", plan);
     params.set("subscription_data[metadata][user_id]", userId);
+    params.set("subscription_data[metadata][plan]", plan);
     if (userEmail) {
       params.set("customer_email", userEmail);
     }
@@ -76,7 +88,7 @@ export async function handleRequest(req: Request, deps: CreateCheckoutDeps): Pro
       return json({ error: "Failed to create checkout session" }, 500, corsHeaders);
     }
 
-    deps.log("checkout_created", { userId, interval, sessionId: session.id });
+    deps.log("checkout_created", { userId, plan, interval, sessionId: session.id });
     return json({ url: session.url }, 200, corsHeaders);
   } catch (error) {
     deps.log("unhandled_error", { error: error instanceof Error ? error.message : "Unknown" });
