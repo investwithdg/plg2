@@ -14,7 +14,9 @@ export const Route = createFileRoute("/compare/jasper")({
         property: "og:description",
         content: "Jasper writes marketing copy. PLG writes listing copy. See the full comparison.",
       },
+      { property: "og:url", content: "https://propertylistinggenerator.com/compare/jasper" },
     ],
+    links: [{ rel: "canonical", href: "https://propertylistinggenerator.com/compare/jasper" }],
   }),
   component: VsJasper,
 });

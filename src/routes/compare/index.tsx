@@ -21,7 +21,9 @@ export const Route = createFileRoute("/compare/")({
         content:
           "See how PropertyListingGenerator.com stacks up against every alternative. Purpose-built, FHA-compliant listing copy in 15 seconds.",
       },
+      { property: "og:url", content: "https://propertylistinggenerator.com/compare" },
     ],
+    links: [{ rel: "canonical", href: "https://propertylistinggenerator.com/compare" }],
   }),
   component: CompareIndex,
 });

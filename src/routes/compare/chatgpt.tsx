@@ -15,7 +15,9 @@ export const Route = createFileRoute("/compare/chatgpt")({
         content:
           "ChatGPT writes generic text. PLG writes FHA-compliant, research-backed listing copy in 15 seconds.",
       },
+      { property: "og:url", content: "https://propertylistinggenerator.com/compare/chatgpt" },
     ],
+    links: [{ rel: "canonical", href: "https://propertylistinggenerator.com/compare/chatgpt" }],
   }),
   component: VsChatGPT,
 });

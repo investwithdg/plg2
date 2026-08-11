@@ -15,6 +15,10 @@ export const Route = createFileRoute("/compare/reimaginehome")({
         content: "PLG vs REimagineHome — Property Listing Generator Comparison",
       },
       { property: "og:description", content: "Visuals vs Text. See the difference." },
+      { property: "og:url", content: "https://propertylistinggenerator.com/compare/reimaginehome" },
+    ],
+    links: [
+      { rel: "canonical", href: "https://propertylistinggenerator.com/compare/reimaginehome" },
     ],
   }),
   component: VsReimagine,

@@ -20,6 +20,10 @@ export const Route = createFileRoute("/compare/dealmachine")({
         content:
           "DealMachine finds deals. PLG writes the listing copy. See the full feature comparison.",
       },
+      { property: "og:url", content: "https://propertylistinggenerator.com/compare/dealmachine" },
+    ],
+    links: [
+      { rel: "canonical", href: "https://propertylistinggenerator.com/compare/dealmachine" },
     ],
   }),
   component: VsDealMachine,

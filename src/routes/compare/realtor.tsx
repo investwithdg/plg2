@@ -17,7 +17,9 @@ export const Route = createFileRoute("/compare/realtor")({
         property: "og:description",
         content: "Platform-locked vs. Portable copy. See the comparison.",
       },
+      { property: "og:url", content: "https://propertylistinggenerator.com/compare/realtor" },
     ],
+    links: [{ rel: "canonical", href: "https://propertylistinggenerator.com/compare/realtor" }],
   }),
   component: VsRealtor,
 });
