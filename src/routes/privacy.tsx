@@ -14,7 +14,9 @@ export const Route = createFileRoute("/privacy")({
         property: "og:description",
         content: "Privacy Policy for PropertyListingGenerator.com.",
       },
+      { property: "og:url", content: "https://propertylistinggenerator.com/privacy" },
     ],
+    links: [{ rel: "canonical", href: "https://propertylistinggenerator.com/privacy" }],
   }),
   component: PrivacyPage,
 });

@@ -16,7 +16,9 @@ export const Route = createFileRoute("/hub")({
         name: "description",
         content: "Manage your PLG account, subscription, and view your generation history.",
       },
+      { name: "robots", content: "noindex, nofollow" },
     ],
+    links: [{ rel: "canonical", href: "https://propertylistinggenerator.com/hub" }],
   }),
   component: UserHubPage,
 });

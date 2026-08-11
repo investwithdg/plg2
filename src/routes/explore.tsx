@@ -16,7 +16,9 @@ export const Route = createFileRoute("/explore")({
         property: "og:description",
         content: "Browse real listing copy generated with PLG by agents across the US.",
       },
+      { property: "og:url", content: "https://propertylistinggenerator.com/explore" },
     ],
+    links: [{ rel: "canonical", href: "https://propertylistinggenerator.com/explore" }],
   }),
   component: Explore,
 });

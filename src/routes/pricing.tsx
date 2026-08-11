@@ -19,7 +19,9 @@ export const Route = createFileRoute("/pricing")({
         content:
           "Free: 10 generations with 1 Pro-tier sample. Pro: $49/mo for unlimited listing copy generation.",
       },
+      { property: "og:url", content: "https://propertylistinggenerator.com/pricing" },
     ],
+    links: [{ rel: "canonical", href: "https://propertylistinggenerator.com/pricing" }],
   }),
   component: Pricing,
 });

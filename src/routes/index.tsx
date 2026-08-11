@@ -10,13 +10,18 @@ export const Route = createFileRoute("/")({
         content:
           "Paste an address or Zillow link. Get FHA-compliant MLS, social, and email copy in 15 seconds. 10 free generations, no sign-up required.",
       },
-      { property: "og:title", content: "PLG — Listing Copy in 15 Seconds" },
+      {
+        property: "og:title",
+        content: "PropertyListingGenerator.com — Listing Copy in 15 Seconds",
+      },
       {
         property: "og:description",
         content:
           "The listing tool for agents who value their time. MLS, social, email — researched and compliant — in 15 seconds.",
       },
+      { property: "og:url", content: "https://propertylistinggenerator.com" },
     ],
+    links: [{ rel: "canonical", href: "https://propertylistinggenerator.com" }],
   }),
   component: Index,
 });
