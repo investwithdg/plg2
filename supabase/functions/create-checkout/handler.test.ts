@@ -147,19 +147,43 @@ Deno.test("plan: 'elite' selects the Elite price pair and stamps plan into metad
   restoreEnv();
 });
 
-Deno.test("missing Elite price id fails closed even when the Pro prices are configured", async () => {
+Deno.test("missing Elite env price id falls back to the hardcoded live Elite price", async () => {
   Deno.env.set("STRIPE_SECRET_KEY", "sk_test_fake");
   Deno.env.set("STRIPE_PRICE_MONTHLY", "price_monthly_fake");
   Deno.env.set("STRIPE_PRICE_ANNUAL", "price_annual_fake");
   Deno.env.delete("STRIPE_PRICE_ELITE_MONTHLY");
   Deno.env.delete("STRIPE_PRICE_ELITE_ANNUAL");
+  let capturedParams: URLSearchParams | undefined;
+  const deps = fakeDeps({
+    createStripeSession: async (params) => {
+      capturedParams = params;
+      return { ok: true, session: { id: "cs_test_1", url: "https://checkout.stripe.com/cs_test_1" } };
+    },
+  });
   const res = await handleRequest(
     req({ plan: "elite", interval: "month" }, { Authorization: "Bearer good" }),
-    fakeDeps(),
+    deps,
   );
-  assertEquals(res.status, 500);
-  const body = await res.json();
-  assertEquals(body.error, "Payment plan not configured");
+  assertEquals(res.status, 200);
+  assertEquals(capturedParams?.get("line_items[0][price]"), "price_1U0omXPF6X38Hv5mfe0hbdWf");
+  restoreEnv();
+});
+
+Deno.test("Elite env price id, when set, overrides the hardcoded fallback", async () => {
+  setStripeEnv();
+  let capturedParams: URLSearchParams | undefined;
+  const deps = fakeDeps({
+    createStripeSession: async (params) => {
+      capturedParams = params;
+      return { ok: true, session: { id: "cs_test_1", url: "https://checkout.stripe.com/cs_test_1" } };
+    },
+  });
+  const res = await handleRequest(
+    req({ plan: "elite", interval: "month" }, { Authorization: "Bearer good" }),
+    deps,
+  );
+  assertEquals(res.status, 200);
+  assertEquals(capturedParams?.get("line_items[0][price]"), "price_elite_monthly_fake");
   restoreEnv();
 });
 

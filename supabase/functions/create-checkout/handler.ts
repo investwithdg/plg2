@@ -18,6 +18,15 @@ export interface CreateCheckoutDeps {
   log: (step: string, data?: Record<string, unknown>) => void;
 }
 
+// Live Stripe price IDs for the Elite product (created directly via the Stripe API under
+// the project's existing STRIPE_SECRET_KEY). Price IDs are identifiers, not credentials, so
+// hardcoding them here is safe. STRIPE_PRICE_ELITE_MONTHLY/ANNUAL still take precedence when
+// set, so the price can be rotated by env var alone without a redeploy.
+const ELITE_PRICE_FALLBACK: Record<"month" | "year", string> = {
+  month: "price_1U0omXPF6X38Hv5mfe0hbdWf",
+  year: "price_1U0omYPF6X38Hv5mDTpwkjTG",
+};
+
 function json(body: Record<string, unknown>, status: number, corsHeaders: Record<string, string>) {
   return new Response(JSON.stringify(body), {
     status,
@@ -58,7 +67,7 @@ export async function handleRequest(req: Request, deps: CreateCheckoutDeps): Pro
         : interval === "year"
           ? "STRIPE_PRICE_ANNUAL"
           : "STRIPE_PRICE_MONTHLY";
-    const priceId = Deno.env.get(priceEnvVar);
+    const priceId = Deno.env.get(priceEnvVar) ?? (plan === "elite" ? ELITE_PRICE_FALLBACK[interval] : undefined);
 
     if (!priceId) {
       deps.log("missing_price_id", { plan, interval });
