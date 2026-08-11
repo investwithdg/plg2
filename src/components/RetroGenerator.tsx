@@ -522,7 +522,7 @@ export default function RetroGenerator() {
                 </div>
               )}
             </div>
-            <div className="text-win95-16 font-bold">listing copy in 15 seconds</div>
+            <h1 className="text-win95-16 font-bold">listing copy in 15 seconds</h1>
             <div className="text-win95-12 text-muted-foreground">
               paste an address or zillow link. pick the property type. hit generate. we research the
               property, analyze the neighborhood, and write 3 FHA-compliant listings — MLS, social,
@@ -685,7 +685,12 @@ export default function RetroGenerator() {
             <OutputTabsWindow
               outputs={outputs}
               headerRight={
-                <button className="win95-control-btn" onClick={() => setOutputs(null)}>
+                <button
+                  type="button"
+                  className="win95-control-btn"
+                  aria-label="Close results"
+                  onClick={() => setOutputs(null)}
+                >
                   x
                 </button>
               }
@@ -970,7 +975,12 @@ function Win95PaywallModal({
                 ? "Pro-Tier Limit Used"
                 : "Free Generations Used"}
           </span>
-          <button className="win95-control-btn" onClick={onClose}>
+          <button
+            type="button"
+            className="win95-control-btn"
+            aria-label="Close dialog"
+            onClick={onClose}
+          >
             x
           </button>
         </div>
