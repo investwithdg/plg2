@@ -35,4 +35,7 @@ supabase/.temp/
 *.sw?
 .claude/
 
-
+# Env files
+.env
+.env.*
+!.env.example
