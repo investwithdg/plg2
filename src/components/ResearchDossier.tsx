@@ -227,7 +227,10 @@ export default function ResearchDossier({ enrichmentData, property }: ResearchDo
                       key={i}
                       className="win95-raised bg-red-100 text-red-900 border-red-400 font-bold px-2 py-0.5 text-win95-11 flex items-center gap-1"
                     >
-                      <span className="text-red-600 font-bold">x</span> "{v}"
+                      <span className="text-red-600 font-bold" role="img" aria-label="Failed">
+                        x
+                      </span>{" "}
+                      "{v}"
                     </span>
                   ))}
                 </div>
