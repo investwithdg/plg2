@@ -14,7 +14,9 @@ export const Route = createFileRoute("/compare/kvcore")({
         property: "og:description",
         content: "CRM vs. Listing Copy Engine. See why agents use PLG alongside their CRM.",
       },
+      { property: "og:url", content: "https://propertylistinggenerator.com/compare/kvcore" },
     ],
+    links: [{ rel: "canonical", href: "https://propertylistinggenerator.com/compare/kvcore" }],
   }),
   component: VsKvCore,
 });

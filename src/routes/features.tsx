@@ -20,7 +20,9 @@ export const Route = createFileRoute("/features")({
         content:
           "Explore the features of PropertyListingGenerator.com. FHA-compliant, research-backed real estate listing copy in seconds, perfectly formatted.",
       },
+      { property: "og:url", content: "https://propertylistinggenerator.com/features" },
     ],
+    links: [{ rel: "canonical", href: "https://propertylistinggenerator.com/features" }],
   }),
   component: FeaturesPage,
 });

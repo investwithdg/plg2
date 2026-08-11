@@ -20,7 +20,9 @@ export const Route = createFileRoute("/compare/listingai")({
         content:
           "Generic AI copy vs. FHA-compliant, research-backed listing copy. See why PLG wins for real estate agents.",
       },
+      { property: "og:url", content: "https://propertylistinggenerator.com/compare/listingai" },
     ],
+    links: [{ rel: "canonical", href: "https://propertylistinggenerator.com/compare/listingai" }],
   }),
   component: VsListingAI,
 });

@@ -14,7 +14,9 @@ export const Route = createFileRoute("/terms")({
         property: "og:description",
         content: "Terms of Service for PropertyListingGenerator.com.",
       },
+      { property: "og:url", content: "https://propertylistinggenerator.com/terms" },
     ],
+    links: [{ rel: "canonical", href: "https://propertylistinggenerator.com/terms" }],
   }),
   component: TermsPage,
 });

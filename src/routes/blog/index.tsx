@@ -12,7 +12,14 @@ export const Route = createFileRoute("/blog/")({
           "Tips, guides, and resources for real estate agents — listing copy, Fair Housing compliance, and how to write MLS descriptions that convert.",
       },
       { property: "og:title", content: "PLG Blog — Real Estate Listing Tips" },
+      {
+        property: "og:description",
+        content:
+          "Guides on MLS descriptions, Fair Housing compliance, and listing copy that converts.",
+      },
+      { property: "og:url", content: "https://propertylistinggenerator.com/blog" },
     ],
+    links: [{ rel: "canonical", href: "https://propertylistinggenerator.com/blog" }],
   }),
   component: BlogIndex,
 });

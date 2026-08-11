@@ -20,7 +20,9 @@ export const Route = createFileRoute("/docs/claude")({
         content:
           "Connect Property Listing Generator to Claude over MCP and generate FHA-compliant listing copy straight from chat.",
       },
+      { property: "og:url", content: "https://propertylistinggenerator.com/docs/claude" },
     ],
+    links: [{ rel: "canonical", href: "https://propertylistinggenerator.com/docs/claude" }],
   }),
   component: ClaudeDocsPage,
 });

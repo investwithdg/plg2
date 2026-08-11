@@ -17,7 +17,9 @@ export const Route = createFileRoute("/compare/writesonic")({
         property: "og:description",
         content: "Writesonic writes blog posts. PLG writes compliant listing copy in 15 seconds.",
       },
+      { property: "og:url", content: "https://propertylistinggenerator.com/compare/writesonic" },
     ],
+    links: [{ rel: "canonical", href: "https://propertylistinggenerator.com/compare/writesonic" }],
   }),
   component: VsWritesonic,
 });

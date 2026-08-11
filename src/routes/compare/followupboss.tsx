@@ -14,6 +14,10 @@ export const Route = createFileRoute("/compare/followupboss")({
         content: "PLG vs Follow Up Boss — Property Listing Generator Comparison",
       },
       { property: "og:description", content: "Lead management vs. Listing Copy generation." },
+      { property: "og:url", content: "https://propertylistinggenerator.com/compare/followupboss" },
+    ],
+    links: [
+      { rel: "canonical", href: "https://propertylistinggenerator.com/compare/followupboss" },
     ],
   }),
   component: VsFollowUpBoss,

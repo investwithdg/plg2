@@ -15,6 +15,13 @@ export const Route = createFileRoute("/compare/virtualstagingai")({
         content: "PLG vs Virtual Staging AI — Property Listing Generator Comparison",
       },
       { property: "og:description", content: "Visuals vs Text. See the difference." },
+      {
+        property: "og:url",
+        content: "https://propertylistinggenerator.com/compare/virtualstagingai",
+      },
+    ],
+    links: [
+      { rel: "canonical", href: "https://propertylistinggenerator.com/compare/virtualstagingai" },
     ],
   }),
   component: VsVirtualStaging,

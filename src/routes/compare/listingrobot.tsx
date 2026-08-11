@@ -18,6 +18,10 @@ export const Route = createFileRoute("/compare/listingrobot")({
         content:
           "Template descriptions vs. researched AI copy. See why PLG is the better choice for agents.",
       },
+      { property: "og:url", content: "https://propertylistinggenerator.com/compare/listingrobot" },
+    ],
+    links: [
+      { rel: "canonical", href: "https://propertylistinggenerator.com/compare/listingrobot" },
     ],
   }),
   component: VsListingRobot,

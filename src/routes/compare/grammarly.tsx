@@ -12,7 +12,9 @@ export const Route = createFileRoute("/compare/grammarly")({
       },
       { property: "og:title", content: "PLG vs Grammarly — Property Listing Generator Comparison" },
       { property: "og:description", content: "Editing vs Writing. See the comparison." },
+      { property: "og:url", content: "https://propertylistinggenerator.com/compare/grammarly" },
     ],
+    links: [{ rel: "canonical", href: "https://propertylistinggenerator.com/compare/grammarly" }],
   }),
   component: VsGrammarly,
 });
