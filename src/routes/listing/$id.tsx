@@ -60,7 +60,7 @@ export const Route = createFileRoute("/listing/$id")({
       copies: copies as { copy_type: string; content: string }[],
     } satisfies ListingData;
   },
-  head: ({ loaderData }) => {
+  head: ({ params, loaderData }) => {
     const addr = loaderData?.address ?? "Property Listing";
     const typeLabel = loaderData?.property_type
       ? (TYPE_LABELS[loaderData.property_type] ?? loaderData.property_type)
@@ -68,6 +68,7 @@ export const Route = createFileRoute("/listing/$id")({
     const title = `${addr}${typeLabel ? ` — ${typeLabel}` : ""} | PLG`;
     const mls = loaderData?.copies.find((c) => c.copy_type === "mls")?.content ?? "";
     const description = mls.slice(0, 160) || "AI-generated property listing copy via PLG.";
+    const url = `https://propertylistinggenerator.com/listing/${params.id}`;
     return {
       meta: [
         { title },
@@ -75,7 +76,9 @@ export const Route = createFileRoute("/listing/$id")({
         { property: "og:title", content: title },
         { property: "og:description", content: description },
         { property: "og:type", content: "article" },
+        { property: "og:url", content: url },
       ],
+      links: [{ rel: "canonical", href: url }],
     };
   },
   component: ListingPage,
