@@ -109,7 +109,6 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
       { property: "og:image:width", content: "1200" },
       { property: "og:image:height", content: "630" },
       { property: "og:image:alt", content: "PLG — Listing Copy in 15 Seconds" },
-      { property: "og:url", content: "https://propertylistinggenerator.com" },
       { name: "twitter:image", content: "https://propertylistinggenerator.com/og-image.png" },
     ],
     links: [
@@ -120,12 +119,30 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
       { rel: "icon", type: "image/x-icon", href: "/favicon.ico" },
       { rel: "icon", type: "image/png", sizes: "512x512", href: "/favicon-512.png" },
       { rel: "apple-touch-icon", sizes: "180x180", href: "/apple-touch-icon.png" },
-      {
-        rel: "canonical",
-        href: "https://propertylistinggenerator.com",
-      },
     ],
     scripts: [
+      {
+        type: "application/ld+json",
+        children: JSON.stringify({
+          "@context": "https://schema.org",
+          "@type": "Organization",
+          name: "PropertyListingGenerator.com",
+          alternateName: "PLG",
+          url: "https://propertylistinggenerator.com",
+          logo: "https://propertylistinggenerator.com/favicon-512.png",
+          description:
+            "Real estate listing copy generator producing FHA-compliant MLS descriptions, social captions, and buyer emails.",
+        }),
+      },
+      {
+        type: "application/ld+json",
+        children: JSON.stringify({
+          "@context": "https://schema.org",
+          "@type": "WebSite",
+          name: "PropertyListingGenerator.com",
+          url: "https://propertylistinggenerator.com",
+        }),
+      },
       {
         type: "application/ld+json",
         children: JSON.stringify({
