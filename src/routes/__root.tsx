@@ -13,6 +13,7 @@ import appCss from "../styles.css?url";
 import { reportLovableError } from "../lib/lovable-error-reporting";
 import { Toaster } from "@/components/ui/sonner";
 import { AppNav } from "@/components/AppNav";
+import { AppFooter } from "@/components/AppFooter";
 import { initPostHog, identifyUser, resetUser, track, captureException } from "@/lib/posthog";
 import { useAuth } from "@/hooks/useAuth";
 import PlanThemeProvider from "@/components/PlanThemeProvider";
@@ -215,6 +216,7 @@ function RootComponent() {
       <AppNav />
       {/* Required: nested routes render here. Removing <Outlet /> breaks all child routes. */}
       <Outlet />
+      <AppFooter />
       <Toaster />
     </QueryClientProvider>
   );
