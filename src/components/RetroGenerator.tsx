@@ -174,6 +174,10 @@ export default function RetroGenerator() {
   } = usePropertyPolling(propertyId);
 
   const devBypassActive = isDevHost();
+  const [hasMounted, setHasMounted] = useState(false);
+  useEffect(() => {
+    setHasMounted(true);
+  }, []);
   const selectedProTier = isProTierPropertyType(propertyType);
   const generationsLeft = Math.max(0, MAX_GENERATIONS - generationsUsed);
   const proTierGenerationsLeft = Math.max(0, FREE_PRO_TIER_LIMIT - proTierGenerationsUsed);
@@ -630,7 +634,7 @@ export default function RetroGenerator() {
               isProUser={isProUser}
             />
 
-            {anonymousTurnstileRequired && (
+            {hasMounted && anonymousTurnstileRequired && (
               <div className="flex justify-center">
                 <TurnstileWidget
                   key={turnstileWidgetKey}
