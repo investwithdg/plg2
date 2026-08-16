@@ -630,7 +630,7 @@ export default function RetroGenerator() {
               isProUser={isProUser}
             />
 
-            {anonymousTurnstileRequired && (
+            {hasMounted && anonymousTurnstileRequired && (
               <div className="flex justify-center">
                 <TurnstileWidget
                   key={turnstileWidgetKey}
