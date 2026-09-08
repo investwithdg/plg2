@@ -6,6 +6,7 @@ import type { OutputTabKey } from "@/components/OutputTabsWindow";
 import ResearchDossier from "@/components/ResearchDossier";
 import type { EnrichmentData, PropertyWithCopies } from "@/hooks/usePropertyPolling";
 import { toast as sonnerToast } from "sonner";
+import { buildExportFilename, downloadTextFile } from "@/lib/export/listing-export";
 
 interface HistoryEntry {
   id: string;
@@ -153,6 +154,13 @@ export default function ListingHistory({
     sonnerToast.success("Copied!", { description: "Text copied to clipboard" });
   };
 
+  const onDownload = (text: string, address: string, tabLabel: string) => {
+    if (!text) return;
+    const filename = buildExportFilename(address, tabLabel);
+    downloadTextFile(filename, text);
+    sonnerToast.success("Downloaded!", { description: `Saved as ${filename}.txt` });
+  };
+
   if (loading) {
     return (
       <RetroWindow title="Your Listings" showControls={false} className="w-full max-w-3xl">
@@ -215,7 +223,7 @@ export default function ListingHistory({
                     <OutputTabsWindow
                       outputs={expandedCopies}
                       renderActions={(activeTab) => (
-                        <div className="flex gap-2 mt-2">
+                        <div className="flex flex-wrap gap-2 mt-2">
                           {activeTab !== "research" && (
                             <RetroButton
                               onClick={() =>
@@ -229,6 +237,21 @@ export default function ListingHistory({
                               copy {activeTab}
                             </RetroButton>
                           )}
+                          {activeTab !== "research" && (
+                            <RetroButton
+                              onClick={() =>
+                                onDownload(
+                                  typeof expandedCopies[activeTab] === "string"
+                                    ? (expandedCopies[activeTab] as string)
+                                    : "",
+                                  entry.address,
+                                  activeTab,
+                                )
+                              }
+                            >
+                              download {activeTab}
+                            </RetroButton>
+                          )}
                           <RetroButton
                             onClick={() =>
                               onCopy(
@@ -237,6 +260,17 @@ export default function ListingHistory({
                             }
                           >
                             copy all
+                          </RetroButton>
+                          <RetroButton
+                            onClick={() =>
+                              onDownload(
+                                `MLS Description:\n${expandedCopies.mls}\n\nSocial Post:\n${expandedCopies.social}\n\nEmail:\n${expandedCopies.email}`,
+                                entry.address,
+                                "all",
+                              )
+                            }
+                          >
+                            download all
                           </RetroButton>
                         </div>
                       )}

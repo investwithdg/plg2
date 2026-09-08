@@ -16,6 +16,7 @@ import { RetroButton, RetroInput, RetroWindow } from "@/components/retro";
 import ResearchDossier from "@/components/ResearchDossier";
 import { describeFunctionInvokeError, parsePropertyInput } from "@/lib/parsePropertyInput";
 import { track } from "@/lib/posthog";
+import { buildExportFilename, downloadTextFile } from "@/lib/export/listing-export";
 
 type PropertyType =
   | "sfr"
@@ -384,6 +385,20 @@ export default function RetroGenerator() {
     onCopy(allText, "all");
   };
 
+  const onDownload = (text: string, tabLabel: string, tabKey?: string) => {
+    if (!text) return;
+    const filename = buildExportFilename(query, tabLabel);
+    downloadTextFile(filename, text);
+    sonnerToast.success("Downloaded!", { description: `Saved as ${filename}.txt` });
+    track("download_clicked", { tab: tabKey ?? "unknown", property_id: propertyId });
+  };
+
+  const onDownloadAll = () => {
+    if (!outputs) return;
+    const allText = `MLS Description:\n${outputs.mls}\n\nSocial Post:\n${outputs.social}\n\nEmail:\n${outputs.email}`;
+    onDownload(allText, "all", "all");
+  };
+
   const handleAuth = async (email: string, password: string, mode: "signin" | "signup") => {
     if (mode === "signin") return signIn(email, password);
     const { error, isNewUser } = await signUp(email, password);
@@ -514,7 +529,23 @@ export default function RetroGenerator() {
                       copy {activeTab}
                     </RetroButton>
                   )}
+                  {activeTab !== "research" && (
+                    <RetroButton
+                      onClick={() =>
+                        onDownload(
+                          typeof outputs[activeTab] === "string"
+                            ? (outputs[activeTab] as string)
+                            : "",
+                          activeTab,
+                          activeTab,
+                        )
+                      }
+                    >
+                      download {activeTab}
+                    </RetroButton>
+                  )}
                   <RetroButton onClick={onCopyAll}>copy all</RetroButton>
+                  <RetroButton onClick={onDownloadAll}>download all</RetroButton>
                   {propertyId && (
                     <RetroButton
                       onClick={() => {
