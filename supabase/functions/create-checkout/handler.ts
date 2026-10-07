@@ -72,7 +72,9 @@ export async function handleRequest(req: Request, deps: CreateCheckoutDeps): Pro
     params.set("line_items[0][price]", priceId);
     params.set("line_items[0][quantity]", "1");
     params.set("metadata[user_id]", userId);
+    params.set("metadata[plan]", plan);
     params.set("subscription_data[metadata][user_id]", userId);
+    params.set("subscription_data[metadata][plan]", plan);
     if (userEmail) {
       params.set("customer_email", userEmail);
     }
