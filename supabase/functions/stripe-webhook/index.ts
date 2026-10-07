@@ -171,9 +171,9 @@ async function handleCheckoutCompleted(
           Authorization: `Bearer ${loopsKey}`,
           "Content-Type": "application/json",
         },
-        body: JSON.stringify({ email, userGroup: "pro", source: "plg_signup" }),
+        body: JSON.stringify({ email, userGroup: plan, source: "plg_signup" }),
       }).catch(() => {});
-      await sendLoopsEvent(loopsKey, email, "upgraded");
+      await sendLoopsEvent(loopsKey, email, "upgraded", { plan });
     }
   }
 }
