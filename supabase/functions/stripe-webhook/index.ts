@@ -141,14 +141,15 @@ async function handleCheckoutCompleted(
     return;
   }
 
-  log("checkout_completed", { userId, customerId, subscriptionId });
+  const plan = session.metadata?.plan === "elite" ? "elite" : "pro";
+  log("checkout_completed", { userId, customerId, subscriptionId, plan });
 
   const { error } = await supabase.from("subscriptions").upsert(
     {
       user_id: userId,
       stripe_customer_id: customerId,
       stripe_subscription_id: subscriptionId,
-      plan: "pro",
+      plan,
       status: "active",
       updated_at: new Date().toISOString(),
     },
@@ -186,8 +187,11 @@ async function handleSubscriptionChange(
   const customerId = subscription.customer;
   const status = subscription.status;
   const userId = subscription.metadata?.user_id;
+  const priceId = subscription.items?.data?.[0]?.price?.id;
+  const plan =
+    subscription.metadata?.plan === "elite" ? "elite" : planFromPriceId(priceId);
 
-  log("subscription_change", { eventType, subscriptionId, status });
+  log("subscription_change", { eventType, subscriptionId, status, plan });
 
   const periodStart = subscription.current_period_start
     ? new Date(subscription.current_period_start * 1000).toISOString()
