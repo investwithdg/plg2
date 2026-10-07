@@ -220,8 +220,10 @@ body[data-plan="elite"] {
   --win95-gray-dark: #707070;
   --win95-white: #f8f8f8;
   --win95-black: #0a0a0a;
-  --win95-blue: #404040;
-  --win95-blue-light: #808080;
+  --win95-blue: #2a2a2a;
+  --win95-blue-light: #5a5a5a;
+  --win95-gold: #ffd700;
+  --win95-gold-dark: #b8860b;
 
   --background: #1a1a2e;
   --foreground: #0a0a0a;
@@ -229,17 +231,23 @@ body[data-plan="elite"] {
   --card-foreground: #0a0a0a;
   --popover: #c8c8c8;
   --popover-foreground: #0a0a0a;
-  --primary: #404040;
-  --primary-foreground: #f8f8f8;
+  --primary: #2a2a2a;
+  --primary-foreground: #ffd700;
   --secondary: #c8c8c8;
   --secondary-foreground: #0a0a0a;
   --muted: #c8c8c8;
   --muted-foreground: #505050;
-  --accent: #404040;
-  --accent-foreground: #f8f8f8;
+  --accent: #b8860b;
+  --accent-foreground: #0a0a0a;
   --destructive: #800000;
   --destructive-foreground: #ffffff;
   --border: #707070;
   --input: #f0f0f0;
-  --ring: #404040;
+  --ring: #b8860b;
+}
+
+/* Elite titlebars: charcoal gradient with gold text */
+body[data-plan="elite"] .win95-titlebar {
+  background: linear-gradient(to right, #1a1a1a, #4a4a4a);
+  color: var(--win95-gold);
 }

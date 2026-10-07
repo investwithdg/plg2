@@ -2,6 +2,7 @@ import { useState, useEffect, useRef } from "react";
 import { Link } from "@tanstack/react-router";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
+import { usePlanTier } from "@/hooks/usePlanTier";
 import AuthModal from "@/components/AuthModal";
 import RetroLegend from "@/components/RetroLegend";
 
@@ -16,6 +17,7 @@ const NAV_LINKS = [
 
 export function AppNav() {
   const { user, signIn, signUp, signOut } = useAuth();
+  const { plan } = usePlanTier(user);
   const [menuOpen, setMenuOpen] = useState(false);
   const [showAuthModal, setShowAuthModal] = useState(false);
   const menuRef = useRef<HTMLDivElement>(null);
