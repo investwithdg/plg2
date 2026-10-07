@@ -9,67 +9,42 @@
 // Additionally, you should also exclude this file from your linter and/or formatter to prevent it from being checked or modified.
 
 import { Route as rootRouteImport } from './routes/__root'
-import { Route as TermsRouteImport } from './routes/terms'
-import { Route as SitemapDotxmlRouteImport } from './routes/sitemap[.]xml'
-import { Route as PrivacyRouteImport } from './routes/privacy'
-import { Route as PricingRouteImport } from './routes/pricing'
-import { Route as HubRouteImport } from './routes/hub'
-import { Route as FeaturesRouteImport } from './routes/features'
-import { Route as ExploreRouteImport } from './routes/explore'
 import { Route as IndexRouteImport } from './routes/index'
-import { Route as CompareIndexRouteImport } from './routes/compare/index'
+import { Route as ExploreRouteImport } from './routes/explore'
+import { Route as FeaturesRouteImport } from './routes/features'
+import { Route as HubRouteImport } from './routes/hub'
+import { Route as PricingRouteImport } from './routes/pricing'
+import { Route as PrivacyRouteImport } from './routes/privacy'
+import { Route as SitemapDotxmlRouteImport } from './routes/sitemap[.]xml'
+import { Route as TermsRouteImport } from './routes/terms'
 import { Route as BlogIndexRouteImport } from './routes/blog/index'
-import { Route as OauthAuthorizeRouteImport } from './routes/oauth/authorize'
-import { Route as ListingIdRouteImport } from './routes/listing/$id'
-import { Route as DocsClaudeRouteImport } from './routes/docs/claude'
-import { Route as CompareZillowRouteImport } from './routes/compare/zillow'
-import { Route as CompareWritesonicRouteImport } from './routes/compare/writesonic'
-import { Route as CompareVirtualstagingaiRouteImport } from './routes/compare/virtualstagingai'
-import { Route as CompareReimaginehomeRouteImport } from './routes/compare/reimaginehome'
-import { Route as CompareRealtorRouteImport } from './routes/compare/realtor'
-import { Route as CompareListingrobotRouteImport } from './routes/compare/listingrobot'
-import { Route as CompareListingaiRouteImport } from './routes/compare/listingai'
-import { Route as CompareKvcoreRouteImport } from './routes/compare/kvcore'
-import { Route as CompareJasperRouteImport } from './routes/compare/jasper'
-import { Route as CompareHomebotRouteImport } from './routes/compare/homebot'
-import { Route as CompareGrammarlyRouteImport } from './routes/compare/grammarly'
-import { Route as CompareFollowupbossRouteImport } from './routes/compare/followupboss'
-import { Route as CompareEpiqueRouteImport } from './routes/compare/epique'
-import { Route as CompareDealmachineRouteImport } from './routes/compare/dealmachine'
-import { Route as CompareCuraytorRouteImport } from './routes/compare/curaytor'
-import { Route as CompareCopyaiRouteImport } from './routes/compare/copyai'
-import { Route as CompareChatgptRouteImport } from './routes/compare/chatgpt'
-import { Route as CompareCanvaRouteImport } from './routes/compare/canva'
 import { Route as BlogSlugRouteImport } from './routes/blog/$slug'
+import { Route as CompareIndexRouteImport } from './routes/compare/index'
+import { Route as CompareCanvaRouteImport } from './routes/compare/canva'
+import { Route as CompareChatgptRouteImport } from './routes/compare/chatgpt'
+import { Route as CompareCopyaiRouteImport } from './routes/compare/copyai'
+import { Route as CompareCuraytorRouteImport } from './routes/compare/curaytor'
+import { Route as CompareDealmachineRouteImport } from './routes/compare/dealmachine'
+import { Route as CompareEpiqueRouteImport } from './routes/compare/epique'
+import { Route as CompareFollowupbossRouteImport } from './routes/compare/followupboss'
+import { Route as CompareGrammarlyRouteImport } from './routes/compare/grammarly'
+import { Route as CompareHomebotRouteImport } from './routes/compare/homebot'
+import { Route as CompareJasperRouteImport } from './routes/compare/jasper'
+import { Route as CompareKvcoreRouteImport } from './routes/compare/kvcore'
+import { Route as CompareListingaiRouteImport } from './routes/compare/listingai'
+import { Route as CompareListingrobotRouteImport } from './routes/compare/listingrobot'
+import { Route as CompareRealtorRouteImport } from './routes/compare/realtor'
+import { Route as CompareReimaginehomeRouteImport } from './routes/compare/reimaginehome'
+import { Route as CompareVirtualstagingaiRouteImport } from './routes/compare/virtualstagingai'
+import { Route as CompareWritesonicRouteImport } from './routes/compare/writesonic'
+import { Route as CompareZillowRouteImport } from './routes/compare/zillow'
+import { Route as DocsClaudeRouteImport } from './routes/docs/claude'
+import { Route as ListingIdRouteImport } from './routes/listing/$id'
+import { Route as OauthAuthorizeRouteImport } from './routes/oauth/authorize'
 
-const TermsRoute = TermsRouteImport.update({
-  id: '/terms',
-  path: '/terms',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const SitemapDotxmlRoute = SitemapDotxmlRouteImport.update({
-  id: '/sitemap.xml',
-  path: '/sitemap.xml',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const PrivacyRoute = PrivacyRouteImport.update({
-  id: '/privacy',
-  path: '/privacy',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const PricingRoute = PricingRouteImport.update({
-  id: '/pricing',
-  path: '/pricing',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const HubRoute = HubRouteImport.update({
-  id: '/hub',
-  path: '/hub',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const FeaturesRoute = FeaturesRouteImport.update({
-  id: '/features',
-  path: '/features',
+const IndexRoute = IndexRouteImport.update({
+  id: '/',
+  path: '/',
   getParentRoute: () => rootRouteImport,
 } as any)
 const ExploreRoute = ExploreRouteImport.update({
@@ -77,14 +52,34 @@ const ExploreRoute = ExploreRouteImport.update({
   path: '/explore',
   getParentRoute: () => rootRouteImport,
 } as any)
-const IndexRoute = IndexRouteImport.update({
-  id: '/',
-  path: '/',
+const FeaturesRoute = FeaturesRouteImport.update({
+  id: '/features',
+  path: '/features',
   getParentRoute: () => rootRouteImport,
 } as any)
-const CompareIndexRoute = CompareIndexRouteImport.update({
-  id: '/compare/',
-  path: '/compare/',
+const HubRoute = HubRouteImport.update({
+  id: '/hub',
+  path: '/hub',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const PricingRoute = PricingRouteImport.update({
+  id: '/pricing',
+  path: '/pricing',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const PrivacyRoute = PrivacyRouteImport.update({
+  id: '/privacy',
+  path: '/privacy',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const SitemapDotxmlRoute = SitemapDotxmlRouteImport.update({
+  id: '/sitemap.xml',
+  path: '/sitemap.xml',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const TermsRoute = TermsRouteImport.update({
+  id: '/terms',
+  path: '/terms',
   getParentRoute: () => rootRouteImport,
 } as any)
 const BlogIndexRoute = BlogIndexRouteImport.update({
@@ -92,104 +87,14 @@ const BlogIndexRoute = BlogIndexRouteImport.update({
   path: '/blog/',
   getParentRoute: () => rootRouteImport,
 } as any)
-const OauthAuthorizeRoute = OauthAuthorizeRouteImport.update({
-  id: '/oauth/authorize',
-  path: '/oauth/authorize',
+const BlogSlugRoute = BlogSlugRouteImport.update({
+  id: '/blog/$slug',
+  path: '/blog/$slug',
   getParentRoute: () => rootRouteImport,
 } as any)
-const ListingIdRoute = ListingIdRouteImport.update({
-  id: '/listing/$id',
-  path: '/listing/$id',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const DocsClaudeRoute = DocsClaudeRouteImport.update({
-  id: '/docs/claude',
-  path: '/docs/claude',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const CompareZillowRoute = CompareZillowRouteImport.update({
-  id: '/compare/zillow',
-  path: '/compare/zillow',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const CompareWritesonicRoute = CompareWritesonicRouteImport.update({
-  id: '/compare/writesonic',
-  path: '/compare/writesonic',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const CompareVirtualstagingaiRoute = CompareVirtualstagingaiRouteImport.update({
-  id: '/compare/virtualstagingai',
-  path: '/compare/virtualstagingai',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const CompareReimaginehomeRoute = CompareReimaginehomeRouteImport.update({
-  id: '/compare/reimaginehome',
-  path: '/compare/reimaginehome',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const CompareRealtorRoute = CompareRealtorRouteImport.update({
-  id: '/compare/realtor',
-  path: '/compare/realtor',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const CompareListingrobotRoute = CompareListingrobotRouteImport.update({
-  id: '/compare/listingrobot',
-  path: '/compare/listingrobot',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const CompareListingaiRoute = CompareListingaiRouteImport.update({
-  id: '/compare/listingai',
-  path: '/compare/listingai',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const CompareKvcoreRoute = CompareKvcoreRouteImport.update({
-  id: '/compare/kvcore',
-  path: '/compare/kvcore',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const CompareJasperRoute = CompareJasperRouteImport.update({
-  id: '/compare/jasper',
-  path: '/compare/jasper',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const CompareHomebotRoute = CompareHomebotRouteImport.update({
-  id: '/compare/homebot',
-  path: '/compare/homebot',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const CompareGrammarlyRoute = CompareGrammarlyRouteImport.update({
-  id: '/compare/grammarly',
-  path: '/compare/grammarly',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const CompareFollowupbossRoute = CompareFollowupbossRouteImport.update({
-  id: '/compare/followupboss',
-  path: '/compare/followupboss',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const CompareEpiqueRoute = CompareEpiqueRouteImport.update({
-  id: '/compare/epique',
-  path: '/compare/epique',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const CompareDealmachineRoute = CompareDealmachineRouteImport.update({
-  id: '/compare/dealmachine',
-  path: '/compare/dealmachine',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const CompareCuraytorRoute = CompareCuraytorRouteImport.update({
-  id: '/compare/curaytor',
-  path: '/compare/curaytor',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const CompareCopyaiRoute = CompareCopyaiRouteImport.update({
-  id: '/compare/copyai',
-  path: '/compare/copyai',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const CompareChatgptRoute = CompareChatgptRouteImport.update({
-  id: '/compare/chatgpt',
-  path: '/compare/chatgpt',
+const CompareIndexRoute = CompareIndexRouteImport.update({
+  id: '/compare/',
+  path: '/compare/',
   getParentRoute: () => rootRouteImport,
 } as any)
 const CompareCanvaRoute = CompareCanvaRouteImport.update({
@@ -197,9 +102,104 @@ const CompareCanvaRoute = CompareCanvaRouteImport.update({
   path: '/compare/canva',
   getParentRoute: () => rootRouteImport,
 } as any)
-const BlogSlugRoute = BlogSlugRouteImport.update({
-  id: '/blog/$slug',
-  path: '/blog/$slug',
+const CompareChatgptRoute = CompareChatgptRouteImport.update({
+  id: '/compare/chatgpt',
+  path: '/compare/chatgpt',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const CompareCopyaiRoute = CompareCopyaiRouteImport.update({
+  id: '/compare/copyai',
+  path: '/compare/copyai',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const CompareCuraytorRoute = CompareCuraytorRouteImport.update({
+  id: '/compare/curaytor',
+  path: '/compare/curaytor',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const CompareDealmachineRoute = CompareDealmachineRouteImport.update({
+  id: '/compare/dealmachine',
+  path: '/compare/dealmachine',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const CompareEpiqueRoute = CompareEpiqueRouteImport.update({
+  id: '/compare/epique',
+  path: '/compare/epique',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const CompareFollowupbossRoute = CompareFollowupbossRouteImport.update({
+  id: '/compare/followupboss',
+  path: '/compare/followupboss',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const CompareGrammarlyRoute = CompareGrammarlyRouteImport.update({
+  id: '/compare/grammarly',
+  path: '/compare/grammarly',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const CompareHomebotRoute = CompareHomebotRouteImport.update({
+  id: '/compare/homebot',
+  path: '/compare/homebot',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const CompareJasperRoute = CompareJasperRouteImport.update({
+  id: '/compare/jasper',
+  path: '/compare/jasper',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const CompareKvcoreRoute = CompareKvcoreRouteImport.update({
+  id: '/compare/kvcore',
+  path: '/compare/kvcore',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const CompareListingaiRoute = CompareListingaiRouteImport.update({
+  id: '/compare/listingai',
+  path: '/compare/listingai',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const CompareListingrobotRoute = CompareListingrobotRouteImport.update({
+  id: '/compare/listingrobot',
+  path: '/compare/listingrobot',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const CompareRealtorRoute = CompareRealtorRouteImport.update({
+  id: '/compare/realtor',
+  path: '/compare/realtor',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const CompareReimaginehomeRoute = CompareReimaginehomeRouteImport.update({
+  id: '/compare/reimaginehome',
+  path: '/compare/reimaginehome',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const CompareVirtualstagingaiRoute = CompareVirtualstagingaiRouteImport.update({
+  id: '/compare/virtualstagingai',
+  path: '/compare/virtualstagingai',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const CompareWritesonicRoute = CompareWritesonicRouteImport.update({
+  id: '/compare/writesonic',
+  path: '/compare/writesonic',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const CompareZillowRoute = CompareZillowRouteImport.update({
+  id: '/compare/zillow',
+  path: '/compare/zillow',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const DocsClaudeRoute = DocsClaudeRouteImport.update({
+  id: '/docs/claude',
+  path: '/docs/claude',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ListingIdRoute = ListingIdRouteImport.update({
+  id: '/listing/$id',
+  path: '/listing/$id',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const OauthAuthorizeRoute = OauthAuthorizeRouteImport.update({
+  id: '/oauth/authorize',
+  path: '/oauth/authorize',
   getParentRoute: () => rootRouteImport,
 } as any)
 
@@ -448,46 +448,11 @@ export interface RootRouteChildren {
 
 declare module '@tanstack/react-router' {
   interface FileRoutesByPath {
-    '/terms': {
-      id: '/terms'
-      path: '/terms'
-      fullPath: '/terms'
-      preLoaderRoute: typeof TermsRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/sitemap.xml': {
-      id: '/sitemap.xml'
-      path: '/sitemap.xml'
-      fullPath: '/sitemap.xml'
-      preLoaderRoute: typeof SitemapDotxmlRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/privacy': {
-      id: '/privacy'
-      path: '/privacy'
-      fullPath: '/privacy'
-      preLoaderRoute: typeof PrivacyRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/pricing': {
-      id: '/pricing'
-      path: '/pricing'
-      fullPath: '/pricing'
-      preLoaderRoute: typeof PricingRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/hub': {
-      id: '/hub'
-      path: '/hub'
-      fullPath: '/hub'
-      preLoaderRoute: typeof HubRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/features': {
-      id: '/features'
-      path: '/features'
-      fullPath: '/features'
-      preLoaderRoute: typeof FeaturesRouteImport
+    '/': {
+      id: '/'
+      path: '/'
+      fullPath: '/'
+      preLoaderRoute: typeof IndexRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/explore': {
@@ -497,18 +462,46 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ExploreRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/': {
-      id: '/'
-      path: '/'
-      fullPath: '/'
-      preLoaderRoute: typeof IndexRouteImport
+    '/features': {
+      id: '/features'
+      path: '/features'
+      fullPath: '/features'
+      preLoaderRoute: typeof FeaturesRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/compare/': {
-      id: '/compare/'
-      path: '/compare'
-      fullPath: '/compare/'
-      preLoaderRoute: typeof CompareIndexRouteImport
+    '/hub': {
+      id: '/hub'
+      path: '/hub'
+      fullPath: '/hub'
+      preLoaderRoute: typeof HubRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/pricing': {
+      id: '/pricing'
+      path: '/pricing'
+      fullPath: '/pricing'
+      preLoaderRoute: typeof PricingRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/privacy': {
+      id: '/privacy'
+      path: '/privacy'
+      fullPath: '/privacy'
+      preLoaderRoute: typeof PrivacyRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/sitemap.xml': {
+      id: '/sitemap.xml'
+      path: '/sitemap.xml'
+      fullPath: '/sitemap.xml'
+      preLoaderRoute: typeof SitemapDotxmlRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/terms': {
+      id: '/terms'
+      path: '/terms'
+      fullPath: '/terms'
+      preLoaderRoute: typeof TermsRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/blog/': {
@@ -518,144 +511,18 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof BlogIndexRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/oauth/authorize': {
-      id: '/oauth/authorize'
-      path: '/oauth/authorize'
-      fullPath: '/oauth/authorize'
-      preLoaderRoute: typeof OauthAuthorizeRouteImport
+    '/blog/$slug': {
+      id: '/blog/$slug'
+      path: '/blog/$slug'
+      fullPath: '/blog/$slug'
+      preLoaderRoute: typeof BlogSlugRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/listing/$id': {
-      id: '/listing/$id'
-      path: '/listing/$id'
-      fullPath: '/listing/$id'
-      preLoaderRoute: typeof ListingIdRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/docs/claude': {
-      id: '/docs/claude'
-      path: '/docs/claude'
-      fullPath: '/docs/claude'
-      preLoaderRoute: typeof DocsClaudeRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/compare/zillow': {
-      id: '/compare/zillow'
-      path: '/compare/zillow'
-      fullPath: '/compare/zillow'
-      preLoaderRoute: typeof CompareZillowRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/compare/writesonic': {
-      id: '/compare/writesonic'
-      path: '/compare/writesonic'
-      fullPath: '/compare/writesonic'
-      preLoaderRoute: typeof CompareWritesonicRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/compare/virtualstagingai': {
-      id: '/compare/virtualstagingai'
-      path: '/compare/virtualstagingai'
-      fullPath: '/compare/virtualstagingai'
-      preLoaderRoute: typeof CompareVirtualstagingaiRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/compare/reimaginehome': {
-      id: '/compare/reimaginehome'
-      path: '/compare/reimaginehome'
-      fullPath: '/compare/reimaginehome'
-      preLoaderRoute: typeof CompareReimaginehomeRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/compare/realtor': {
-      id: '/compare/realtor'
-      path: '/compare/realtor'
-      fullPath: '/compare/realtor'
-      preLoaderRoute: typeof CompareRealtorRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/compare/listingrobot': {
-      id: '/compare/listingrobot'
-      path: '/compare/listingrobot'
-      fullPath: '/compare/listingrobot'
-      preLoaderRoute: typeof CompareListingrobotRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/compare/listingai': {
-      id: '/compare/listingai'
-      path: '/compare/listingai'
-      fullPath: '/compare/listingai'
-      preLoaderRoute: typeof CompareListingaiRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/compare/kvcore': {
-      id: '/compare/kvcore'
-      path: '/compare/kvcore'
-      fullPath: '/compare/kvcore'
-      preLoaderRoute: typeof CompareKvcoreRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/compare/jasper': {
-      id: '/compare/jasper'
-      path: '/compare/jasper'
-      fullPath: '/compare/jasper'
-      preLoaderRoute: typeof CompareJasperRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/compare/homebot': {
-      id: '/compare/homebot'
-      path: '/compare/homebot'
-      fullPath: '/compare/homebot'
-      preLoaderRoute: typeof CompareHomebotRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/compare/grammarly': {
-      id: '/compare/grammarly'
-      path: '/compare/grammarly'
-      fullPath: '/compare/grammarly'
-      preLoaderRoute: typeof CompareGrammarlyRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/compare/followupboss': {
-      id: '/compare/followupboss'
-      path: '/compare/followupboss'
-      fullPath: '/compare/followupboss'
-      preLoaderRoute: typeof CompareFollowupbossRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/compare/epique': {
-      id: '/compare/epique'
-      path: '/compare/epique'
-      fullPath: '/compare/epique'
-      preLoaderRoute: typeof CompareEpiqueRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/compare/dealmachine': {
-      id: '/compare/dealmachine'
-      path: '/compare/dealmachine'
-      fullPath: '/compare/dealmachine'
-      preLoaderRoute: typeof CompareDealmachineRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/compare/curaytor': {
-      id: '/compare/curaytor'
-      path: '/compare/curaytor'
-      fullPath: '/compare/curaytor'
-      preLoaderRoute: typeof CompareCuraytorRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/compare/copyai': {
-      id: '/compare/copyai'
-      path: '/compare/copyai'
-      fullPath: '/compare/copyai'
-      preLoaderRoute: typeof CompareCopyaiRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/compare/chatgpt': {
-      id: '/compare/chatgpt'
-      path: '/compare/chatgpt'
-      fullPath: '/compare/chatgpt'
-      preLoaderRoute: typeof CompareChatgptRouteImport
+    '/compare/': {
+      id: '/compare/'
+      path: '/compare'
+      fullPath: '/compare/'
+      preLoaderRoute: typeof CompareIndexRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/compare/canva': {
@@ -665,11 +532,144 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof CompareCanvaRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/blog/$slug': {
-      id: '/blog/$slug'
-      path: '/blog/$slug'
-      fullPath: '/blog/$slug'
-      preLoaderRoute: typeof BlogSlugRouteImport
+    '/compare/chatgpt': {
+      id: '/compare/chatgpt'
+      path: '/compare/chatgpt'
+      fullPath: '/compare/chatgpt'
+      preLoaderRoute: typeof CompareChatgptRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/compare/copyai': {
+      id: '/compare/copyai'
+      path: '/compare/copyai'
+      fullPath: '/compare/copyai'
+      preLoaderRoute: typeof CompareCopyaiRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/compare/curaytor': {
+      id: '/compare/curaytor'
+      path: '/compare/curaytor'
+      fullPath: '/compare/curaytor'
+      preLoaderRoute: typeof CompareCuraytorRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/compare/dealmachine': {
+      id: '/compare/dealmachine'
+      path: '/compare/dealmachine'
+      fullPath: '/compare/dealmachine'
+      preLoaderRoute: typeof CompareDealmachineRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/compare/epique': {
+      id: '/compare/epique'
+      path: '/compare/epique'
+      fullPath: '/compare/epique'
+      preLoaderRoute: typeof CompareEpiqueRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/compare/followupboss': {
+      id: '/compare/followupboss'
+      path: '/compare/followupboss'
+      fullPath: '/compare/followupboss'
+      preLoaderRoute: typeof CompareFollowupbossRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/compare/grammarly': {
+      id: '/compare/grammarly'
+      path: '/compare/grammarly'
+      fullPath: '/compare/grammarly'
+      preLoaderRoute: typeof CompareGrammarlyRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/compare/homebot': {
+      id: '/compare/homebot'
+      path: '/compare/homebot'
+      fullPath: '/compare/homebot'
+      preLoaderRoute: typeof CompareHomebotRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/compare/jasper': {
+      id: '/compare/jasper'
+      path: '/compare/jasper'
+      fullPath: '/compare/jasper'
+      preLoaderRoute: typeof CompareJasperRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/compare/kvcore': {
+      id: '/compare/kvcore'
+      path: '/compare/kvcore'
+      fullPath: '/compare/kvcore'
+      preLoaderRoute: typeof CompareKvcoreRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/compare/listingai': {
+      id: '/compare/listingai'
+      path: '/compare/listingai'
+      fullPath: '/compare/listingai'
+      preLoaderRoute: typeof CompareListingaiRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/compare/listingrobot': {
+      id: '/compare/listingrobot'
+      path: '/compare/listingrobot'
+      fullPath: '/compare/listingrobot'
+      preLoaderRoute: typeof CompareListingrobotRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/compare/realtor': {
+      id: '/compare/realtor'
+      path: '/compare/realtor'
+      fullPath: '/compare/realtor'
+      preLoaderRoute: typeof CompareRealtorRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/compare/reimaginehome': {
+      id: '/compare/reimaginehome'
+      path: '/compare/reimaginehome'
+      fullPath: '/compare/reimaginehome'
+      preLoaderRoute: typeof CompareReimaginehomeRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/compare/virtualstagingai': {
+      id: '/compare/virtualstagingai'
+      path: '/compare/virtualstagingai'
+      fullPath: '/compare/virtualstagingai'
+      preLoaderRoute: typeof CompareVirtualstagingaiRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/compare/writesonic': {
+      id: '/compare/writesonic'
+      path: '/compare/writesonic'
+      fullPath: '/compare/writesonic'
+      preLoaderRoute: typeof CompareWritesonicRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/compare/zillow': {
+      id: '/compare/zillow'
+      path: '/compare/zillow'
+      fullPath: '/compare/zillow'
+      preLoaderRoute: typeof CompareZillowRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/docs/claude': {
+      id: '/docs/claude'
+      path: '/docs/claude'
+      fullPath: '/docs/claude'
+      preLoaderRoute: typeof DocsClaudeRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/listing/$id': {
+      id: '/listing/$id'
+      path: '/listing/$id'
+      fullPath: '/listing/$id'
+      preLoaderRoute: typeof ListingIdRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/oauth/authorize': {
+      id: '/oauth/authorize'
+      path: '/oauth/authorize'
+      fullPath: '/oauth/authorize'
+      preLoaderRoute: typeof OauthAuthorizeRouteImport
       parentRoute: typeof rootRouteImport
     }
   }
