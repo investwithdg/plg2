@@ -84,7 +84,7 @@ function enrichmentCacheKey(address: string, propertyType?: string): string {
   const parts = address.toLowerCase().trim().replace(/\s+/g, " ").split(",");
   // Use city + state + zip (skip street number for neighborhood-level caching)
   const base = parts.length >= 2 ? parts.slice(1).join(",").trim() : parts[0];
-  const typeSuffix = propertyType ? \`|\${propertyType.toLowerCase().trim()}\` : "";
+  const typeSuffix = propertyType ? `|${propertyType.toLowerCase().trim()}` : "";
   return base + typeSuffix;
 }
 
