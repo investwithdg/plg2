@@ -10,6 +10,7 @@ import {
 import { type TokenUsage, pickKey, extractWithPerplexity, enrichWithPerplexity, generateCopy } from "../_shared/llm.ts";
 import { parseExistingListingFHA } from "../_shared/fha.ts";
 import { sanitizeForLLM } from "../_shared/security.ts";
+import { resolvePlanTier } from "../_shared/planTier.ts";
 
 // `reason` is an optional caller-supplied tag for this run. The only value with behaviour
 // attached is "photo_enrichment" (sent by analyze-property-photos) — see the re-processing
@@ -403,12 +404,41 @@ async function process(propertyId: string, reason?: string) {
       { type: "email", instruction: profile.copy.email },
     ];
 
+    // Elite Brand Voice: load the agent's saved tone/banned-words/signature and
+    // fold it into the system prompt. Elite-only, mirroring the Vision+ gate.
+    let brandVoiceAddendum = "";
+    if (property.user_id) {
+      const { data: subRows } = await supabase
+        .from("subscriptions")
+        .select("plan, status")
+        .eq("user_id", property.user_id);
+      if (resolvePlanTier(subRows) === "elite") {
+        const { data: brand } = await supabase
+          .from("brand_profiles")
+          .select("tone, banned_words, signature")
+          .eq("user_id", property.user_id)
+          .maybeSingle();
+        if (brand && (brand.tone || brand.banned_words?.length || brand.signature)) {
+          const parts: string[] = [];
+          if (brand.tone) parts.push(`Tone & style: ${sanitizeForLLM(brand.tone)}`);
+          if (brand.banned_words?.length)
+            parts.push(
+              `Never use these words or phrases: ${brand.banned_words.map((w: string) => sanitizeForLLM(w)).join(", ")}`,
+            );
+          if (brand.signature)
+            parts.push(`End every piece with this signature line: ${sanitizeForLLM(brand.signature)}`);
+          brandVoiceAddendum = `\n\nAgent brand voice (follow strictly):\n${parts.join("\n")}`;
+        }
+      }
+    }
+
     // Compose system prompt with profile-specific voice directive
     const composedSystemPrompt =
       FHA_SYSTEM_PROMPT +
       `\n\nProperty type context (${profile.label}):\n${profile.copy.voiceDirective}` +
       // Only added when there is actually a photo_features block in the context JSON.
-      (photoFeatures ? PHOTO_FEATURES_PROMPT_ADDENDUM : "");
+      (photoFeatures ? PHOTO_FEATURES_PROMPT_ADDENDUM : "") +
+      brandVoiceAddendum;
 
     const results = await Promise.allSettled(
       copyTypes.map((c, i) =>
