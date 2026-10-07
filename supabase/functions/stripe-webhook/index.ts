@@ -209,7 +209,7 @@ async function handleSubscriptionChange(
   const payload = {
     stripe_customer_id: customerId,
     stripe_subscription_id: subscriptionId,
-    plan: "pro",
+    plan,
     status,
     current_period_start: periodStart,
     current_period_end: periodEnd,
