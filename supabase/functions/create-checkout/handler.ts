@@ -40,6 +40,7 @@ export async function handleRequest(req: Request, deps: CreateCheckoutDeps): Pro
 
     const body = await req.json();
     const interval = body.interval === "year" ? "year" : "month";
+    const plan = body.plan === "elite" ? "elite" : "pro";
 
     const stripeKey = Deno.env.get("STRIPE_SECRET_KEY");
     if (!stripeKey) {
@@ -48,10 +49,16 @@ export async function handleRequest(req: Request, deps: CreateCheckoutDeps): Pro
     }
 
     const priceId =
-      interval === "year" ? Deno.env.get("STRIPE_PRICE_ANNUAL") : Deno.env.get("STRIPE_PRICE_MONTHLY");
+      plan === "elite"
+        ? interval === "year"
+          ? Deno.env.get("STRIPE_PRICE_ELITE_ANNUAL")
+          : Deno.env.get("STRIPE_PRICE_ELITE_MONTHLY")
+        : interval === "year"
+          ? Deno.env.get("STRIPE_PRICE_ANNUAL")
+          : Deno.env.get("STRIPE_PRICE_MONTHLY");
 
     if (!priceId) {
-      deps.log("missing_price_id", { interval });
+      deps.log("missing_price_id", { interval, plan });
       return json({ error: "Payment plan not configured" }, 500, corsHeaders);
     }
 
@@ -65,7 +72,9 @@ export async function handleRequest(req: Request, deps: CreateCheckoutDeps): Pro
     params.set("line_items[0][price]", priceId);
     params.set("line_items[0][quantity]", "1");
     params.set("metadata[user_id]", userId);
+    params.set("metadata[plan]", plan);
     params.set("subscription_data[metadata][user_id]", userId);
+    params.set("subscription_data[metadata][plan]", plan);
     if (userEmail) {
       params.set("customer_email", userEmail);
     }

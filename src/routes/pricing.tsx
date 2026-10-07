@@ -1,23 +1,24 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { useAuth } from "@/hooks/useAuth";
 import { usePlanTier } from "@/hooks/usePlanTier";
 import { supabase } from "@/integrations/supabase/client";
+import { toast as sonnerToast } from "sonner";
 
 export const Route = createFileRoute("/pricing")({
   head: () => ({
     meta: [
-      { title: "PLG Pricing — Free & Pro Plans" },
+      { title: "PLG Pricing — Free, Pro & Elite Plans" },
       {
         name: "description",
         content:
-          "PropertyListingGenerator.com pricing: 10 free generations with 1 Pro-tier property sample, or Pro at $49/mo for unlimited generations and all Pro-tier property types.",
+          "PropertyListingGenerator.com pricing: 10 free generations, Pro at $49/mo for unlimited generations, or Elite at $99/mo with Vision+ photo analysis and custom brand voice.",
       },
-      { property: "og:title", content: "PLG Pricing — Free & Pro Plans" },
+      { property: "og:title", content: "PLG Pricing — Free, Pro & Elite Plans" },
       {
         property: "og:description",
         content:
-          "Free: 10 generations with 1 Pro-tier sample. Pro: $49/mo for unlimited listing copy generation.",
+          "Free: 10 generations. Pro: $49/mo unlimited. Elite: $99/mo with Vision+ photo analysis and brand voice.",
       },
       { property: "og:url", content: "https://propertylistinggenerator.com/pricing" },
     ],
@@ -30,6 +31,31 @@ function Pricing() {
   const { user } = useAuth();
   const { plan } = usePlanTier(user);
   const isProUser = plan === "pro" || plan === "elite";
+  const isEliteUser = plan === "elite";
+  const [eliteLoading, setEliteLoading] = useState(false);
+
+  const handleEliteCheckout = async () => {
+    if (!user) {
+      sonnerToast.error("Sign in before upgrading to Elite");
+      return;
+    }
+    setEliteLoading(true);
+    try {
+      const { data, error } = await supabase.functions.invoke("create-checkout", {
+        body: { interval: "month", plan: "elite" },
+      });
+      if (error) throw error;
+      if (data?.url) {
+        window.location.href = data.url;
+      } else {
+        throw new Error("No checkout URL returned");
+      }
+    } catch (err) {
+      console.error("Elite checkout error:", err);
+      sonnerToast.error("Failed to start Elite checkout");
+      setEliteLoading(false);
+    }
+  };
 
   return (
     <div className="min-h-screen bg-[var(--background)] p-4 flex flex-col items-center">
@@ -196,7 +222,7 @@ function Pricing() {
                 </ul>
               </div>
               <div className="text-center pt-1 mt-auto">
-                {isProUser ? (
+                {plan === "pro" ? (
                   <button
                     type="button"
                     disabled
@@ -224,48 +250,71 @@ function Pricing() {
             <div
               className="win95-titlebar"
               style={{
-                background: "linear-gradient(to right, #808080, #a9a9a9)",
-                color: "white",
+                background: "linear-gradient(to right, #1a1a1a, #4a4a4a)",
+                color: "#FFD700",
               }}
             >
               <span className="font-bold text-win95-12 truncate pl-1">Elite Plan</span>
-              <span className="text-win95-11 opacity-90">coming soon</span>
+              <span className="text-win95-11 opacity-90">top tier</span>
             </div>
             <div className="p-4 space-y-3 flex flex-col flex-1">
               <div className="text-center">
-                <span className="text-win95-16 font-bold text-muted-foreground">—</span>
-                <div className="text-[10px] text-muted-foreground mt-0.5">in development</div>
+                <span className="text-win95-16 font-bold">$99</span>
+                <span className="text-win95-11 text-muted-foreground"> / month</span>
+                <div className="text-[10px] text-muted-foreground mt-0.5">
+                  or $79/mo billed annually
+                </div>
               </div>
               <div className="win95-inset p-3 flex-grow">
-                <ul className="space-y-1.5 text-win95-11 text-muted-foreground">
+                <ul className="space-y-1.5 text-win95-11">
                   <li className="flex gap-2">
-                    <span className="font-bold">+</span>
+                    <span className="font-bold text-[#B8860B]">+</span>
                     <span>Everything in Pro, plus:</span>
                   </li>
                   <li className="flex gap-2">
-                    <span className="font-bold">+</span>
+                    <span className="font-bold text-[#B8860B]">+</span>
                     <span>
-                      <strong>Vision+</strong> Photo analysis & feature extraction
+                      <strong>Vision+</strong> — photo analysis & feature extraction
                     </span>
                   </li>
                   <li className="flex gap-2">
-                    <span className="font-bold">+</span>
-                    <span>Custom brand voice training</span>
+                    <span className="font-bold text-[#B8860B]">+</span>
+                    <span>
+                      <strong>Brand Voice</strong> — custom tone, banned words, signature
+                    </span>
                   </li>
                   <li className="flex gap-2">
-                    <span className="font-bold">+</span>
-                    <span>Team collaboration</span>
+                    <span className="font-bold text-[#B8860B]">+</span>
+                    <span>
+                      <strong>Static API keys</strong> — script PLG from anywhere
+                    </span>
+                  </li>
+                  <li className="flex gap-2">
+                    <span className="font-bold text-[#B8860B]">+</span>
+                    <span>Elite desktop theme</span>
                   </li>
                 </ul>
               </div>
               <div className="text-center pt-1 mt-auto">
-                <button
-                  type="button"
-                  disabled
-                  className="win95-raised px-4 py-1 text-win95-12 font-bold cursor-not-allowed opacity-50"
-                >
-                  Coming Soon
-                </button>
+                {isEliteUser ? (
+                  <button
+                    type="button"
+                    disabled
+                    className="win95-raised px-4 py-1 text-win95-12 font-bold cursor-default opacity-60"
+                  >
+                    Current Plan
+                  </button>
+                ) : (
+                  <button
+                    type="button"
+                    onClick={handleEliteCheckout}
+                    disabled={eliteLoading}
+                    className="win95-raised px-4 py-1 text-win95-12 font-bold cursor-pointer active:win95-pressed"
+                    style={{ color: "#B8860B" }}
+                  >
+                    {eliteLoading ? "Loading..." : "Go Elite"}
+                  </button>
+                )}
               </div>
             </div>
           </div>
