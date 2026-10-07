@@ -627,6 +627,23 @@ export default function RetroGenerator() {
               <PhotoAttachmentTray key={photoTrayKey} onPhotosChange={setAttachedPhotos} />
             )}
 
+            {!isEliteUser && (
+              <div className="win95-raised bg-card p-2 flex items-center justify-between gap-2 flex-wrap">
+                <span className="text-win95-11">
+                  <span className="font-bold">
+                    Vision+{" "}
+                    <span className="text-[#FFD700] [text-shadow:1px_1px_0_rgba(0,0,0,0.8)]">★</span>
+                  </span>{" "}
+                  <span className="text-muted-foreground">
+                    — attach up to 5 photos and PLG writes copy around what's actually in them.
+                  </span>
+                </span>
+                <Link to="/pricing">
+                  <RetroButton>Unlock with Elite</RetroButton>
+                </Link>
+              </div>
+            )}
+
             <PropertyTypeToggle
               value={propertyType}
               onChange={setPropertyType}
