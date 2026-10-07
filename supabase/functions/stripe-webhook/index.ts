@@ -92,6 +92,16 @@ serve(async (req) => {
   return new Response(JSON.stringify({ received: true }), { status: 200 });
 });
 
+/** Maps a Stripe price ID to a plan tier using the configured env price IDs. Defaults to "pro". */
+function planFromPriceId(priceId: string | undefined | null): "pro" | "elite" {
+  if (!priceId) return "pro";
+  const elitePrices = [
+    Deno.env.get("STRIPE_PRICE_ELITE_MONTHLY"),
+    Deno.env.get("STRIPE_PRICE_ELITE_ANNUAL"),
+  ].filter(Boolean);
+  return elitePrices.includes(priceId) ? "elite" : "pro";
+}
+
 async function sendLoopsEvent(
   loopsKey: string,
   email: string,
