@@ -1,23 +1,24 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { useAuth } from "@/hooks/useAuth";
 import { usePlanTier } from "@/hooks/usePlanTier";
 import { supabase } from "@/integrations/supabase/client";
+import { toast as sonnerToast } from "sonner";
 
 export const Route = createFileRoute("/pricing")({
   head: () => ({
     meta: [
-      { title: "PLG Pricing — Free & Pro Plans" },
+      { title: "PLG Pricing — Free, Pro & Elite Plans" },
       {
         name: "description",
         content:
-          "PropertyListingGenerator.com pricing: 10 free generations with 1 Pro-tier property sample, or Pro at $49/mo for unlimited generations and all Pro-tier property types.",
+          "PropertyListingGenerator.com pricing: 10 free generations, Pro at $49/mo for unlimited generations, or Elite at $99/mo with Vision+ photo analysis and custom brand voice.",
       },
-      { property: "og:title", content: "PLG Pricing — Free & Pro Plans" },
+      { property: "og:title", content: "PLG Pricing — Free, Pro & Elite Plans" },
       {
         property: "og:description",
         content:
-          "Free: 10 generations with 1 Pro-tier sample. Pro: $49/mo for unlimited listing copy generation.",
+          "Free: 10 generations. Pro: $49/mo unlimited. Elite: $99/mo with Vision+ photo analysis and brand voice.",
       },
       { property: "og:url", content: "https://propertylistinggenerator.com/pricing" },
     ],
@@ -30,6 +31,31 @@ function Pricing() {
   const { user } = useAuth();
   const { plan } = usePlanTier(user);
   const isProUser = plan === "pro" || plan === "elite";
+  const isEliteUser = plan === "elite";
+  const [eliteLoading, setEliteLoading] = useState(false);
+
+  const handleEliteCheckout = async () => {
+    if (!user) {
+      sonnerToast.error("Sign in before upgrading to Elite");
+      return;
+    }
+    setEliteLoading(true);
+    try {
+      const { data, error } = await supabase.functions.invoke("create-checkout", {
+        body: { interval: "month", plan: "elite" },
+      });
+      if (error) throw error;
+      if (data?.url) {
+        window.location.href = data.url;
+      } else {
+        throw new Error("No checkout URL returned");
+      }
+    } catch (err) {
+      console.error("Elite checkout error:", err);
+      sonnerToast.error("Failed to start Elite checkout");
+      setEliteLoading(false);
+    }
+  };
 
   return (
     <div className="min-h-screen bg-[var(--background)] p-4 flex flex-col items-center">
