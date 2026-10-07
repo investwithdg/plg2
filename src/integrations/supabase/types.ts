@@ -47,6 +47,36 @@ export type Database = {
         }
         Relationships: []
       }
+      brand_profiles: {
+        Row: {
+          banned_words: string[]
+          created_at: string
+          id: string
+          signature: string | null
+          tone: string | null
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          banned_words?: string[]
+          created_at?: string
+          id?: string
+          signature?: string | null
+          tone?: string | null
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          banned_words?: string[]
+          created_at?: string
+          id?: string
+          signature?: string | null
+          tone?: string | null
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       compliance_checks: {
         Row: {
           board: string
