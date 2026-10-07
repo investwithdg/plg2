@@ -90,6 +90,15 @@ export function AppNav() {
 
         {/* Desktop: user info + auth button */}
         <div className="hidden sm:flex items-center gap-2">
+          {userEmail && plan !== "free" && (
+            <span
+              className={`text-[10px] font-bold px-1.5 py-0.5 win95-raised ${
+                plan === "elite" ? "bg-[#1a1a1a] text-[#FFD700]" : "bg-[#800000] text-white"
+              }`}
+            >
+              {plan.toUpperCase()}
+            </span>
+          )}
           {userEmail && (
             <span className="text-win95-11 opacity-80 hidden md:inline truncate max-w-[160px]">
               {userEmail}
