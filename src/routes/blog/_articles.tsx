@@ -1121,4 +1121,264 @@ export const ARTICLES: Article[] = [
       },
     ],
   },
+  {
+    slug: "free-mls-listing-description-generator",
+    title: "The Best Free MLS Listing Description Generators (2026 Comparison)",
+    description:
+      "We tested every free AI listing description generator available in 2026. Here's what actually works — and why most fall short on FHA compliance and research quality.",
+    date: "2026-10-09",
+    readTime: "7 min read",
+    intro: () => (
+      <>
+        <p className="text-win95-12 leading-relaxed">
+          Typing listing descriptions from scratch takes 45 minutes on average.
+          In 2026, there's no reason to do that. Several AI tools now generate
+          MLS copy in under a minute — some for free. But not all of them are
+          safe to use without editing, and most aren't purpose-built for real
+          estate.
+        </p>
+        <p className="text-win95-12 leading-relaxed mt-3">
+          We tested every major option and documented what each one gets right,
+          what it gets wrong, and whether the output would survive a Fair Housing
+          review.
+        </p>
+      </>
+    ),
+    sections: [
+      {
+        title: "What to Look for in an MLS Description Generator",
+        Body: () => (
+          <div className="space-y-3 text-win95-12 leading-relaxed">
+            <p>Before comparing tools, here's what matters:</p>
+            <ul className="list-disc pl-5 space-y-2">
+              <li><strong>FHA Fair Housing compliance.</strong> The output must not contain discriminatory language — even unintentionally. Generic AI tools (ChatGPT, Claude, Gemini) have no real estate compliance training and will produce "great school district," "quiet neighborhood," and other flagged phrases.</li>
+              <li><strong>Real property research.</strong> Good listing copy uses actual facts about the property and neighborhood. Tools that only work from your typed input will hallucinate or produce generic copy. Tools that look up the address independently write with specificity.</li>
+              <li><strong>Multiple output formats.</strong> Agents need MLS description, social post, and email copy — not just one format. Having to run three separate prompts defeats the purpose.</li>
+              <li><strong>Speed.</strong> If a tool takes 3 minutes to produce output, you haven't saved much time over writing it yourself. Sub-30 second generation is the bar.</li>
+            </ul>
+          </div>
+        ),
+      },
+      {
+        title: "ChatGPT / Claude / Gemini (Free General AI)",
+        Body: () => (
+          <div className="space-y-3 text-win95-12 leading-relaxed">
+            <p>
+              The general-purpose AI chatbots can write listing descriptions. The
+              output reads well and sounds professional — the problem is what's
+              under the surface.
+            </p>
+            <p><strong>What works:</strong> Fluent prose, fast, free for limited use.</p>
+            <p><strong>What doesn't:</strong></p>
+            <ul className="list-disc pl-5 space-y-2">
+              <li>No FHA compliance training. These models will write "perfect for a growing family," "quiet, safe neighborhood," and "walk to your favorite church" without flagging anything. All three are Fair Housing violations or high-risk language depending on state.</li>
+              <li>No property research. Give ChatGPT an address and it will hallucinate details — beds, baths, square footage, neighborhood character — unless you paste in every fact. The result is plausible-sounding copy that you have to verify line by line.</li>
+              <li>No real estate output structure. You'll get a paragraph, not a properly formatted MLS description with a lead line, feature bullets, and compliant CTA.</li>
+            </ul>
+            <p>
+              <strong>Verdict:</strong> Useful as a starting-point editor, not a
+              finished listing generator. Budget 20–30 minutes of review and rewriting.
+            </p>
+          </div>
+        ),
+      },
+      {
+        title: "Listing AI and Similar Template-Based Tools",
+        Body: () => (
+          <div className="space-y-3 text-win95-12 leading-relaxed">
+            <p>
+              Listing AI and similar tools are designed for real estate agents
+              and generate output faster than a blank chat prompt. They typically
+              take a structured form input and return an MLS description.
+            </p>
+            <p><strong>What works:</strong> Purpose-built for agents, output is MLS-formatted.</p>
+            <p><strong>What doesn't:</strong></p>
+            <ul className="list-disc pl-5 space-y-2">
+              <li>Most do not conduct independent property research — they write from your form inputs only. If you forget to include a detail, it won't appear.</li>
+              <li>Compliance varies by tool. Some have basic keyword filters; few have been trained on the full NAR flagged-language list or state-level extensions.</li>
+              <li>Typically only one output format. You'll need a separate tool or prompt for social and email copy.</li>
+              <li>Paid plans required for meaningful volume.</li>
+            </ul>
+            <p>
+              <strong>Verdict:</strong> A step up from general AI for format and
+              framing, but still requires manual input of all property details and
+              FHA review.
+            </p>
+          </div>
+        ),
+      },
+      {
+        title: "PLG — PropertyListingGenerator.com",
+        Body: () => (
+          <div className="space-y-3 text-win95-12 leading-relaxed">
+            <p>
+              PLG is purpose-built to solve the two gaps above: research and
+              compliance. You paste an address or Zillow/Redfin/Realtor.com link
+              and the tool does the rest.
+            </p>
+            <p><strong>What works:</strong></p>
+            <ul className="list-disc pl-5 space-y-2">
+              <li><strong>Real property research.</strong> PLG uses Perplexity AI to look up the actual property — beds, baths, lot size, neighborhood context, school data, recent sale history — before writing. You don't have to supply any of it.</li>
+              <li><strong>FHA Fair Housing compliant by default.</strong> Every output is run through a compliance filter trained on NAR guidelines and common state-level extensions. Flagged language is rewritten automatically before you see the result.</li>
+              <li><strong>Three formats in one generation.</strong> MLS description, Instagram/Facebook post, and buyer email copy — all from a single 15-second run.</li>
+              <li><strong>Free tier included.</strong> 10 free generations per month for signed-in accounts, including one Pro-tier property type sample.</li>
+            </ul>
+            <p><strong>What it doesn't do:</strong> No image generation, no CRM integration (yet), no brokerage white-labeling on the free plan.</p>
+            <p>
+              <strong>Verdict:</strong> The strongest option if FHA compliance
+              and research-backed copy are your priorities. Free to test at{" "}
+              <a href="/" className="underline">PropertyListingGenerator.com</a>.
+            </p>
+          </div>
+        ),
+      },
+      {
+        title: "Which Tool Should You Use?",
+        Body: () => (
+          <div className="space-y-3 text-win95-12 leading-relaxed">
+            <div className="win95-inset bg-input p-3">
+              <p className="text-win95-11 font-bold mb-2">Decision guide:</p>
+              <ul className="space-y-2 text-win95-11">
+                <li><strong>You want to test AI listing copy for free, right now:</strong> PLG — 10 free/month, no credit card.</li>
+                <li><strong>You want to edit an AI draft by hand:</strong> ChatGPT works, but budget review time and run every output through a Fair Housing check before publishing.</li>
+                <li><strong>You generate 50+ listings per year and want compliance built in:</strong> PLG Pro ($49/mo) removes the generation cap and covers all property types.</li>
+                <li><strong>You want MLS copy only with a simple form:</strong> Listing AI or similar tools. You'll still need to supply all property details manually and review for compliance.</li>
+              </ul>
+            </div>
+            <p>
+              The non-negotiable: whatever you use, read the output before you
+              publish. AI tools — including PLG — can make mistakes. The compliance
+              filter catches common violations; it doesn't replace your professional
+              judgment.
+            </p>
+          </div>
+        ),
+      },
+    ],
+  },
+  {
+    slug: "chatgpt-real-estate-listing-descriptions",
+    title: "Can You Use ChatGPT for Real Estate Listing Descriptions? (Honest Answer)",
+    description:
+      "ChatGPT can write listing copy. But for real estate agents, using it without modification is a Fair Housing compliance risk. Here's what to know before you paste and send.",
+    date: "2026-10-09",
+    readTime: "5 min read",
+    intro: () => (
+      <>
+        <p className="text-win95-12 leading-relaxed">
+          Yes, ChatGPT can write a real estate listing description. It does so
+          quickly and the prose sounds professional. Agents across the country
+          are using it right now.
+        </p>
+        <p className="text-win95-12 leading-relaxed mt-3">
+          Some of them are publishing listing copy that violates the Fair Housing
+          Act without knowing it — because ChatGPT doesn't know what it
+          shouldn't say about neighborhoods, schools, and lifestyle, and it has
+          no way to research the actual property.
+        </p>
+        <p className="text-win95-12 leading-relaxed mt-3">
+          Here's an honest breakdown of what ChatGPT is good for in this
+          workflow, and where it falls short.
+        </p>
+      </>
+    ),
+    sections: [
+      {
+        title: "What ChatGPT Does Well",
+        Body: () => (
+          <div className="space-y-3 text-win95-12 leading-relaxed">
+            <p>
+              If you paste in every detail — beds, baths, square footage, recent
+              updates, neighborhood highlights — ChatGPT will produce fluent,
+              readable copy. It understands listing structure well enough to
+              write a lead sentence, feature paragraph, and close.
+            </p>
+            <p>
+              For agents who want to go from rough notes to a polished first
+              draft, ChatGPT is a legitimate time-saver. It's also a good
+              rewriter if you have existing copy you want to tighten or
+              rephrase.
+            </p>
+          </div>
+        ),
+      },
+      {
+        title: "The Fair Housing Problem",
+        Body: () => (
+          <div className="space-y-3 text-win95-12 leading-relaxed">
+            <p>
+              ChatGPT has no real estate compliance training. Ask it to write
+              listing copy and it may produce:
+            </p>
+            <ul className="list-disc pl-5 space-y-2">
+              <li><strong>"Great school district"</strong> — acceptable only with a named school and factual rating. On its own, this phrase implies something about who should live there.</li>
+              <li><strong>"Quiet, safe neighborhood"</strong> — the word "safe" in listing copy is a steering red flag with a documented history of Fair Housing complaints in certain markets.</li>
+              <li><strong>"Perfect for a growing family"</strong> — familial status discrimination.</li>
+              <li><strong>"Walking distance to [religious institution]"</strong> positioned as a selling point — religion as a demographic signal.</li>
+            </ul>
+            <p>
+              ChatGPT isn't trying to discriminate — it simply doesn't know
+              what it shouldn't say. These phrases appear because they sound
+              positive and appear in its training data. The risk is entirely
+              on the agent who publishes them.
+            </p>
+          </div>
+        ),
+      },
+      {
+        title: "The Research Problem",
+        Body: () => (
+          <div className="space-y-3 text-win95-12 leading-relaxed">
+            <p>
+              Tell ChatGPT an address and it will hallucinate property details
+              unless you supply them. It cannot look up a listing. It cannot pull
+              school ratings, neighborhood data, or walkability scores.
+            </p>
+            <p>
+              This means one of two things happens:
+            </p>
+            <ul className="list-disc pl-5 space-y-2">
+              <li>You supply everything, which takes time and largely defeats the purpose of using AI.</li>
+              <li>The copy contains invented details — a room count that doesn't match, a feature that doesn't exist, a school district that's wrong — that you have to catch before publishing.</li>
+            </ul>
+          </div>
+        ),
+      },
+      {
+        title: "How to Use ChatGPT Safely for Listing Copy",
+        Body: () => (
+          <div className="space-y-3 text-win95-12 leading-relaxed">
+            <p>If you want to use ChatGPT in this workflow, here's how to do it with less risk:</p>
+            <ol className="list-decimal pl-5 space-y-2">
+              <li><strong>Paste every fact</strong> — don't rely on it to look anything up. Include address, beds, baths, sqft, lot size, year built, updates, and any specific features worth calling out.</li>
+              <li><strong>Prompt it explicitly for FHA compliance:</strong> "Write an MLS listing description. Do not include any language about schools, neighborhood character, religion, family status, or who the property is suited for. Stick to physical features and factual distance references."</li>
+              <li><strong>Review before publishing.</strong> Read every sentence for the 7 federal protected classes plus your state's additions. When in doubt, cut the sentence.</li>
+            </ol>
+          </div>
+        ),
+      },
+      {
+        title: "The Alternative: A Tool Built for This",
+        Body: () => (
+          <div className="space-y-3 text-win95-12 leading-relaxed">
+            <p>
+              PLG was built to solve both problems — research and compliance —
+              so you don't have to manage them manually.
+            </p>
+            <p>
+              You paste an address or listing URL. PLG looks up the actual
+              property, pulls real neighborhood and school data, writes
+              FHA-compliant copy across three formats (MLS, social, email), and
+              returns the output in about 15 seconds. The compliance filter runs
+              on every generation — you don't configure it.
+            </p>
+            <p>
+              Free to try — 10 generations per month, no credit card:{" "}
+              <a href="/" className="underline">PropertyListingGenerator.com</a>.
+            </p>
+          </div>
+        ),
+      },
+    ],
+  },
 ];
