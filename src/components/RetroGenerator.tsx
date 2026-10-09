@@ -538,7 +538,42 @@ export default function RetroGenerator() {
         </RetroWindow>
 
         {outputs && (
-          <div className="w-full max-w-3xl">
+          <div className="w-full max-w-3xl space-y-2">
+            {propertyId && (
+              <div className="win95-window">
+                <div className="win95-titlebar" style={{ background: "linear-gradient(to right, #006400, #228B22)" }}>
+                  <span className="font-bold text-win95-12 pl-1">
+                    ✓ Listing ready — share it
+                  </span>
+                </div>
+                <div className="p-3 flex flex-col sm:flex-row items-start sm:items-center gap-2">
+                  <span className="win95-inset bg-input px-2 py-1 text-win95-11 flex-1 truncate select-all cursor-text font-mono">
+                    {typeof window !== "undefined" ? `${window.location.origin}/listing/${propertyId}` : ""}
+                  </span>
+                  <div className="flex gap-2 shrink-0 flex-wrap">
+                    <RetroButton onClick={() => {
+                      navigator.clipboard.writeText(`${window.location.origin}/listing/${propertyId}`);
+                      sonnerToast.success("Link copied!", { description: "Send this to anyone" });
+                    }}>
+                      📋 copy link
+                    </RetroButton>
+                    <RetroButton onClick={() => {
+                      const text = encodeURIComponent(`Just generated listing copy in 15 seconds with PLG`);
+                      const url = encodeURIComponent(`${window.location.origin}/listing/${propertyId}`);
+                      window.open(`https://twitter.com/intent/tweet?text=${text}&url=${url}`, "_blank", "noopener");
+                    }}>
+                      𝕏
+                    </RetroButton>
+                    <RetroButton onClick={() => {
+                      const url = encodeURIComponent(`${window.location.origin}/listing/${propertyId}`);
+                      window.open(`https://www.linkedin.com/sharing/share-offsite/?url=${url}`, "_blank", "noopener");
+                    }}>
+                      in
+                    </RetroButton>
+                  </div>
+                </div>
+              </div>
+            )}
             <OutputTabsWindow
               outputs={outputs}
               headerRight={
@@ -555,14 +590,6 @@ export default function RetroGenerator() {
                     copy {activeTab}
                   </RetroButton>
                   <RetroButton onClick={onCopyAll}>copy all</RetroButton>
-                  {propertyId && (
-                    <RetroButton onClick={() => {
-                      navigator.clipboard.writeText(`${window.location.origin}/listing/${propertyId}`);
-                      sonnerToast.success("Link copied!", { description: "Share this listing with anyone" });
-                    }}>
-                      share link
-                    </RetroButton>
-                  )}
                   <RetroButton
                     variant="primary"
                     onClick={handleGenerate}

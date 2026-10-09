@@ -129,6 +129,17 @@ function ListingPage() {
     sonnerToast.success("Link copied!", { description: "Share this listing with anyone" });
   };
 
+  const handleShareTwitter = () => {
+    const text = encodeURIComponent(`Just generated FHA-compliant listing copy for ${listing.address} in 15 seconds with PLG`);
+    const url = encodeURIComponent(window.location.href);
+    window.open(`https://twitter.com/intent/tweet?text=${text}&url=${url}`, "_blank", "noopener");
+  };
+
+  const handleShareLinkedIn = () => {
+    const url = encodeURIComponent(window.location.href);
+    window.open(`https://www.linkedin.com/sharing/share-offsite/?url=${url}`, "_blank", "noopener");
+  };
+
   const typeLabel = listing.property_type
     ? (TYPE_LABELS[listing.property_type] ?? listing.property_type)
     : null;
@@ -207,7 +218,19 @@ function ListingPage() {
                 onClick={handleShareUrl}
                 className="win95-raised px-3 py-1 text-win95-11 cursor-pointer active:win95-pressed"
               >
-                Share Link
+                📋 Copy Link
+              </button>
+              <button
+                onClick={handleShareTwitter}
+                className="win95-raised px-3 py-1 text-win95-11 cursor-pointer active:win95-pressed"
+              >
+                𝕏 Share
+              </button>
+              <button
+                onClick={handleShareLinkedIn}
+                className="win95-raised px-3 py-1 text-win95-11 cursor-pointer active:win95-pressed"
+              >
+                in Share
               </button>
             </div>
           </div>
