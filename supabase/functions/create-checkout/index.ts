@@ -83,6 +83,7 @@ serve(async (req) => {
     params.set("line_items[0][quantity]", "1");
     params.set("metadata[user_id]", userId);
     params.set("subscription_data[metadata][user_id]", userId);
+    params.set("allow_promotion_codes", "true");
     if (userEmail) {
       params.set("customer_email", userEmail);
     }

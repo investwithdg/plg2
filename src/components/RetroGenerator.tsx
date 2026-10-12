@@ -121,6 +121,7 @@ export default function RetroGenerator() {
   const [showProgress, setShowProgress] = useState(false);
   const [showPaywall, setShowPaywall] = useState(false);
   const [paywallReason, setPaywallReason] = useState<PaywallReason>("free_limit");
+  const [activePromoCode, setActivePromoCode] = useState<string | null>(null);
   const [showAuthModal, setShowAuthModal] = useState(false);
   const [anonymousId] = useState(() => getOrCreateAnonymousId());
   const [turnstileToken, setTurnstileToken] = useState<string | null>(null);
@@ -196,9 +197,14 @@ export default function RetroGenerator() {
       sonnerToast("Checkout cancelled. You can upgrade anytime.");
       window.history.replaceState({}, "", window.location.pathname);
     } else if (params.get("upgrade") === "true") {
+      const promo = params.get("promo");
+      if (promo) setActivePromoCode(promo.toUpperCase());
       setPaywallReason("free_limit");
       setShowPaywall(true);
       window.history.replaceState({}, "", window.location.pathname);
+    } else {
+      const promo = params.get("promo");
+      if (promo) setActivePromoCode(promo.toUpperCase());
     }
   }, []);
 
@@ -830,6 +836,15 @@ function Win95PaywallModal({
               <li>* FHA compliance checks</li>
             </ul>
           </div>
+
+          {activePromoCode && (
+            <div className="win95-raised px-3 py-2 mb-3 text-center">
+              <p className="text-win95-11 font-bold">
+                🎟 Promo code active: <span className="font-mono">{activePromoCode}</span>
+              </p>
+              <p className="text-win95-11 text-muted-foreground">Enter this code at checkout for your discount.</p>
+            </div>
+          )}
 
           {!isSignedIn && (
             <p className="text-win95-11 text-muted-foreground text-center mb-3">
