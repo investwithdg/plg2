@@ -262,29 +262,29 @@ function Pricing() {
               <div className="win95-inset p-3 flex-grow">
                 <ul className="space-y-1.5 text-win95-11">
                   <li className="flex gap-2">
-                    <span className="font-bold text-[#B8860B]">+</span>
+                    <span className="font-bold text-[color:var(--win95-blue)]">+</span>
                     <span>Everything in Pro, plus:</span>
                   </li>
                   <li className="flex gap-2">
-                    <span className="font-bold text-[#B8860B]">+</span>
+                    <span className="font-bold text-[color:var(--win95-blue)]">+</span>
                     <span>
                       <strong>Vision+</strong> — photo analysis & feature extraction
                     </span>
                   </li>
                   <li className="flex gap-2">
-                    <span className="font-bold text-[#B8860B]">+</span>
+                    <span className="font-bold text-[color:var(--win95-blue)]">+</span>
                     <span>
                       <strong>Brand Voice</strong> — custom tone, banned words, signature
                     </span>
                   </li>
                   <li className="flex gap-2">
-                    <span className="font-bold text-[#B8860B]">+</span>
+                    <span className="font-bold text-[color:var(--win95-blue)]">+</span>
                     <span>
                       <strong>Static API keys</strong> — script PLG from anywhere
                     </span>
                   </li>
                   <li className="flex gap-2">
-                    <span className="font-bold text-[#B8860B]">+</span>
+                    <span className="font-bold text-[color:var(--win95-blue)]">+</span>
                     <span>Elite desktop theme</span>
                   </li>
                 </ul>
@@ -304,7 +304,7 @@ function Pricing() {
                     onClick={handleEliteCheckout}
                     disabled={eliteLoading}
                     className="win95-raised px-4 py-1 text-win95-12 font-bold cursor-pointer active:win95-pressed"
-                    style={{ color: "#B8860B" }}
+                    style={{ color: "var(--win95-blue)" }}
                   >
                     {eliteLoading ? "Loading..." : "Go Elite"}
                   </button>
