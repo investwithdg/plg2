@@ -247,13 +247,7 @@ function Pricing() {
 
           {/* Elite plan */}
           <div className="win95-window flex flex-col h-full">
-            <div
-              className="win95-titlebar"
-              style={{
-                background: "linear-gradient(to right, #1a1a1a, #4a4a4a)",
-                color: "#FFD700",
-              }}
-            >
+            <div className="win95-titlebar">
               <span className="font-bold text-win95-12 truncate pl-1">Elite Plan</span>
               <span className="text-win95-11 opacity-90">top tier</span>
             </div>

@@ -17,7 +17,6 @@ const NAV_LINKS = [
 
 export function AppNav() {
   const { user, signIn, signUp, signOut } = useAuth();
-  const { plan } = usePlanTier(user);
   const [menuOpen, setMenuOpen] = useState(false);
   const [showAuthModal, setShowAuthModal] = useState(false);
   const menuRef = useRef<HTMLDivElement>(null);
