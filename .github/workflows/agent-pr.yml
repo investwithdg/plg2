@@ -1,0 +1,112 @@
+name: CTO Agent PR Reviewer
+
+on:
+  issue_comment:
+    types: [created]
+
+permissions:
+  contents: write
+  pull-requests: write
+  issues: write
+
+jobs:
+  run-agent:
+    # Only run on pull request comments mentioning @cto, @claude, or @gemini from the repository owner
+    if: |
+      github.event.issue.pull_request != null &&
+      (
+        startsWith(github.event.comment.body, '@cto') ||
+        startsWith(github.event.comment.body, '@claude') ||
+        startsWith(github.event.comment.body, '@gemini')
+      ) &&
+      (github.event.comment.user.login == github.repository_owner)
+    runs-on: ubuntu-latest
+    steps:
+      - name: Acknowledge comment with reaction
+        uses: actions/github-script@v7
+        with:
+          script: |
+            await github.rest.reactions.createForIssueComment({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              comment_id: context.payload.comment.id,
+              content: 'eyes'
+            });
+
+      - name: Get PR branch details
+        id: pr-details
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const pr = await github.rest.pulls.get({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              pull_number: context.payload.issue.number
+            });
+            core.setOutput('branch', pr.data.head.ref);
+            core.setOutput('base', pr.data.base.ref);
+            core.setOutput('repo', pr.data.head.repo.full_name);
+
+      - name: Checkout PR branch
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ steps.pr-details.outputs.branch }}
+          fetch-depth: 0
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Extract user prompt
+        id: parse-prompt
+        run: |
+          BODY="${{ github.event.comment.body }}"
+          # Strip leading @cto / @claude / @gemini prefix
+          PROMPT=$(echo "$BODY" | sed -E 's/^@(cto|claude|gemini)[[:space:]]*//I')
+          echo "prompt=$PROMPT" >> $GITHUB_OUTPUT
+
+      - name: Run Claude Code Agent
+        uses: anthropics/claude-code-action@v1
+        with:
+          prompt: |
+            You are acting as the automated CTO review bot for repository ${{ github.repository }}.
+            The operator commented on Pull Request #${{ github.event.issue.number }}:
+            "${{ steps.parse-prompt.outputs.prompt }}"
+            
+            Instructions:
+            1. Make the requested changes cleanly and defensibly according to the repository standards.
+            2. Run `npm run lint` and verify types.
+            3. Do not break existing features.
+          anthropic_api_key: ${{ secrets.ANTHROPIC_API_KEY }}
+
+      - name: Commit and push changes
+        run: |
+          git config user.name "CTO Agent Bot"
+          git config user.email "bot@investwithdg.com"
+          if [ -n "$(git status --porcelain)" ]; then
+            git add .
+            git commit -m "chore(agent): address PR #${{ github.event.issue.number }} review comment"
+            git push origin ${{ steps.pr-details.outputs.branch }}
+            echo "pushed=true" >> $GITHUB_OUTPUT
+          else
+            echo "pushed=false" >> $GITHUB_OUTPUT
+          fi
+        id: git-push
+
+      - name: Post success reply comment
+        if: steps.git-push.outputs.pushed == 'true'
+        uses: actions/github-script@v7
+        with:
+          script: |
+            await github.rest.issues.createComment({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: context.payload.issue.number,
+              body: `🚀 **CTO Agent:** Addressed review comment. Changes have been committed and pushed to \`${{ steps.pr-details.outputs.branch }}\`. Vercel preview is updating.`
+            });
