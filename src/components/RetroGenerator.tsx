@@ -128,6 +128,7 @@ export default function RetroGenerator() {
   const [focusedPredictionIdx, setFocusedPredictionIdx] = useState(-1);
   const [showPaywall, setShowPaywall] = useState(false);
   const [paywallReason, setPaywallReason] = useState<PaywallReason>("free_limit");
+  const [activePromoCode, setActivePromoCode] = useState<string | null>(null);
   const [showAuthModal, setShowAuthModal] = useState(false);
   const [anonymousId] = useState(() => getOrCreateAnonymousId());
   const [turnstileToken, setTurnstileToken] = useState<string | null>(null);
@@ -199,9 +200,37 @@ export default function RetroGenerator() {
   const handleTurnstileExpire = useCallback(() => {
     setTurnstileToken(null);
   }, []);
+<<<<<<< HEAD
+
+  // --- Checkout success/cancel toast handling ---
+  const checkoutToastShown = useRef(false);
+  useEffect(() => {
+    if (typeof window === "undefined" || checkoutToastShown.current) return;
+    const params = new URLSearchParams(window.location.search);
+    const checkoutStatus = params.get("checkout");
+    if (checkoutStatus === "success") {
+      checkoutToastShown.current = true;
+      sonnerToast.success("Welcome to PLG Pro! Your subscription is active.");
+      window.history.replaceState({}, "", window.location.pathname);
+    } else if (checkoutStatus === "cancel") {
+      checkoutToastShown.current = true;
+      sonnerToast("Checkout cancelled. You can upgrade anytime.");
+      window.history.replaceState({}, "", window.location.pathname);
+    } else if (params.get("upgrade") === "true") {
+      const promo = params.get("promo");
+      if (promo) setActivePromoCode(promo.toUpperCase());
+      setPaywallReason("free_limit");
+      setShowPaywall(true);
+      window.history.replaceState({}, "", window.location.pathname);
+    } else {
+      const promo = params.get("promo");
+      if (promo) setActivePromoCode(promo.toUpperCase());
+    }
+=======
   const resetAnonymousTurnstile = useCallback(() => {
     setTurnstileToken(null);
     setTurnstileWidgetKey((k) => k + 1);
+>>>>>>> origin/main
   }, []);
 
   const fireLoopsEvent = useCallback(
@@ -495,6 +524,13 @@ export default function RetroGenerator() {
     onCopy(allText, "all");
   };
 
+  const fireLoopsEvent = (eventName: string, properties?: Record<string, unknown>) => {
+    if (!user?.email) return;
+    supabase.functions
+      .invoke("send-loops-event", { body: { email: user.email, eventName, properties } })
+      .catch(console.error);
+  };
+
   const handleAuth = async (email: string, password: string, mode: "signin" | "signup") => {
     if (mode === "signin") return signIn(email, password);
     const { error, isNewUser } = await signUp(email, password);
@@ -703,7 +739,42 @@ export default function RetroGenerator() {
         )}
 
         {outputs && (
-          <div className="w-full max-w-3xl">
+          <div className="w-full max-w-3xl space-y-2">
+            {propertyId && (
+              <div className="win95-window">
+                <div className="win95-titlebar" style={{ background: "linear-gradient(to right, #006400, #228B22)" }}>
+                  <span className="font-bold text-win95-12 pl-1">
+                    ✓ Listing ready — share it
+                  </span>
+                </div>
+                <div className="p-3 flex flex-col sm:flex-row items-start sm:items-center gap-2">
+                  <span className="win95-inset bg-input px-2 py-1 text-win95-11 flex-1 truncate select-all cursor-text font-mono">
+                    {typeof window !== "undefined" ? `${window.location.origin}/listing/${propertyId}` : ""}
+                  </span>
+                  <div className="flex gap-2 shrink-0 flex-wrap">
+                    <RetroButton onClick={() => {
+                      navigator.clipboard.writeText(`${window.location.origin}/listing/${propertyId}`);
+                      sonnerToast.success("Link copied!", { description: "Send this to anyone" });
+                    }}>
+                      📋 copy link
+                    </RetroButton>
+                    <RetroButton onClick={() => {
+                      const text = encodeURIComponent(`Just generated listing copy in 15 seconds with PLG`);
+                      const url = encodeURIComponent(`${window.location.origin}/listing/${propertyId}`);
+                      window.open(`https://twitter.com/intent/tweet?text=${text}&url=${url}`, "_blank", "noopener");
+                    }}>
+                      𝕏
+                    </RetroButton>
+                    <RetroButton onClick={() => {
+                      const url = encodeURIComponent(`${window.location.origin}/listing/${propertyId}`);
+                      window.open(`https://www.linkedin.com/sharing/share-offsite/?url=${url}`, "_blank", "noopener");
+                    }}>
+                      in
+                    </RetroButton>
+                  </div>
+                </div>
+              </div>
+            )}
             <OutputTabsWindow
               outputs={outputs}
               propertyAddress={property?.address || query}
@@ -1056,6 +1127,15 @@ function Win95PaywallModal({
               <li>* FHA compliance checks</li>
             </ul>
           </div>
+
+          {activePromoCode && (
+            <div className="win95-raised px-3 py-2 mb-3 text-center">
+              <p className="text-win95-11 font-bold">
+                🎟 Promo code active: <span className="font-mono">{activePromoCode}</span>
+              </p>
+              <p className="text-win95-11 text-muted-foreground">Enter this code at checkout for your discount.</p>
+            </div>
+          )}
 
           {!isSignedIn && (
             <p className="text-win95-11 text-muted-foreground text-center mb-3">

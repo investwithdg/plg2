@@ -101,7 +101,6 @@ function planFromPriceId(priceId: string | undefined | null): "pro" | "elite" {
   ].filter(Boolean);
   return elitePrices.includes(priceId) ? "elite" : "pro";
 }
-
 async function sendLoopsEvent(
   loopsKey: string,
   email: string,

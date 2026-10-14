@@ -75,6 +75,7 @@ export async function handleRequest(req: Request, deps: CreateCheckoutDeps): Pro
     params.set("metadata[plan]", plan);
     params.set("subscription_data[metadata][user_id]", userId);
     params.set("subscription_data[metadata][plan]", plan);
+    params.set("allow_promotion_codes", "true");
     if (userEmail) {
       params.set("customer_email", userEmail);
     }
