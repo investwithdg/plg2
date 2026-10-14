@@ -10,7 +10,7 @@ export const Route = createFileRoute("/compare/")({
       {
         name: "description",
         content:
-          "See how PropertyListingGenerator.com stacks up against ChatGPT, Jasper, DealMachine, Listing AI, Copy.ai, and 15+ other real estate tools. Purpose-built, FHA-compliant listing copy in 15 seconds.",
+          "See how PropertyListingGenerator.com stacks up against ChatGPT, Jasper, DealMachine, Listing AI, Copy.ai, and 15+ other real estate tools. Purpose-built, FHA-compliant listing copy in 30 seconds.",
       },
       {
         property: "og:title",
@@ -19,7 +19,7 @@ export const Route = createFileRoute("/compare/")({
       {
         property: "og:description",
         content:
-          "See how PropertyListingGenerator.com stacks up against every alternative. Purpose-built, FHA-compliant listing copy in 15 seconds.",
+          "See how PropertyListingGenerator.com stacks up against every alternative. Purpose-built, FHA-compliant listing copy in 30 seconds.",
       },
       { property: "og:url", content: "https://propertylistinggenerator.com/compare" },
     ],
@@ -169,8 +169,8 @@ const WHY_PLG_REASONS = [
     body: "MLS description, Instagram/Facebook post, and buyer email — all in one click. No copy-pasting between tools.",
   },
   {
-    title: "15 seconds vs. 45 minutes",
-    body: "Agents average 45 minutes writing listing copy from scratch. PLG cuts that to under 15 seconds. Across 50 listings, that's 37 hours back.",
+    title: "30 seconds vs. 45 minutes",
+    body: "Agents average 45 minutes writing listing copy from scratch. PLG cuts that to under 30 seconds. Across 50 listings, that's 37 hours back.",
   },
 ];
 

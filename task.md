@@ -10,3 +10,9 @@
 - [x] Consolidate Condo & Townhome buttons into a single "ROW" button (configured as free-tier option covering Townhouse, Condo, or Rowhouse)
 - [x] Design and implement a Property Type Mismatch dialog warning box for residential vs. raw land mismatch edge cases
 - [x] Redesign Research+ top layout: merge Market Overview and Walkability cards into a single compact window, removing the large progress bar
+- [x] Un-gate Research+ tab: expose teased Research+ view to free users with high-converting Win95 shareware upgrade card
+- [x] "Show Our Work" in Research+: add 4-stage audit protocol breakdown and collapsible scanned original listing text inspector
+- [x] Design and implement printable PLG-branded FHA Fair Housing Compliance Audit Certificate Modal (gated/watermarked for free, unredacted PDF for Pro)
+- [x] Transform output viewer into an interactive WordPad sandbox: live inline editing with real-time char & word counters and reset capability
+- [x] Implement MLS character limit selector with auto-detected state presets (Bright MLS 1024, Standard 1000, Compact 500) and one-click smart sentence auto-trim
+- [x] Standardize all product speed promises from 15 seconds to 30 seconds across routes, metadata, and comparisons

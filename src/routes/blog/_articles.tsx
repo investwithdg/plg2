@@ -163,7 +163,7 @@ export const ARTICLES: Article[] = [
         ),
       },
       {
-        title: "How PLG Writes This For You in 15 Seconds",
+        title: "How PLG Writes This For You in 30 Seconds",
         Body: () => (
           <div className="space-y-3 text-win95-12 leading-relaxed">
             <p>
@@ -348,7 +348,7 @@ export const ARTICLES: Article[] = [
               when agents are writing quickly and not thinking about compliance.
             </p>
             <p className="font-bold">
-              Generate compliant listing copy in 15 seconds at{" "}
+              Generate compliant listing copy in 30 seconds at{" "}
               <a href="/" className="underline">
                 PropertyListingGenerator.com
               </a>
@@ -481,7 +481,7 @@ export const ARTICLES: Article[] = [
               PLG's STR mode researches the property location — pulling nearby attractions, transit
               options, walkability data, and neighborhood context — and writes platform-optimized
               copy tuned for travelers, not MLS buyers. You get a description built for each
-              platform's format in about 15 seconds, Fair Housing compliant and ready to post.
+              platform's format in about 30 seconds, Fair Housing compliant and ready to post.
             </p>
             <p className="font-bold">
               Try it at{" "}
@@ -602,11 +602,11 @@ export const ARTICLES: Article[] = [
               put out. Every output is Fair Housing compliant before you see it.
             </p>
             <p>
-              For the cost of zero agent commission, you get professional-grade copy in 15 seconds.
+              For the cost of zero agent commission, you get professional-grade copy in 30 seconds.
               That's the whole pitch.
             </p>
             <p className="font-bold">
-              Generate your FSBO listing in 15 seconds at{" "}
+              Generate your FSBO listing in 30 seconds at{" "}
               <a href="/" className="underline">
                 PropertyListingGenerator.com
               </a>
@@ -1013,7 +1013,7 @@ export const ARTICLES: Article[] = [
               Every PLG generation produces a platform-tuned social media post alongside the MLS
               description and email. The social copy is written for Instagram and Facebook format —
               short, scene-first, with a CTA built in. Fair Housing compliant, ready to post. You
-              get all three formats in about 15 seconds, for the same address, in one pass.
+              get all three formats in about 30 seconds, for the same address, in one pass.
             </p>
             <p className="font-bold">
               Generate your MLS, social, and email copy all at once at{" "}

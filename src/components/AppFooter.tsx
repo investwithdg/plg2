@@ -79,7 +79,7 @@ export function AppFooter() {
               <span className="text-win95-12 font-bold">PLG</span>
             </div>
             <p className="text-win95-11 max-w-[28ch]">
-              FHA-compliant MLS, social, and email listing copy from any address in 15 seconds.
+              FHA-compliant MLS, social, and email listing copy from any address in 30 seconds.
             </p>
           </div>
           <FooterColumn title="Product" links={productLinks} />

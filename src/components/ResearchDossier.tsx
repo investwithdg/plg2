@@ -8,6 +8,7 @@
  * 2. At-a-Glance Neighborhood Intelligence (Schools, Walkability, Market Value, Amenities)
  * 3. Verified Web Sources & Grounding Links
  */
+import { useState } from "react";
 import type {
   EnrichmentData,
   FhaCategories,
@@ -15,10 +16,14 @@ import type {
   PlaceEntryOrLegacyString,
 } from "@/hooks/usePropertyPolling";
 import type { PropertyWithCopies } from "@/hooks/usePropertyPolling";
+import FhaComplianceCertificateModal from "@/components/FhaComplianceCertificateModal";
+import { RetroButton } from "@/components/retro";
 
 interface ResearchDossierProps {
   enrichmentData: EnrichmentData;
   property: PropertyWithCopies | null;
+  isProUser?: boolean;
+  onUpgradeIntent?: () => void;
 }
 
 function formatCurrency(val: number | null | undefined): string {
@@ -117,7 +122,15 @@ function mapsSearchUrl(query: string, nearAddress?: string | null): string {
   return `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(q)}`;
 }
 
-export default function ResearchDossier({ enrichmentData, property }: ResearchDossierProps) {
+export default function ResearchDossier({
+  enrichmentData,
+  property,
+  isProUser = false,
+  onUpgradeIntent,
+}: ResearchDossierProps) {
+  const [showCertModal, setShowCertModal] = useState(false);
+  const [showRawListing, setShowRawListing] = useState(false);
+
   const {
     schools,
     transit_options,
@@ -151,7 +164,7 @@ export default function ResearchDossier({ enrichmentData, property }: ResearchDo
             PLG Research+ Intelligence Card
           </span>
           <span className="text-[10px] bg-white text-black px-1.5 py-0.2 font-bold uppercase rounded-none border border-black">
-            PRO TIER
+            {isProUser ? "PRO TIER" : "PRO PREVIEW"}
           </span>
         </div>
         <div className="p-3 bg-[var(--win95-gray)] space-y-2">
@@ -178,19 +191,30 @@ export default function ResearchDossier({ enrichmentData, property }: ResearchDo
                 </div>
               )}
             </div>
-            <div className="win95-raised px-2.5 py-1 text-center bg-card">
-              <span className="text-[10px] block font-bold text-muted-foreground">FHA STATUS</span>
-              <span
-                className={`text-win95-12 font-bold ${
-                  property?.fha_compliance_score != null && property.fha_compliance_score < 100
-                    ? "text-[#800000]"
-                    : "text-[#008000]"
-                }`}
+            <div className="flex flex-wrap items-center gap-2">
+              <div className="win95-raised px-2.5 py-1 text-center bg-card">
+                <span className="text-[10px] block font-bold text-muted-foreground">FHA STATUS</span>
+                <span
+                  className={`text-win95-12 font-bold ${
+                    property?.fha_compliance_score != null && property.fha_compliance_score < 100
+                      ? "text-[#800000]"
+                      : "text-[#008000]"
+                  }`}
+                >
+                  {property?.fha_compliance_score != null
+                    ? `${property.fha_compliance_score}% COMPLIANT`
+                    : "VERIFIED COMPLIANT"}
+                </span>
+              </div>
+              <button
+                type="button"
+                onClick={() => setShowCertModal(true)}
+                className="win95-raised bg-[var(--win95-blue)] text-white hover:bg-blue-900 active:win95-pressed px-2.5 py-1 text-win95-11 font-bold cursor-pointer flex items-center gap-1.5"
+                title="Print or export official FHA Compliance Audit Certificate"
               >
-                {property?.fha_compliance_score != null
-                  ? `${property.fha_compliance_score}% COMPLIANT`
-                  : "VERIFIED COMPLIANT"}
-              </span>
+                <span>🖨️</span>
+                <span>{isProUser ? "Print Official Certificate" : "Official Certificate ★ PRO"}</span>
+              </button>
             </div>
           </div>
         </div>
@@ -204,6 +228,50 @@ export default function ResearchDossier({ enrichmentData, property }: ResearchDo
           </span>
         </div>
         <div className="p-3 bg-[var(--win95-gray)] space-y-3">
+          {/* How We Verified It / Show Our Work */}
+          <div className="win95-inset bg-slate-50 p-2.5 space-y-2 border border-slate-300">
+            <div className="flex items-center justify-between border-b border-slate-200 pb-1">
+              <span className="font-bold text-slate-900 text-win95-11 flex items-center gap-1.5">
+                <span>🔍</span> How PLG Verified This Listing (Audit Protocol)
+              </span>
+              <span className="text-[10px] text-slate-500 font-mono">4-STAGE MULTI-PASS</span>
+            </div>
+            <div className="grid grid-cols-1 sm:grid-cols-4 gap-2 text-[10px]">
+              <div className="bg-white p-1.5 border border-slate-200">
+                <span className="font-bold block text-slate-900">1. Text Ingestion</span>
+                <span className="text-slate-600">Extracted exact property specs and listing remarks</span>
+              </div>
+              <div className="bg-white p-1.5 border border-slate-200">
+                <span className="font-bold block text-slate-900">2. Protected Classes</span>
+                <span className="text-slate-600">Screened against 42 U.S.C. § 3604(c) guidelines</span>
+              </div>
+              <div className="bg-white p-1.5 border border-slate-200">
+                <span className="font-bold block text-slate-900">3. Steering Scan</span>
+                <span className="text-slate-600">Flagged coded church, school & demographic terms</span>
+              </div>
+              <div className="bg-white p-1.5 border border-slate-200">
+                <span className="font-bold block text-slate-900">4. AI Mitigation</span>
+                <span className="text-slate-600">Rewrote non-compliant phrases into neutral facts</span>
+              </div>
+            </div>
+
+            {property?.existing_listing_raw && (
+              <div className="pt-1 border-t border-slate-200">
+                <button
+                  type="button"
+                  onClick={() => setShowRawListing((v) => !v)}
+                  className="text-[10px] text-blue-700 underline font-bold hover:text-blue-900 cursor-pointer flex items-center gap-1"
+                >
+                  <span>{showRawListing ? "▼ Hide" : "▶ View"} Scanned Original Listing Text ({property.existing_listing_raw.length} chars)</span>
+                </button>
+                {showRawListing && (
+                  <div className="win95-inset bg-white p-2 mt-1.5 text-win95-11 font-mono text-slate-700 max-h-36 overflow-y-auto whitespace-pre-wrap leading-relaxed border border-slate-300">
+                    {property.existing_listing_raw}
+                  </div>
+                )}
+              </div>
+            )}
+          </div>
           {hasViolations ? (
             <div className="space-y-3">
               {/* Flagged Red Card */}
@@ -349,7 +417,10 @@ export default function ResearchDossier({ enrichmentData, property }: ResearchDo
         </div>
       </div>
 
-      {/* ── 3. AT-A-GLANCE NEIGHBORHOOD & MARKET CARD ── */}
+      {/* ── 3-6. NEIGHBORHOOD INTELLIGENCE (PRO GATED) ── */}
+      <div className="relative">
+        <div className={!isProUser ? "relative select-none pointer-events-none filter blur-[2px] opacity-40 max-h-[380px] overflow-hidden space-y-4" : "space-y-4"}>
+          {/* ── 3. AT-A-GLANCE NEIGHBORHOOD & MARKET CARD ── */}
       <div className="win95-window">
         <div className="win95-titlebar">
           <span className="font-bold text-win95-12 pl-1">Local Market & Walkability Overview</span>
@@ -590,6 +661,52 @@ export default function ResearchDossier({ enrichmentData, property }: ResearchDo
           )}
         </div>
       </div>
+    </div>
+
+        {/* Free Teaser Floating Win95 Modal */}
+        {!isProUser && (
+          <div className="absolute inset-0 flex items-center justify-center p-3 z-20">
+            <div className="win95-window max-w-md w-full shadow-2xl">
+              <div className="win95-titlebar bg-gradient-to-r from-[#800000] to-[#c04040] text-white">
+                <span className="font-bold text-win95-12 flex items-center gap-1.5">
+                  <span>🔒</span> PLG Research+ Intelligence Dossier [PRO ONLY]
+                </span>
+              </div>
+              <div className="p-4 bg-[var(--win95-gray)] text-black space-y-3">
+                <div className="space-y-1.5">
+                  <h4 className="font-bold text-win95-13 text-slate-900">
+                    Unlock Full Property & Neighborhood Intelligence
+                  </h4>
+                  <p className="text-win95-11 text-slate-700 leading-relaxed">
+                    We indexed nearby schools with ratings & boundaries, walkability score ({enrichmentData.walkability_score ?? "80+"}/100), transit hubs, and market pricing for <strong>{property?.address || "this property"}</strong>.
+                  </p>
+                  <p className="text-win95-11 text-slate-600 leading-relaxed">
+                    Upgrade to Pro ($49/mo) to unlock the full unredacted intelligence dossier, verified school directories, and printable official FHA compliance certificates.
+                  </p>
+                </div>
+                <div className="flex justify-end gap-2 pt-2 border-t border-[var(--win95-gray-dark)]">
+                  <RetroButton
+                    variant="primary"
+                    onClick={onUpgradeIntent}
+                    className="bg-[#800000] text-white font-bold"
+                  >
+                    Unlock Pro Intelligence ($49/mo)
+                  </RetroButton>
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
+      </div>
+
+      <FhaComplianceCertificateModal
+        isOpen={showCertModal}
+        onClose={() => setShowCertModal(false)}
+        property={property}
+        enrichmentData={enrichmentData}
+        isProUser={isProUser}
+        onUpgradeIntent={onUpgradeIntent}
+      />
     </div>
   );
 }

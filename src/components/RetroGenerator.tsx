@@ -163,6 +163,12 @@ export default function RetroGenerator() {
     count: number;
   }>({ status: "idle", count: 0 });
 
+  const activeEditedCopiesRef = useRef<{ mls: string; social: string; email: string }>({
+    mls: "",
+    social: "",
+    email: "",
+  });
+
   const {
     status,
     enrichmentStep,
@@ -294,9 +300,17 @@ export default function RetroGenerator() {
         if (key in outputMap) outputMap[key] = copy.content;
       });
 
-      if (isProUser && enrichmentData && enrichmentData.perplexity_raw_response) {
+      if (enrichmentData || property) {
         outputMap.research = (
-          <ResearchDossier enrichmentData={enrichmentData} property={property} />
+          <ResearchDossier
+            enrichmentData={enrichmentData || {}}
+            property={property}
+            isProUser={isProUser}
+            onUpgradeIntent={() => {
+              setPaywallReason("upgrade_intent");
+              setShowPaywall(true);
+            }}
+          />
         );
       }
 
@@ -473,7 +487,11 @@ export default function RetroGenerator() {
 
   const onCopyAll = () => {
     if (!outputs) return;
-    const allText = `MLS Description:\n${outputs.mls}\n\nSocial Post:\n${outputs.social}\n\nEmail:\n${outputs.email}`;
+    const copies = activeEditedCopiesRef.current;
+    const mlsText = copies.mls || (typeof outputs.mls === "string" ? outputs.mls : "");
+    const socialText = copies.social || (typeof outputs.social === "string" ? outputs.social : "");
+    const emailText = copies.email || (typeof outputs.email === "string" ? outputs.email : "");
+    const allText = `MLS Description:\n${mlsText}\n\nSocial Post:\n${socialText}\n\nEmail:\n${emailText}`;
     onCopy(allText, "all");
   };
 
@@ -526,7 +544,7 @@ export default function RetroGenerator() {
                 </div>
               )}
             </div>
-            <h1 className="text-win95-16 font-bold">listing copy in 15 seconds</h1>
+            <h1 className="text-win95-16 font-bold">listing copy in 30 seconds</h1>
             <div className="text-win95-12 text-muted-foreground">
               paste an address or zillow link. pick the property type. hit generate. we research the
               property, analyze the neighborhood, and write 3 FHA-compliant listings — MLS, social,
@@ -688,6 +706,11 @@ export default function RetroGenerator() {
           <div className="w-full max-w-3xl">
             <OutputTabsWindow
               outputs={outputs}
+              propertyAddress={property?.address || query}
+              isProUser={isProUser}
+              onCopiesChange={(updatedCopies) => {
+                activeEditedCopiesRef.current = updatedCopies;
+              }}
               headerRight={
                 <button
                   type="button"
@@ -698,18 +721,11 @@ export default function RetroGenerator() {
                   x
                 </button>
               }
-              renderActions={(activeTab) => (
+              renderActions={(activeTab, currentContent) => (
                 <div className="flex flex-wrap gap-2 mt-3">
                   {activeTab !== "research" && (
                     <RetroButton
-                      onClick={() =>
-                        onCopy(
-                          typeof outputs[activeTab] === "string"
-                            ? (outputs[activeTab] as string)
-                            : "",
-                          activeTab,
-                        )
-                      }
+                      onClick={() => onCopy(currentContent, activeTab)}
                     >
                       copy {activeTab}
                     </RetroButton>
@@ -1097,7 +1113,7 @@ function HowItWorks() {
     },
     {
       n: "3.",
-      title: "Generate in ~15 seconds",
+      title: "Generate in ~30 seconds",
       body: "PLG researches the property, pulls neighborhood data, and writes FHA-compliant copy — automatically.",
     },
     {
@@ -1139,8 +1155,8 @@ function WhyPLG() {
       body: "MLS description, Instagram/Facebook post, and buyer email — all in one click. No copy-pasting between tools.",
     },
     {
-      title: "15 seconds vs. 45 minutes",
-      body: "Agents average 45 minutes writing listing copy from scratch. PLG cuts that to under 15 seconds. Across 50 listings, that's 37 hours back.",
+      title: "30 seconds vs. 45 minutes",
+      body: "Agents average 45 minutes writing listing copy from scratch. PLG cuts that to under 30 seconds. Across 50 listings, that's 37 hours back.",
     },
   ];
   return (

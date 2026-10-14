@@ -173,7 +173,7 @@ function BlogIndex() {
         <div className="win95-window">
           <div className="win95-titlebar">
             <span className="font-bold text-win95-12 truncate pl-1">
-              Generate listing copy in 15 seconds
+              Generate listing copy in 30 seconds
             </span>
           </div>
           <div className="p-4 flex items-center justify-between gap-4">

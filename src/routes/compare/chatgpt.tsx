@@ -13,7 +13,7 @@ export const Route = createFileRoute("/compare/chatgpt")({
       {
         property: "og:description",
         content:
-          "ChatGPT writes generic text. PLG writes FHA-compliant, research-backed listing copy in 15 seconds.",
+          "ChatGPT writes generic text. PLG writes FHA-compliant, research-backed listing copy in 30 seconds.",
       },
       { property: "og:url", content: "https://propertylistinggenerator.com/compare/chatgpt" },
     ],
@@ -60,7 +60,7 @@ const FEATURES = [
   },
   {
     feature: "Generation speed",
-    plg: "~15 seconds (automated)",
+    plg: "~30 seconds (automated)",
     rival: "Varies — requires prompt engineering",
   },
   {
@@ -80,7 +80,7 @@ const FEATURES = [
   },
   {
     feature: "Time to usable copy",
-    plg: "15 seconds, ready to publish",
+    plg: "30 seconds, ready to publish",
     rival: "5-15 min of prompting & editing",
   },
 ];
@@ -119,7 +119,7 @@ function VsChatGPT() {
             </p>
             <p className="text-win95-12">
               <strong>PropertyListingGenerator.com (PLG)</strong> does all of that — automatically,
-              in about 15 seconds. No prompt engineering required.
+              in about 30 seconds. No prompt engineering required.
             </p>
           </div>
         </div>
@@ -205,7 +205,7 @@ function VsChatGPT() {
             </p>
             <p className="text-win95-12">
               PLG does one thing and does it better than any general-purpose AI: it turns an address
-              into publish-ready listing copy in 15 seconds.
+              into publish-ready listing copy in 30 seconds.
             </p>
             <div className="flex gap-2 pt-1">
               <Link to="/">

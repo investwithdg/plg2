@@ -230,7 +230,7 @@ function Explore() {
           </div>
           <div className="p-4 flex items-center justify-between gap-4">
             <p className="text-win95-11 text-muted-foreground">
-              Generate FHA-compliant MLS copy in 15 seconds. Free to start.
+              Generate FHA-compliant MLS copy in 30 seconds. Free to start.
             </p>
             <Link to="/">
               <button className="win95-raised px-4 py-1 text-win95-12 font-bold cursor-pointer active:win95-pressed shrink-0">

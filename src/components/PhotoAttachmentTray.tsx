@@ -210,7 +210,7 @@ export default function PhotoAttachmentTray({
 
         <p className="text-[10px] text-muted-foreground">
           Photos are analyzed in the background after your listing is generated — your copy appears
-          in ~15 seconds either way.
+          in ~30 seconds either way.
         </p>
       </div>
     </div>

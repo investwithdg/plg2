@@ -41,7 +41,7 @@ const FEATURES = [
   {
     title: "Triple Format Output",
     description:
-      "Generate copy optimized for your MLS, a punchy version for Instagram and Facebook, and a persuasive buyer-focused email—all simultaneously in just 15 seconds.",
+      "Generate copy optimized for your MLS, a punchy version for Instagram and Facebook, and a persuasive buyer-focused email—all simultaneously in just 30 seconds.",
   },
   {
     title: "Unlimited Generation Architecture",

@@ -40,7 +40,7 @@ const FEATURES = [
   },
   {
     feature: "Generation speed",
-    plg: "~15 seconds",
+    plg: "~30 seconds",
     rival: "Varies (30s–2min typical)",
   },
   {

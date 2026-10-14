@@ -89,14 +89,14 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
       {
         name: "description",
         content:
-          "The fastest way to generate FHA-compliant MLS, social, and email listing copy. Paste an address, get 3 polished listings in 15 seconds. Used by thousands of agents.",
+          "The fastest way to generate FHA-compliant MLS, social, and email listing copy. Paste an address, get 3 polished listings in 30 seconds. Used by thousands of agents.",
       },
       { name: "author", content: "PLG — PropertyListingGenerator.com" },
       { property: "og:title", content: "PLG — Property Listing Generator" },
       {
         property: "og:description",
         content:
-          "The fastest way to generate FHA-compliant MLS, social, and email listing copy. Paste an address, get 3 polished listings in 15 seconds.",
+          "The fastest way to generate FHA-compliant MLS, social, and email listing copy. Paste an address, get 3 polished listings in 30 seconds.",
       },
       { property: "og:type", content: "website" },
       { property: "og:site_name", content: "PLG" },
@@ -110,7 +110,7 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
       { property: "og:image", content: "https://propertylistinggenerator.com/og-image.png" },
       { property: "og:image:width", content: "1200" },
       { property: "og:image:height", content: "630" },
-      { property: "og:image:alt", content: "PLG — Listing Copy in 15 Seconds" },
+      { property: "og:image:alt", content: "PLG — Listing Copy in 30 Seconds" },
       { name: "twitter:image", content: "https://propertylistinggenerator.com/og-image.png" },
     ],
     links: [
@@ -155,7 +155,7 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
           applicationCategory: "BusinessApplication",
           operatingSystem: "Web",
           description:
-            "Generate FHA-compliant MLS, social, and email listing copy from any address in 15 seconds. The listing tool for real estate agents.",
+            "Generate FHA-compliant MLS, social, and email listing copy from any address in 30 seconds. The listing tool for real estate agents.",
           offers: [
             {
               "@type": "Offer",

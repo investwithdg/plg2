@@ -100,7 +100,7 @@ function VsJasper() {
             <p className="text-win95-12">
               <strong>PLG</strong> is built exclusively for real estate agents. It researches the
               actual property, formats for MLS, social, and email, and ensures every word passes FHA
-              compliance checks — all in 15 seconds from a single address.
+              compliance checks — all in 30 seconds from a single address.
             </p>
           </div>
         </div>

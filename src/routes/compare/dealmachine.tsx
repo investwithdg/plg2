@@ -42,7 +42,7 @@ const FEATURES = [
   },
   {
     feature: "Generation speed",
-    plg: "~15 seconds",
+    plg: "~30 seconds",
     rival: "N/A (no copy generation)",
   },
   {
@@ -111,7 +111,7 @@ function VsDealMachine() {
             <p className="text-win95-12">
               <strong>PropertyListingGenerator.com (PLG)</strong> is purpose-built for the next
               step: once you have a property, PLG generates polished, FHA-compliant listing copy for
-              MLS, social media, and email in about 15 seconds.
+              MLS, social media, and email in about 30 seconds.
             </p>
             <p className="text-win95-12 font-bold">
               They solve different problems. But when it comes to listing copy, PLG dominates the
