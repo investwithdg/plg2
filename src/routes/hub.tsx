@@ -102,7 +102,13 @@ function UserHubPage() {
                     Active Plan
                   </span>
                   <span
-                    className={`text-win95-14 font-bold ${isProUser ? "text-red-800" : "text-slate-800"}`}
+                    className={`text-win95-14 font-bold ${
+                      plan === "elite"
+                        ? "text-slate-700"
+                        : plan === "pro"
+                          ? "text-red-800"
+                          : "text-[#000080]"
+                    }`}
                   >
                     {plan?.toUpperCase() || "FREE"}
                   </span>

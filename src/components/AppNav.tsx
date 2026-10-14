@@ -17,6 +17,7 @@ const NAV_LINKS = [
 
 export function AppNav() {
   const { user, signIn, signUp, signOut } = useAuth();
+  const { plan } = usePlanTier(user);
   const [menuOpen, setMenuOpen] = useState(false);
   const [showAuthModal, setShowAuthModal] = useState(false);
   const menuRef = useRef<HTMLDivElement>(null);
@@ -89,6 +90,17 @@ export function AppNav() {
 
         {/* Desktop: user info + auth button */}
         <div className="hidden sm:flex items-center gap-2">
+          {userEmail && plan !== "free" && (
+            <span
+              className={`text-[10px] font-bold px-1.5 py-0.5 win95-raised ${
+                plan === "elite"
+                  ? "bg-[#404040] text-white border border-[#707070]"
+                  : "bg-[#800000] text-white"
+              }`}
+            >
+              {plan.toUpperCase()}
+            </span>
+          )}
           {userEmail && (
             <span className="text-win95-11 opacity-80 hidden md:inline truncate max-w-[160px]">
               {userEmail}
@@ -164,7 +176,20 @@ export function AppNav() {
                 <div className="border-t-2 border-[var(--win95-gray-dark)] my-1 mx-2" />
                 {userEmail ? (
                   <div className="px-4 space-y-1.5">
-                    <p className="text-win95-11 text-muted-foreground truncate">{userEmail}</p>
+                    <div className="flex items-center gap-2">
+                      <p className="text-win95-11 text-muted-foreground truncate">{userEmail}</p>
+                      {plan !== "free" && (
+                        <span
+                          className={`text-[10px] font-bold px-1.5 py-0.5 win95-raised ${
+                            plan === "elite"
+                              ? "bg-[#404040] text-white border border-[#707070]"
+                              : "bg-[#800000] text-white"
+                          }`}
+                        >
+                          {plan.toUpperCase()}
+                        </span>
+                      )}
+                    </div>
                     <Link
                       to="/hub"
                       onClick={() => setMenuOpen(false)}

@@ -83,7 +83,13 @@ function Pricing() {
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
           {/* Free plan */}
           <div className="win95-window flex flex-col h-full">
-            <div className="win95-titlebar">
+            <div
+              className="win95-titlebar"
+              style={{
+                background: "linear-gradient(to right, #000080, #1084d0)",
+                color: "white",
+              }}
+            >
               <span className="font-bold text-win95-12 truncate pl-1">Free Plan</span>
             </div>
             <div className="p-4 space-y-3 flex flex-col flex-1">
@@ -97,31 +103,31 @@ function Pricing() {
               <div className="win95-inset p-3 flex-grow">
                 <ul className="space-y-1.5 text-win95-11">
                   <li className="flex gap-2">
-                    <span className="font-bold text-[var(--win95-blue)]">+</span>
+                    <span className="font-bold text-[#000080]">+</span>
                     <span>10 free generations</span>
                   </li>
                   <li className="flex gap-2">
-                    <span className="font-bold text-[var(--win95-blue)]">+</span>
+                    <span className="font-bold text-[#000080]">+</span>
                     <span>Signed-in accounts reset monthly</span>
                   </li>
                   <li className="flex gap-2">
-                    <span className="font-bold text-[var(--win95-blue)]">+</span>
+                    <span className="font-bold text-[#000080]">+</span>
                     <span>SFR + FSBO included</span>
                   </li>
                   <li className="flex gap-2">
-                    <span className="font-bold text-[var(--win95-blue)]">+</span>
+                    <span className="font-bold text-[#000080]">+</span>
                     <span>1 Pro-tier property generation included</span>
                   </li>
                   <li className="flex gap-2">
-                    <span className="font-bold text-[var(--win95-blue)]">+</span>
+                    <span className="font-bold text-[#000080]">+</span>
                     <span>MLS, Social, Email copy</span>
                   </li>
                   <li className="flex gap-2">
-                    <span className="font-bold text-[var(--win95-blue)]">+</span>
+                    <span className="font-bold text-[#000080]">+</span>
                     <span>FHA Fair Housing compliant</span>
                   </li>
                   <li className="flex gap-2">
-                    <span className="font-bold text-[var(--win95-blue)]">+</span>
+                    <span className="font-bold text-[#000080]">+</span>
                     <span>Automated property research</span>
                   </li>
                   <li className="flex gap-2 text-muted-foreground">
@@ -167,6 +173,7 @@ function Pricing() {
               className="win95-titlebar"
               style={{
                 background: "linear-gradient(to right, #800000, #c04040)",
+                color: "white",
               }}
             >
               <span className="font-bold text-win95-12 truncate pl-1">Pro Plan</span>
@@ -183,38 +190,38 @@ function Pricing() {
               <div className="win95-inset p-3 flex-grow">
                 <ul className="space-y-1.5 text-win95-11">
                   <li className="flex gap-2">
-                    <span className="font-bold text-[var(--win95-blue)]">+</span>
+                    <span className="font-bold text-[#800000]">+</span>
                     <span>Everything in Free, plus:</span>
                   </li>
                   <li className="flex gap-2">
-                    <span className="font-bold text-[var(--win95-blue)]">+</span>
+                    <span className="font-bold text-[#800000]">+</span>
                     <span>Unlimited generation volume</span>
                   </li>
                   <li className="flex gap-2">
-                    <span className="font-bold text-[var(--win95-blue)]">+</span>
+                    <span className="font-bold text-[#800000]">+</span>
                     <span>Unlimited Pro-tier property types</span>
                   </li>
 
                   <li className="flex gap-2">
-                    <span className="font-bold text-[var(--win95-blue)]">+</span>
+                    <span className="font-bold text-[#800000]">+</span>
                     <span>
                       <strong>Research+</strong> — property & neighborhood data
                     </span>
                   </li>
                   <li className="flex gap-2">
-                    <span className="font-bold text-[var(--win95-blue)]">+</span>
+                    <span className="font-bold text-[#800000]">+</span>
                     <span>
                       <strong>Listing history</strong> — access past generations
                     </span>
                   </li>
                   <li className="flex gap-2">
-                    <span className="font-bold text-[var(--win95-blue)]">+</span>
+                    <span className="font-bold text-[#800000]">+</span>
                     <span>
                       <strong>Connect PLG to Claude</strong> — generate listings from chat
                     </span>
                   </li>
                   <li className="flex gap-2">
-                    <span className="font-bold text-[var(--win95-blue)]">+</span>
+                    <span className="font-bold text-[#800000]">+</span>
                     <span>
                       <strong>Priority support</strong>
                     </span>
@@ -235,7 +242,7 @@ function Pricing() {
                     <button
                       type="button"
                       className="win95-raised px-4 py-1 text-win95-12 font-bold cursor-pointer active:win95-pressed"
-                      style={{ color: "var(--win95-blue)" }}
+                      style={{ color: "#800000" }}
                     >
                       Go Pro
                     </button>
@@ -247,7 +254,13 @@ function Pricing() {
 
           {/* Elite plan */}
           <div className="win95-window flex flex-col h-full">
-            <div className="win95-titlebar">
+            <div
+              className="win95-titlebar"
+              style={{
+                background: "linear-gradient(to right, #404040, #808080)",
+                color: "white",
+              }}
+            >
               <span className="font-bold text-win95-12 truncate pl-1">Elite Plan</span>
               <span className="text-win95-11 opacity-90">top tier</span>
             </div>
@@ -262,29 +275,29 @@ function Pricing() {
               <div className="win95-inset p-3 flex-grow">
                 <ul className="space-y-1.5 text-win95-11">
                   <li className="flex gap-2">
-                    <span className="font-bold text-[color:var(--win95-blue)]">+</span>
+                    <span className="font-bold text-[#404040]">+</span>
                     <span>Everything in Pro, plus:</span>
                   </li>
                   <li className="flex gap-2">
-                    <span className="font-bold text-[color:var(--win95-blue)]">+</span>
+                    <span className="font-bold text-[#404040]">+</span>
                     <span>
                       <strong>Vision+</strong> — photo analysis & feature extraction
                     </span>
                   </li>
                   <li className="flex gap-2">
-                    <span className="font-bold text-[color:var(--win95-blue)]">+</span>
+                    <span className="font-bold text-[#404040]">+</span>
                     <span>
                       <strong>Brand Voice</strong> — custom tone, banned words, signature
                     </span>
                   </li>
                   <li className="flex gap-2">
-                    <span className="font-bold text-[color:var(--win95-blue)]">+</span>
+                    <span className="font-bold text-[#404040]">+</span>
                     <span>
                       <strong>Static API keys</strong> — script PLG from anywhere
                     </span>
                   </li>
                   <li className="flex gap-2">
-                    <span className="font-bold text-[color:var(--win95-blue)]">+</span>
+                    <span className="font-bold text-[#404040]">+</span>
                     <span>Elite desktop theme</span>
                   </li>
                 </ul>
@@ -304,7 +317,7 @@ function Pricing() {
                     onClick={handleEliteCheckout}
                     disabled={eliteLoading}
                     className="win95-raised px-4 py-1 text-win95-12 font-bold cursor-pointer active:win95-pressed"
-                    style={{ color: "var(--win95-blue)" }}
+                    style={{ color: "#404040" }}
                   >
                     {eliteLoading ? "Loading..." : "Go Elite"}
                   </button>
