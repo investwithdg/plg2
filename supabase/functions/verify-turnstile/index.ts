@@ -1,10 +1,5 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
-
-const corsHeaders = {
-  "Access-Control-Allow-Origin": "*",
-  "Access-Control-Allow-Headers":
-    "authorization, x-client-info, apikey, content-type",
-};
+import { getCorsHeaders } from "../_shared/cors.ts";
 
 function log(step: string, data?: Record<string, unknown>) {
   console.log(
@@ -18,8 +13,8 @@ function log(step: string, data?: Record<string, unknown>) {
 }
 
 serve(async (req) => {
-  if (req.method === "OPTIONS")
-    return new Response(null, { headers: corsHeaders });
+  const corsHeaders = getCorsHeaders(req);
+  if (req.method === "OPTIONS") return new Response(null, { headers: corsHeaders });
 
   try {
     const { token } = await req.json();
@@ -33,21 +28,21 @@ serve(async (req) => {
     const secret = Deno.env.get("TURNSTILE_SECRET_KEY");
     if (!secret) {
       log("missing_secret");
-      return new Response(JSON.stringify({ success: false, error: "TURNSTILE_SECRET_KEY not configured" }), {
-        status: 500,
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
-      });
+      return new Response(
+        JSON.stringify({ success: false, error: "TURNSTILE_SECRET_KEY not configured" }),
+        {
+          status: 500,
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        },
+      );
     }
 
     const body = new URLSearchParams({ secret, response: token });
-    const res = await fetch(
-      "https://challenges.cloudflare.com/turnstile/v0/siteverify",
-      {
-        method: "POST",
-        headers: { "Content-Type": "application/x-www-form-urlencoded" },
-        body: body.toString(),
-      },
-    );
+    const res = await fetch("https://challenges.cloudflare.com/turnstile/v0/siteverify", {
+      method: "POST",
+      headers: { "Content-Type": "application/x-www-form-urlencoded" },
+      body: body.toString(),
+    });
 
     if (!res.ok) {
       log("siteverify_http_error", { status: res.status });
@@ -61,10 +56,9 @@ serve(async (req) => {
 
     log("result", { success: result.success });
 
-    return new Response(
-      JSON.stringify({ success: result.success === true }),
-      { headers: { ...corsHeaders, "Content-Type": "application/json" } },
-    );
+    return new Response(JSON.stringify({ success: result.success === true }), {
+      headers: { ...corsHeaders, "Content-Type": "application/json" },
+    });
   } catch (err) {
     log("error", { error: String(err) });
     return new Response(JSON.stringify({ success: false }), {

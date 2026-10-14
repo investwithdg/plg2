@@ -1,8 +1,10 @@
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, type ReactNode } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { RetroWindow, RetroButton } from "@/components/retro";
 import OutputTabsWindow from "@/components/OutputTabsWindow";
 import type { OutputTabKey } from "@/components/OutputTabsWindow";
+import ResearchDossier from "@/components/ResearchDossier";
+import type { EnrichmentData, PropertyWithCopies } from "@/hooks/usePropertyPolling";
 import { toast as sonnerToast } from "sonner";
 
 interface HistoryEntry {
@@ -42,19 +44,25 @@ function formatDate(iso: string): string {
   });
 }
 
-export default function ListingHistory({ userId }: { userId: string }) {
+export default function ListingHistory({
+  userId,
+  isProUser,
+}: {
+  userId: string;
+  isProUser?: boolean;
+}) {
   const [entries, setEntries] = useState<HistoryEntry[]>([]);
   const [loading, setLoading] = useState(true);
   const [expandedId, setExpandedId] = useState<string | null>(null);
-  const [expandedCopies, setExpandedCopies] = useState<Record<
-    OutputTabKey,
-    string
+  const [expandedCopies, setExpandedCopies] = useState<Partial<
+    Record<OutputTabKey, ReactNode>
   > | null>(null);
   const [loadingCopies, setLoadingCopies] = useState(false);
 
   const fetchHistory = useCallback(async () => {
     setLoading(true);
-    const { data, error } = await (supabase.from("properties" as never) as any)
+    const { data, error } = await supabase
+      .from("properties")
       .select("id, address, property_type, status, created_at, beds, baths, price")
       .eq("user_id", userId)
       .eq("status", "complete")
@@ -83,25 +91,59 @@ export default function ListingHistory({ userId }: { userId: string }) {
     setExpandedCopies(null);
     setLoadingCopies(true);
 
-    const { data, error } = await (
-      supabase.from("copy_generations" as never) as any
-    )
+    const copyPromise = supabase
+      .from("copy_generations")
       .select("copy_type, content")
       .eq("property_id", id)
       .order("created_at", { ascending: true });
 
-    if (error) {
-      console.error("Copy fetch error:", error);
+    const propertyPromise = supabase
+      .from("properties")
+      .select(
+        "id, address, property_type, status, enrichment_step, extraction_status, failed_step, beds, baths, sqft, price, fha_violations, fha_compliant_listing_parts, existing_listing_raw, created_at",
+      )
+      .eq("id", id)
+      .maybeSingle();
+
+    const enrichPromise = isProUser
+      ? supabase
+          .from("enrichments")
+          .select(
+            "schools, transit_options, nearby_amenities, walkability_score, market_overview, median_home_value, key_sources, perplexity_raw_response",
+          )
+          .eq("property_id", id)
+          .maybeSingle()
+      : Promise.resolve({ data: null, error: null });
+
+    const [copyRes, propertyRes, enrichRes] = await Promise.all([
+      copyPromise,
+      propertyPromise,
+      enrichPromise,
+    ]);
+
+    if (copyRes.error) {
+      console.error("Copy fetch error:", copyRes.error);
       setLoadingCopies(false);
       return;
     }
 
-    const copies = (data ?? []) as HistoryCopy[];
-    const map: Record<OutputTabKey, string> = { mls: "", social: "", email: "" };
+    const copies = (copyRes.data ?? []) as HistoryCopy[];
+    const map: Partial<Record<OutputTabKey, ReactNode>> = { mls: "", social: "", email: "" };
     for (const c of copies) {
       const key = c.copy_type as OutputTabKey;
       if (key in map) map[key] = c.content;
     }
+
+    const enrichData = enrichRes?.data as unknown as EnrichmentData | null | undefined;
+    if (isProUser && enrichData?.perplexity_raw_response) {
+      map.research = (
+        <ResearchDossier
+          enrichmentData={enrichData}
+          property={(propertyRes?.data as unknown as PropertyWithCopies) || null}
+        />
+      );
+    }
+
     setExpandedCopies(map);
     setLoadingCopies(false);
   };
@@ -158,33 +200,35 @@ export default function ListingHistory({ userId }: { userId: string }) {
                   {TYPE_LABELS[entry.property_type ?? ""] ?? "—"}
                 </span>
                 <span className="w-20 text-right hidden sm:block">
-                  {entry.price
-                    ? `$${Number(entry.price).toLocaleString()}`
-                    : "—"}
+                  {entry.price ? `$${Number(entry.price).toLocaleString()}` : "—"}
                 </span>
-                <span className="w-20 text-right">
-                  {formatDate(entry.created_at)}
-                </span>
+                <span className="w-20 text-right">{formatDate(entry.created_at)}</span>
               </button>
 
               {expandedId === entry.id && (
                 <div className="p-2">
                   {loadingCopies ? (
                     <div className="win95-inset bg-input p-3">
-                      <p className="text-win95-11 text-muted-foreground">
-                        Loading copies...
-                      </p>
+                      <p className="text-win95-11 text-muted-foreground">Loading copies...</p>
                     </div>
                   ) : expandedCopies ? (
                     <OutputTabsWindow
                       outputs={expandedCopies}
                       renderActions={(activeTab) => (
                         <div className="flex gap-2 mt-2">
-                          <RetroButton
-                            onClick={() => onCopy(expandedCopies[activeTab])}
-                          >
-                            copy {activeTab}
-                          </RetroButton>
+                          {activeTab !== "research" && (
+                            <RetroButton
+                              onClick={() =>
+                                onCopy(
+                                  typeof expandedCopies[activeTab] === "string"
+                                    ? (expandedCopies[activeTab] as string)
+                                    : "",
+                                )
+                              }
+                            >
+                              copy {activeTab}
+                            </RetroButton>
+                          )}
                           <RetroButton
                             onClick={() =>
                               onCopy(

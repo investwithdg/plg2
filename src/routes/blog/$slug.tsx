@@ -7,7 +7,7 @@ export const Route = createFileRoute("/blog/$slug")({
     if (!article) throw notFound();
     return article;
   },
-  head: ({ loaderData }) => ({
+  head: ({ params, loaderData }) => ({
     meta: [
       { title: `${loaderData?.title ?? "Article"} — PLG Blog` },
       {
@@ -17,7 +17,45 @@ export const Route = createFileRoute("/blog/$slug")({
       { property: "og:title", content: loaderData?.title ?? "PLG Blog" },
       { property: "og:description", content: loaderData?.description ?? "" },
       { property: "og:type", content: "article" },
+      {
+        property: "og:url",
+        content: `https://propertylistinggenerator.com/blog/${params.slug}`,
+      },
+      ...(loaderData ? [] : [{ name: "robots", content: "noindex" }]),
     ],
+    links: [
+      {
+        rel: "canonical",
+        href: `https://propertylistinggenerator.com/blog/${params.slug}`,
+      },
+    ],
+    scripts: loaderData
+      ? [
+          {
+            type: "application/ld+json",
+            children: JSON.stringify({
+              "@context": "https://schema.org",
+              "@type": "Article",
+              headline: loaderData.title,
+              description: loaderData.description,
+              datePublished: loaderData.date,
+              mainEntityOfPage: `https://propertylistinggenerator.com/blog/${params.slug}`,
+              author: {
+                "@type": "Organization",
+                name: "PropertyListingGenerator.com",
+              },
+              publisher: {
+                "@type": "Organization",
+                name: "PropertyListingGenerator.com",
+                logo: {
+                  "@type": "ImageObject",
+                  url: "https://propertylistinggenerator.com/favicon-512.png",
+                },
+              },
+            }),
+          },
+        ]
+      : [],
   }),
   component: BlogPost,
   notFoundComponent: () => (
@@ -58,9 +96,7 @@ function BlogPost() {
         {/* Article header window */}
         <div className="win95-window">
           <div className="win95-titlebar">
-            <span className="font-bold text-win95-12 truncate pl-1">
-              {article.title}
-            </span>
+            <span className="font-bold text-win95-12 truncate pl-1">{article.title}</span>
             <div className="flex gap-[2px]">
               <Link to="/blog" className="win95-control-btn no-underline" aria-label="Close">
                 ×
@@ -84,12 +120,10 @@ function BlogPost() {
         </div>
 
         {/* Each section as its own window panel */}
-        {article.sections.map((section: typeof article.sections[number]) => (
+        {article.sections.map((section: (typeof article.sections)[number]) => (
           <div key={section.title} className="win95-window">
             <div className="win95-titlebar">
-              <span className="font-bold text-win95-12 truncate pl-1">
-                {section.title}
-              </span>
+              <span className="font-bold text-win95-12 truncate pl-1">{section.title}</span>
             </div>
             <div className="p-4">
               <section.Body />
@@ -117,9 +151,7 @@ function BlogPost() {
         {ARTICLES.filter((a) => a.slug !== article.slug).length > 0 && (
           <div className="win95-window">
             <div className="win95-titlebar">
-              <span className="font-bold text-win95-12 truncate pl-1">
-                More Articles
-              </span>
+              <span className="font-bold text-win95-12 truncate pl-1">More Articles</span>
             </div>
             <div className="p-2">
               {ARTICLES.filter((a) => a.slug !== article.slug).map((a) => (

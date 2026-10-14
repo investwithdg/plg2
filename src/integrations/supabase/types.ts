@@ -14,6 +14,104 @@ export type Database = {
   }
   public: {
     Tables: {
+      api_keys: {
+        Row: {
+          created_at: string
+          id: string
+          key_hash: string
+          key_prefix: string
+          last_used_at: string | null
+          name: string | null
+          revoked_at: string | null
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          key_hash: string
+          key_prefix: string
+          last_used_at?: string | null
+          name?: string | null
+          revoked_at?: string | null
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          key_hash?: string
+          key_prefix?: string
+          last_used_at?: string | null
+          name?: string | null
+          revoked_at?: string | null
+          user_id?: string
+        }
+        Relationships: []
+      }
+      brand_profiles: {
+        Row: {
+          banned_words: string[]
+          created_at: string
+          id: string
+          signature: string | null
+          tone: string | null
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          banned_words?: string[]
+          created_at?: string
+          id?: string
+          signature?: string | null
+          tone?: string | null
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          banned_words?: string[]
+          created_at?: string
+          id?: string
+          signature?: string | null
+          tone?: string | null
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
+      compliance_checks: {
+        Row: {
+          board: string
+          checked_at: string
+          copy_generation_id: string | null
+          id: string
+          passed: boolean
+          violations: Json
+        }
+        Insert: {
+          board?: string
+          checked_at?: string
+          copy_generation_id?: string | null
+          id?: string
+          passed: boolean
+          violations?: Json
+        }
+        Update: {
+          board?: string
+          checked_at?: string
+          copy_generation_id?: string | null
+          id?: string
+          passed?: boolean
+          violations?: Json
+        }
+        Relationships: [
+          {
+            foreignKeyName: "compliance_checks_copy_generation_id_fkey"
+            columns: ["copy_generation_id"]
+            isOneToOne: false
+            referencedRelation: "copy_generations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       copy_generations: {
         Row: {
           batch_id: string | null
@@ -24,6 +122,7 @@ export type Database = {
           generation_latency_ms: number | null
           generation_number: number | null
           id: string
+          language: string
           model_used: string | null
           property_id: string
           user_id: string | null
@@ -37,6 +136,7 @@ export type Database = {
           generation_latency_ms?: number | null
           generation_number?: number | null
           id?: string
+          language?: string
           model_used?: string | null
           property_id: string
           user_id?: string | null
@@ -50,6 +150,7 @@ export type Database = {
           generation_latency_ms?: number | null
           generation_number?: number | null
           id?: string
+          language?: string
           model_used?: string | null
           property_id?: string
           user_id?: string | null
@@ -63,6 +164,27 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      elite_waitlist: {
+        Row: {
+          created_at: string
+          email: string
+          id: string
+          name: string | null
+        }
+        Insert: {
+          created_at?: string
+          email: string
+          id?: string
+          name?: string | null
+        }
+        Update: {
+          created_at?: string
+          email?: string
+          id?: string
+          name?: string | null
+        }
+        Relationships: []
       }
       enrichment_cache: {
         Row: {
@@ -94,6 +216,7 @@ export type Database = {
           enrichment_latency_ms: number | null
           enrichment_model_version: string | null
           id: string
+          key_sources: Json | null
           market_overview: string | null
           median_home_value: number | null
           nearby_amenities: Json | null
@@ -108,6 +231,7 @@ export type Database = {
           enrichment_latency_ms?: number | null
           enrichment_model_version?: string | null
           id?: string
+          key_sources?: Json | null
           market_overview?: string | null
           median_home_value?: number | null
           nearby_amenities?: Json | null
@@ -122,6 +246,7 @@ export type Database = {
           enrichment_latency_ms?: number | null
           enrichment_model_version?: string | null
           id?: string
+          key_sources?: Json | null
           market_overview?: string | null
           median_home_value?: number | null
           nearby_amenities?: Json | null
@@ -154,6 +279,10 @@ export type Database = {
           extraction_input_tokens: number | null
           extraction_output_tokens: number | null
           id: string
+          photo_analysis_cost_usd: number | null
+          photo_analysis_input_tokens: number | null
+          photo_analysis_model_version: string | null
+          photo_analysis_output_tokens: number | null
           property_id: string
           total_cost_usd: number | null
           total_input_tokens: number | null
@@ -172,6 +301,10 @@ export type Database = {
           extraction_input_tokens?: number | null
           extraction_output_tokens?: number | null
           id?: string
+          photo_analysis_cost_usd?: number | null
+          photo_analysis_input_tokens?: number | null
+          photo_analysis_model_version?: string | null
+          photo_analysis_output_tokens?: number | null
           property_id: string
           total_cost_usd?: number | null
           total_input_tokens?: number | null
@@ -190,6 +323,10 @@ export type Database = {
           extraction_input_tokens?: number | null
           extraction_output_tokens?: number | null
           id?: string
+          photo_analysis_cost_usd?: number | null
+          photo_analysis_input_tokens?: number | null
+          photo_analysis_model_version?: string | null
+          photo_analysis_output_tokens?: number | null
           property_id?: string
           total_cost_usd?: number | null
           total_input_tokens?: number | null
@@ -206,6 +343,244 @@ export type Database = {
           },
         ]
       }
+      listing_outcomes: {
+        Row: {
+          copy_generation_id: string | null
+          created_at: string
+          days_on_market: number | null
+          event_type: string
+          id: string
+          metadata: Json
+          property_id: string | null
+        }
+        Insert: {
+          copy_generation_id?: string | null
+          created_at?: string
+          days_on_market?: number | null
+          event_type: string
+          id?: string
+          metadata?: Json
+          property_id?: string | null
+        }
+        Update: {
+          copy_generation_id?: string | null
+          created_at?: string
+          days_on_market?: number | null
+          event_type?: string
+          id?: string
+          metadata?: Json
+          property_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "listing_outcomes_copy_generation_id_fkey"
+            columns: ["copy_generation_id"]
+            isOneToOne: false
+            referencedRelation: "copy_generations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "listing_outcomes_property_id_fkey"
+            columns: ["property_id"]
+            isOneToOne: false
+            referencedRelation: "properties"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      mcp_tool_calls: {
+        Row: {
+          created_at: string
+          id: string
+          tool: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          tool: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          tool?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
+      mls_rules: {
+        Row: {
+          active: boolean
+          board: string
+          created_at: string
+          guidance: string | null
+          id: string
+          pattern: string
+          rule_type: string
+          severity: string
+          updated_at: string
+          version: number
+        }
+        Insert: {
+          active?: boolean
+          board?: string
+          created_at?: string
+          guidance?: string | null
+          id?: string
+          pattern: string
+          rule_type?: string
+          severity?: string
+          updated_at?: string
+          version?: number
+        }
+        Update: {
+          active?: boolean
+          board?: string
+          created_at?: string
+          guidance?: string | null
+          id?: string
+          pattern?: string
+          rule_type?: string
+          severity?: string
+          updated_at?: string
+          version?: number
+        }
+        Relationships: []
+      }
+      oauth_access_tokens: {
+        Row: {
+          client_id: string
+          created_at: string
+          expires_at: string
+          id: string
+          revoked_at: string | null
+          scope: string | null
+          token_hash: string
+          user_id: string
+        }
+        Insert: {
+          client_id: string
+          created_at?: string
+          expires_at: string
+          id?: string
+          revoked_at?: string | null
+          scope?: string | null
+          token_hash: string
+          user_id: string
+        }
+        Update: {
+          client_id?: string
+          created_at?: string
+          expires_at?: string
+          id?: string
+          revoked_at?: string | null
+          scope?: string | null
+          token_hash?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "oauth_access_tokens_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "oauth_clients"
+            referencedColumns: ["client_id"]
+          },
+        ]
+      }
+      oauth_authorization_codes: {
+        Row: {
+          client_id: string
+          code_challenge: string
+          code_challenge_method: string
+          code_hash: string
+          created_at: string
+          expires_at: string
+          id: string
+          redirect_uri: string
+          resource: string | null
+          scope: string | null
+          used_at: string | null
+          user_id: string
+        }
+        Insert: {
+          client_id: string
+          code_challenge: string
+          code_challenge_method?: string
+          code_hash: string
+          created_at?: string
+          expires_at: string
+          id?: string
+          redirect_uri: string
+          resource?: string | null
+          scope?: string | null
+          used_at?: string | null
+          user_id: string
+        }
+        Update: {
+          client_id?: string
+          code_challenge?: string
+          code_challenge_method?: string
+          code_hash?: string
+          created_at?: string
+          expires_at?: string
+          id?: string
+          redirect_uri?: string
+          resource?: string | null
+          scope?: string | null
+          used_at?: string | null
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "oauth_authorization_codes_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "oauth_clients"
+            referencedColumns: ["client_id"]
+          },
+        ]
+      }
+      oauth_clients: {
+        Row: {
+          client_id: string
+          client_name: string | null
+          client_secret_hash: string | null
+          created_at: string
+          grant_types: Json
+          metadata: Json
+          redirect_uris: Json
+          response_types: Json
+          scope: string | null
+          token_endpoint_auth_method: string
+        }
+        Insert: {
+          client_id?: string
+          client_name?: string | null
+          client_secret_hash?: string | null
+          created_at?: string
+          grant_types?: Json
+          metadata?: Json
+          redirect_uris: Json
+          response_types?: Json
+          scope?: string | null
+          token_endpoint_auth_method?: string
+        }
+        Update: {
+          client_id?: string
+          client_name?: string | null
+          client_secret_hash?: string | null
+          created_at?: string
+          grant_types?: Json
+          metadata?: Json
+          redirect_uris?: Json
+          response_types?: Json
+          scope?: string | null
+          token_endpoint_auth_method?: string
+        }
+        Relationships: []
+      }
       properties: {
         Row: {
           address: string
@@ -214,14 +589,25 @@ export type Database = {
           created_at: string
           dedupe_key: string | null
           enrichment_step: string | null
+          existing_listing_raw: string | null
           extraction_latency_ms: number | null
           extraction_model_version: string | null
           extraction_status: string | null
           failed_step: string | null
+          fha_categories: Json | null
+          fha_compliance_score: number | null
+          fha_compliant_listing_parts: string | null
+          fha_violations: Json | null
           id: string
           ip_hash: string | null
+          is_public: boolean
+          listing_agent: string | null
+          listing_office: string | null
+          mls_number: string | null
+          perplexity_extract_raw: Json | null
           price: number | null
           property_type: string | null
+          secondary_language: string | null
           source: string | null
           source_url: string | null
           sqft: number | null
@@ -235,14 +621,25 @@ export type Database = {
           created_at?: string
           dedupe_key?: string | null
           enrichment_step?: string | null
+          existing_listing_raw?: string | null
           extraction_latency_ms?: number | null
           extraction_model_version?: string | null
           extraction_status?: string | null
           failed_step?: string | null
+          fha_categories?: Json | null
+          fha_compliance_score?: number | null
+          fha_compliant_listing_parts?: string | null
+          fha_violations?: Json | null
           id?: string
           ip_hash?: string | null
+          is_public?: boolean
+          listing_agent?: string | null
+          listing_office?: string | null
+          mls_number?: string | null
+          perplexity_extract_raw?: Json | null
           price?: number | null
           property_type?: string | null
+          secondary_language?: string | null
           source?: string | null
           source_url?: string | null
           sqft?: number | null
@@ -256,14 +653,25 @@ export type Database = {
           created_at?: string
           dedupe_key?: string | null
           enrichment_step?: string | null
+          existing_listing_raw?: string | null
           extraction_latency_ms?: number | null
           extraction_model_version?: string | null
           extraction_status?: string | null
           failed_step?: string | null
+          fha_categories?: Json | null
+          fha_compliance_score?: number | null
+          fha_compliant_listing_parts?: string | null
+          fha_violations?: Json | null
           id?: string
           ip_hash?: string | null
+          is_public?: boolean
+          listing_agent?: string | null
+          listing_office?: string | null
+          mls_number?: string | null
+          perplexity_extract_raw?: Json | null
           price?: number | null
           property_type?: string | null
+          secondary_language?: string | null
           source?: string | null
           source_url?: string | null
           sqft?: number | null
@@ -271,6 +679,47 @@ export type Database = {
           user_id?: string | null
         }
         Relationships: []
+      }
+      property_photos: {
+        Row: {
+          analysis: Json | null
+          created_at: string
+          error_message: string | null
+          id: string
+          property_id: string
+          status: string
+          storage_path: string
+          user_id: string
+        }
+        Insert: {
+          analysis?: Json | null
+          created_at?: string
+          error_message?: string | null
+          id?: string
+          property_id: string
+          status?: string
+          storage_path: string
+          user_id: string
+        }
+        Update: {
+          analysis?: Json | null
+          created_at?: string
+          error_message?: string | null
+          id?: string
+          property_id?: string
+          status?: string
+          storage_path?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "property_photos_property_id_fkey"
+            columns: ["property_id"]
+            isOneToOne: false
+            referencedRelation: "properties"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       subscriptions: {
         Row: {
@@ -344,12 +793,12 @@ export type Tables<
   DefaultSchemaTableNameOrOptions extends
     | keyof (DefaultSchema["Tables"] & DefaultSchema["Views"])
     | { schema: keyof DatabaseWithoutInternals },
-  TableName extends DefaultSchemaTableNameOrOptions extends {
+  TableName extends (DefaultSchemaTableNameOrOptions extends {
     schema: keyof DatabaseWithoutInternals
   }
     ? keyof (DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Tables"] &
         DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Views"])
-    : never = never,
+    : never) = never,
 > = DefaultSchemaTableNameOrOptions extends {
   schema: keyof DatabaseWithoutInternals
 }
@@ -373,11 +822,11 @@ export type TablesInsert<
   DefaultSchemaTableNameOrOptions extends
     | keyof DefaultSchema["Tables"]
     | { schema: keyof DatabaseWithoutInternals },
-  TableName extends DefaultSchemaTableNameOrOptions extends {
+  TableName extends (DefaultSchemaTableNameOrOptions extends {
     schema: keyof DatabaseWithoutInternals
   }
     ? keyof DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Tables"]
-    : never = never,
+    : never) = never,
 > = DefaultSchemaTableNameOrOptions extends {
   schema: keyof DatabaseWithoutInternals
 }
@@ -398,11 +847,11 @@ export type TablesUpdate<
   DefaultSchemaTableNameOrOptions extends
     | keyof DefaultSchema["Tables"]
     | { schema: keyof DatabaseWithoutInternals },
-  TableName extends DefaultSchemaTableNameOrOptions extends {
+  TableName extends (DefaultSchemaTableNameOrOptions extends {
     schema: keyof DatabaseWithoutInternals
   }
     ? keyof DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Tables"]
-    : never = never,
+    : never) = never,
 > = DefaultSchemaTableNameOrOptions extends {
   schema: keyof DatabaseWithoutInternals
 }
@@ -423,11 +872,11 @@ export type Enums<
   DefaultSchemaEnumNameOrOptions extends
     | keyof DefaultSchema["Enums"]
     | { schema: keyof DatabaseWithoutInternals },
-  EnumName extends DefaultSchemaEnumNameOrOptions extends {
+  EnumName extends (DefaultSchemaEnumNameOrOptions extends {
     schema: keyof DatabaseWithoutInternals
   }
     ? keyof DatabaseWithoutInternals[DefaultSchemaEnumNameOrOptions["schema"]]["Enums"]
-    : never = never,
+    : never) = never,
 > = DefaultSchemaEnumNameOrOptions extends {
   schema: keyof DatabaseWithoutInternals
 }
@@ -440,11 +889,11 @@ export type CompositeTypes<
   PublicCompositeTypeNameOrOptions extends
     | keyof DefaultSchema["CompositeTypes"]
     | { schema: keyof DatabaseWithoutInternals },
-  CompositeTypeName extends PublicCompositeTypeNameOrOptions extends {
+  CompositeTypeName extends (PublicCompositeTypeNameOrOptions extends {
     schema: keyof DatabaseWithoutInternals
   }
     ? keyof DatabaseWithoutInternals[PublicCompositeTypeNameOrOptions["schema"]]["CompositeTypes"]
-    : never = never,
+    : never) = never,
 > = PublicCompositeTypeNameOrOptions extends {
   schema: keyof DatabaseWithoutInternals
 }

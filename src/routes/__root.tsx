@@ -6,6 +6,7 @@ import {
   useRouter,
   HeadContent,
   Scripts,
+  type ErrorComponentProps,
 } from "@tanstack/react-router";
 import { useEffect, useRef, type ReactNode } from "react";
 
@@ -13,8 +14,10 @@ import appCss from "../styles.css?url";
 import { reportLovableError } from "../lib/lovable-error-reporting";
 import { Toaster } from "@/components/ui/sonner";
 import { AppNav } from "@/components/AppNav";
-import { initPostHog, identifyUser, resetUser, track } from "@/lib/posthog";
+import { AppFooter } from "@/components/AppFooter";
+import { initPostHog, identifyUser, resetUser, track, captureException } from "@/lib/posthog";
 import { useAuth } from "@/hooks/useAuth";
+import PlanThemeProvider from "@/components/PlanThemeProvider";
 
 function NotFoundComponent() {
   return (
@@ -38,11 +41,12 @@ function NotFoundComponent() {
   );
 }
 
-function ErrorComponent({ error, reset }: { error: Error; reset: () => void }) {
+function ErrorComponent({ error, reset }: ErrorComponentProps) {
   console.error(error);
   const router = useRouter();
   useEffect(() => {
     reportLovableError(error, { boundary: "tanstack_root_error_component" });
+    captureException(error, { boundary: "tanstack_root_error_component" });
   }, [error]);
 
   return (
@@ -82,17 +86,32 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
       { charSet: "utf-8" },
       { name: "viewport", content: "width=device-width, initial-scale=1" },
       { title: "PLG — Property Listing Generator" },
-      { name: "description", content: "The fastest way to generate FHA-compliant MLS, social, and email listing copy. Paste an address, get 3 polished listings in 15 seconds. Used by thousands of agents." },
+      {
+        name: "description",
+        content:
+          "The fastest way to generate FHA-compliant MLS, social, and email listing copy. Paste an address, get 3 polished listings in 30 seconds. Used by thousands of agents.",
+      },
       { name: "author", content: "PLG — PropertyListingGenerator.com" },
       { property: "og:title", content: "PLG — Property Listing Generator" },
-      { property: "og:description", content: "The fastest way to generate FHA-compliant MLS, social, and email listing copy. Paste an address, get 3 polished listings in 15 seconds." },
+      {
+        property: "og:description",
+        content:
+          "The fastest way to generate FHA-compliant MLS, social, and email listing copy. Paste an address, get 3 polished listings in 30 seconds.",
+      },
       { property: "og:type", content: "website" },
       { property: "og:site_name", content: "PLG" },
       { name: "twitter:card", content: "summary_large_image" },
       { name: "twitter:title", content: "PLG — Property Listing Generator" },
-      { name: "twitter:description", content: "The fastest way to generate FHA-compliant MLS, social, and email listing copy. Used by thousands of agents." },
-      { property: "og:image", content: "https://pub-bb2e103a32db4e198524a2e9ed8f35b4.r2.dev/fd9b0118-ec7e-4e79-b5e2-def916e87676/id-preview-47622f33--c76353e6-e57a-4f26-aef0-767e3a4734d3.lovable.app-1782271456544.png" },
-      { name: "twitter:image", content: "https://pub-bb2e103a32db4e198524a2e9ed8f35b4.r2.dev/fd9b0118-ec7e-4e79-b5e2-def916e87676/id-preview-47622f33--c76353e6-e57a-4f26-aef0-767e3a4734d3.lovable.app-1782271456544.png" },
+      {
+        name: "twitter:description",
+        content:
+          "The fastest way to generate FHA-compliant MLS, social, and email listing copy. Used by thousands of agents.",
+      },
+      { property: "og:image", content: "https://propertylistinggenerator.com/og-image.png" },
+      { property: "og:image:width", content: "1200" },
+      { property: "og:image:height", content: "630" },
+      { property: "og:image:alt", content: "PLG — Listing Copy in 30 Seconds" },
+      { name: "twitter:image", content: "https://propertylistinggenerator.com/og-image.png" },
     ],
     links: [
       {
@@ -102,12 +121,30 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
       { rel: "icon", type: "image/x-icon", href: "/favicon.ico" },
       { rel: "icon", type: "image/png", sizes: "512x512", href: "/favicon-512.png" },
       { rel: "apple-touch-icon", sizes: "180x180", href: "/apple-touch-icon.png" },
-      {
-        rel: "canonical",
-        href: "https://propertylistinggenerator.com",
-      },
     ],
     scripts: [
+      {
+        type: "application/ld+json",
+        children: JSON.stringify({
+          "@context": "https://schema.org",
+          "@type": "Organization",
+          name: "PropertyListingGenerator.com",
+          alternateName: "PLG",
+          url: "https://propertylistinggenerator.com",
+          logo: "https://propertylistinggenerator.com/favicon-512.png",
+          description:
+            "Real estate listing copy generator producing FHA-compliant MLS descriptions, social captions, and buyer emails.",
+        }),
+      },
+      {
+        type: "application/ld+json",
+        children: JSON.stringify({
+          "@context": "https://schema.org",
+          "@type": "WebSite",
+          name: "PropertyListingGenerator.com",
+          url: "https://propertylistinggenerator.com",
+        }),
+      },
       {
         type: "application/ld+json",
         children: JSON.stringify({
@@ -117,14 +154,16 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
           url: "https://propertylistinggenerator.com",
           applicationCategory: "BusinessApplication",
           operatingSystem: "Web",
-          description: "Generate FHA-compliant MLS, social, and email listing copy from any address in 15 seconds. The listing tool for real estate agents.",
+          description:
+            "Generate FHA-compliant MLS, social, and email listing copy from any address in 30 seconds. The listing tool for real estate agents.",
           offers: [
             {
               "@type": "Offer",
               name: "Free",
               price: "0",
               priceCurrency: "USD",
-              description: "10 free generations with 1 Pro-tier property sample; signed-in free accounts reset monthly",
+              description:
+                "10 free generations with 1 Pro-tier property sample; signed-in free accounts reset monthly",
             },
             {
               "@type": "Offer",
@@ -132,7 +171,8 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
               price: "49",
               priceCurrency: "USD",
               billingDuration: "P1M",
-              description: "Unlimited generations, unlimited Pro-tier property types, listing history",
+              description:
+                "Unlimited generations, unlimited Pro-tier property types, listing history",
             },
             {
               "@type": "Offer",
@@ -172,10 +212,12 @@ function RootComponent() {
 
   return (
     <QueryClientProvider client={queryClient}>
+      <PlanThemeProvider />
       <PostHogInit />
       <AppNav />
       {/* Required: nested routes render here. Removing <Outlet /> breaks all child routes. */}
       <Outlet />
+      <AppFooter />
       <Toaster />
     </QueryClientProvider>
   );

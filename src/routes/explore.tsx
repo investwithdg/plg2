@@ -16,7 +16,9 @@ export const Route = createFileRoute("/explore")({
         property: "og:description",
         content: "Browse real listing copy generated with PLG by agents across the US.",
       },
+      { property: "og:url", content: "https://propertylistinggenerator.com/explore" },
     ],
+    links: [{ rel: "canonical", href: "https://propertylistinggenerator.com/explore" }],
   }),
   component: Explore,
 });
@@ -29,6 +31,7 @@ interface PropertyRow {
   beds: number | null;
   baths: number | null;
   price: number | null;
+  mls_number: string | null;
 }
 
 interface CopyRow {
@@ -68,11 +71,11 @@ function Explore() {
 
   useEffect(() => {
     async function load() {
-      const { data: properties, error } = await (
-        supabase.from("properties" as never) as any
-      )
-        .select("id, address, property_type, created_at, beds, baths, price")
+      const { data: properties, error } = await supabase
+        .from("properties")
+        .select("id, address, property_type, created_at, beds, baths, price, mls_number")
         .eq("status", "complete")
+        .eq("is_public", true)
         .order("created_at", { ascending: false })
         .limit(30);
 
@@ -82,9 +85,8 @@ function Explore() {
       }
 
       const ids = (properties as PropertyRow[]).map((p) => p.id);
-      const { data: copies } = await (
-        supabase.from("copy_generations" as never) as any
-      )
+      const { data: copies } = await supabase
+        .from("copy_generations")
         .select("property_id, content")
         .eq("copy_type", "mls")
         .in("property_id", ids);
@@ -120,12 +122,10 @@ function Explore() {
             </div>
           </div>
           <div className="p-4">
-            <p className="text-win95-12 font-bold mb-1">
-              Browse listings generated with PLG
-            </p>
+            <p className="text-win95-12 font-bold mb-1">Browse listings generated with PLG</p>
             <p className="text-win95-11 text-muted-foreground">
-              Real FHA-compliant copy written by PLG for agents across the US.
-              Click any listing to expand the MLS description.
+              Real FHA-compliant copy written by PLG for agents across the US. Click any listing to
+              expand the MLS description.
             </p>
           </div>
         </div>
@@ -155,9 +155,9 @@ function Explore() {
               </div>
             ) : (
               <div className="space-y-1">
-                {/* Table header */}
                 <div className="flex gap-2 px-2 py-1 text-win95-11 font-bold text-muted-foreground border-b border-[var(--win95-gray-dark)]">
                   <span className="flex-1">Address</span>
+                  <span className="w-24 text-center hidden md:block">MLS #</span>
                   <span className="w-20 text-center hidden sm:block">Type</span>
                   <span className="w-24 text-right">Date</span>
                 </div>
@@ -170,15 +170,14 @@ function Explore() {
                           ? "bg-[color:var(--win95-blue)] text-white"
                           : "hover:bg-[color:var(--win95-blue)] hover:text-white"
                       }`}
-                      onClick={() =>
-                        setExpanded(expanded === property.id ? null : property.id)
-                      }
+                      onClick={() => setExpanded(expanded === property.id ? null : property.id)}
                     >
                       <span className="flex-1 truncate">{property.address}</span>
+                      <span className="w-24 text-center hidden md:block font-bold text-win95-11 opacity-80">
+                        {property.mls_number ?? "—"}
+                      </span>
                       <span className="w-20 text-center hidden sm:block font-bold text-win95-11">
-                        {TYPE_LABELS[property.property_type ?? ""] ??
-                          property.property_type ??
-                          "—"}
+                        {TYPE_LABELS[property.property_type ?? ""] ?? property.property_type ?? "—"}
                       </span>
                       <span className="w-24 text-right text-win95-11">
                         {formatDate(property.created_at)}
@@ -194,9 +193,7 @@ function Explore() {
                             </span>
                             <button
                               className="win95-raised px-2 py-0.5 text-win95-11 cursor-pointer active:win95-pressed"
-                              onClick={() =>
-                                navigator.clipboard.writeText(mlsCopy)
-                              }
+                              onClick={() => navigator.clipboard.writeText(mlsCopy)}
                             >
                               Copy
                             </button>
@@ -206,10 +203,7 @@ function Explore() {
                           </p>
                         </div>
                         <div className="mt-2 flex gap-2">
-                          <Link
-                            to="/listing/$id"
-                            params={{ id: property.id }}
-                          >
+                          <Link to="/listing/$id" params={{ id: property.id }}>
                             <button className="win95-raised px-3 py-1 text-win95-11 cursor-pointer active:win95-pressed">
                               View full listing →
                             </button>
@@ -232,13 +226,11 @@ function Explore() {
         {/* CTA */}
         <div className="win95-window">
           <div className="win95-titlebar">
-            <span className="font-bold text-win95-12 truncate pl-1">
-              Want your listing here?
-            </span>
+            <span className="font-bold text-win95-12 truncate pl-1">Want your listing here?</span>
           </div>
           <div className="p-4 flex items-center justify-between gap-4">
             <p className="text-win95-11 text-muted-foreground">
-              Generate FHA-compliant MLS copy in 15 seconds. Free to start.
+              Generate FHA-compliant MLS copy in 30 seconds. Free to start.
             </p>
             <Link to="/">
               <button className="win95-raised px-4 py-1 text-win95-12 font-bold cursor-pointer active:win95-pressed shrink-0">

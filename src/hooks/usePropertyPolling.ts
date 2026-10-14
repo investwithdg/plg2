@@ -11,6 +11,17 @@ export type EnrichmentStep =
   | "done"
   | null;
 
+export interface FhaCategoryCheck {
+  passed: boolean;
+  reasoning: string;
+}
+
+export interface FhaCategories {
+  protected_classes?: FhaCategoryCheck;
+  steering_coded_language?: FhaCategoryCheck;
+  demographics_character?: FhaCategoryCheck;
+}
+
 export interface PropertyWithCopies {
   id: string;
   address: string;
@@ -21,6 +32,13 @@ export interface PropertyWithCopies {
   price: number | null;
   status: PropertyStatus;
   enrichment_step: EnrichmentStep;
+  fha_violations: string[] | null;
+  fha_compliant_listing_parts: string | null;
+  existing_listing_raw: string | null;
+  listing_agent: string | null;
+  listing_office: string | null;
+  fha_compliance_score: number | null;
+  fha_categories: FhaCategories | null;
   created_at: string;
 }
 
@@ -31,11 +49,50 @@ export interface CopyGeneration {
   created_at: string;
 }
 
+export interface SchoolEntry {
+  name?: string;
+  type?: string;
+  grades?: string;
+  distance?: string;
+  rating?: number | string;
+  [key: string]: unknown;
+}
+
+// Transit/amenity entries used to be plain strings; the enrichment schema now
+// asks for structured objects, but properties enriched before that change (or
+// served from the 7-day neighborhood cache) may still have the old shape.
+export interface PlaceEntry {
+  name?: string;
+  type?: string;
+  distance?: string;
+  [key: string]: unknown;
+}
+export type PlaceEntryOrLegacyString = PlaceEntry | string;
+
+export interface KeySource {
+  name?: string;
+  url?: string;
+  facts_provided?: string;
+  [key: string]: unknown;
+}
+
+export interface EnrichmentData {
+  schools?: SchoolEntry[] | null;
+  transit_options?: PlaceEntryOrLegacyString[] | null;
+  nearby_amenities?: PlaceEntryOrLegacyString[] | null;
+  walkability_score?: number | null;
+  market_overview?: string | null;
+  median_home_value?: number | null;
+  key_sources?: KeySource[] | null;
+  perplexity_raw_response?: unknown;
+}
+
 interface UsePropertyPollingResult {
   status: PropertyStatus;
   enrichmentStep: EnrichmentStep;
   property: PropertyWithCopies | null;
   copies: CopyGeneration[];
+  enrichmentData: EnrichmentData | null;
   isPolling: boolean;
   error: string | null;
   stopPolling: () => void;
@@ -44,13 +101,12 @@ interface UsePropertyPollingResult {
 const FALLBACK_POLL_INTERVAL = 15000;
 const MAX_FALLBACK_ATTEMPTS = 12;
 
-export function usePropertyPolling(
-  propertyId: string | null,
-): UsePropertyPollingResult {
+export function usePropertyPolling(propertyId: string | null): UsePropertyPollingResult {
   const [status, setStatus] = useState<PropertyStatus>("pending");
   const [enrichmentStep, setEnrichmentStep] = useState<EnrichmentStep>(null);
   const [property, setProperty] = useState<PropertyWithCopies | null>(null);
   const [copies, setCopies] = useState<CopyGeneration[]>([]);
+  const [enrichmentData, setEnrichmentData] = useState<EnrichmentData | null>(null);
   const [isPolling, setIsPolling] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -67,22 +123,34 @@ export function usePropertyPolling(
     setIsPolling(false);
   }, []);
 
-  const fetchCopies = useCallback(
-    async (propId: string) => {
-      const { data, error: copiesError } = await (
-        supabase.from("copy_generations" as never) as any
-      )
+  const fetchCopies = useCallback(async (propId: string) => {
+    const [copiesRes, enrichmentsRes] = await Promise.all([
+      supabase
+        .from("copy_generations")
         .select("id, copy_type, content, created_at")
         .eq("property_id", propId)
-        .order("created_at", { ascending: false });
-      if (copiesError) {
-        console.error("Error fetching copies:", copiesError);
-      } else {
-        setCopies((data ?? []) as CopyGeneration[]);
-      }
-    },
-    [],
-  );
+        .order("created_at", { ascending: false }),
+      supabase
+        .from("enrichments")
+        .select(
+          "schools, transit_options, nearby_amenities, walkability_score, market_overview, median_home_value, key_sources, perplexity_raw_response",
+        )
+        .eq("property_id", propId)
+        .maybeSingle(),
+    ]);
+
+    if (copiesRes.error) {
+      console.error("Error fetching copies:", copiesRes.error);
+    } else {
+      setCopies((copiesRes.data ?? []) as CopyGeneration[]);
+    }
+
+    if (enrichmentsRes.error) {
+      console.error("Error fetching enrichments:", enrichmentsRes.error);
+    } else if (enrichmentsRes.data) {
+      setEnrichmentData(enrichmentsRes.data as unknown as EnrichmentData);
+    }
+  }, []);
 
   const handlePropertyUpdate = useCallback(
     (row: Record<string, unknown>) => {
@@ -108,11 +176,10 @@ export function usePropertyPolling(
     async (propId: string) => {
       if (stoppedRef.current) return;
       try {
-        const { data, error: fetchErr } = await (
-          supabase.from("properties" as never) as any
-        )
+        const { data, error: fetchErr } = await supabase
+          .from("properties")
           .select(
-            "id, address, property_type, status, enrichment_step, extraction_status, failed_step, beds, baths, sqft, price, created_at",
+            "id, address, property_type, status, enrichment_step, extraction_status, failed_step, beds, baths, sqft, price, fha_violations, fha_compliant_listing_parts, existing_listing_raw, listing_agent, listing_office, fha_compliance_score, fha_categories, created_at",
           )
           .eq("id", propId)
           .maybeSingle();
@@ -156,14 +223,14 @@ export function usePropertyPolling(
     const channel = supabase
       .channel(`property-${propertyId}`)
       .on(
-        "postgres_changes" as any,
+        "postgres_changes",
         {
           event: "UPDATE",
           schema: "public",
           table: "properties",
           filter: `id=eq.${propertyId}`,
         },
-        (payload: any) => {
+        (payload: Record<string, unknown>) => {
           if (payload.new) {
             handlePropertyUpdate(payload.new as Record<string, unknown>);
           }
@@ -173,10 +240,7 @@ export function usePropertyPolling(
 
     // Fallback: slow poll in case Realtime is unavailable or delayed
     fetchOnce(propertyId);
-    fallbackRef.current = setInterval(
-      () => fetchOnce(propertyId),
-      FALLBACK_POLL_INTERVAL,
-    );
+    fallbackRef.current = setInterval(() => fetchOnce(propertyId), FALLBACK_POLL_INTERVAL);
 
     return () => {
       supabase.removeChannel(channel);
@@ -192,6 +256,7 @@ export function usePropertyPolling(
     enrichmentStep,
     property,
     copies,
+    enrichmentData,
     isPolling,
     error,
     stopPolling,

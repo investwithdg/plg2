@@ -3,19 +3,13 @@ import { supabase } from "@/integrations/supabase/client";
 import { RetroButton, RetroInput } from "@/components/retro";
 import TurnstileWidget from "@/components/TurnstileWidget";
 
-const TURNSTILE_SITE_KEY = import.meta.env.VITE_TURNSTILE_SITE_KEY as
-  | string
-  | undefined;
+const TURNSTILE_SITE_KEY = import.meta.env.VITE_TURNSTILE_SITE_KEY as string | undefined;
 
 type AuthMode = "signin" | "signup";
 
 interface AuthModalProps {
   onClose: () => void;
-  onAuth: (
-    email: string,
-    password: string,
-    mode: AuthMode,
-  ) => Promise<string | null>;
+  onAuth: (email: string, password: string, mode: AuthMode) => Promise<string | null>;
 }
 
 export default function AuthModal({ onClose, onAuth }: AuthModalProps) {
@@ -25,6 +19,7 @@ export default function AuthModal({ onClose, onAuth }: AuthModalProps) {
   const [error, setError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
   const [turnstileToken, setTurnstileToken] = useState<string | null>(null);
+  const [consentChecked, setConsentChecked] = useState(false);
 
   const handleTurnstileVerify = useCallback((token: string) => {
     setTurnstileToken(token);
@@ -38,6 +33,7 @@ export default function AuthModal({ onClose, onAuth }: AuthModalProps) {
   const canSubmit =
     !!email.trim() &&
     !!password.trim() &&
+    consentChecked &&
     (!requiresTurnstile || !!turnstileToken);
 
   const handleSubmit = async () => {
@@ -77,7 +73,7 @@ export default function AuthModal({ onClose, onAuth }: AuthModalProps) {
     setError(null);
     const { error: oauthError } = await supabase.auth.signInWithOAuth({
       provider: "google",
-      options: { redirectTo: window.location.origin },
+      options: { redirectTo: window.location.origin + window.location.pathname },
     });
     if (oauthError) setError(oauthError.message);
   };
@@ -94,7 +90,7 @@ export default function AuthModal({ onClose, onAuth }: AuthModalProps) {
           </button>
         </div>
         <div className="p-4 bg-card space-y-3">
-          <RetroButton onClick={handleGoogleSignIn} disabled={submitting}>
+          <RetroButton onClick={handleGoogleSignIn} disabled={submitting || !consentChecked}>
             Continue with Google
           </RetroButton>
           <div className="flex items-center gap-2">
@@ -133,11 +129,24 @@ export default function AuthModal({ onClose, onAuth }: AuthModalProps) {
             </div>
           )}
 
-          {error && (
-            <p className="text-win95-11 text-[color:var(--destructive)]">
-              {error}
-            </p>
-          )}
+          <div className="flex items-start gap-2 pt-1 pb-1">
+            <input
+              type="checkbox"
+              id="consent-checkbox"
+              checked={consentChecked}
+              onChange={(e) => setConsentChecked(e.target.checked)}
+              className="mt-1"
+            />
+            <label
+              htmlFor="consent-checkbox"
+              className="text-[10px] leading-tight text-muted-foreground cursor-pointer select-none"
+            >
+              I agree to the Terms of Service & Privacy Policy, and consent to my listing data being
+              used to improve the PLG AI model.
+            </label>
+          </div>
+
+          {error && <p className="text-win95-11 text-[color:var(--destructive)]">{error}</p>}
           <div className="flex gap-2 justify-between items-center">
             <button
               className="text-win95-11 underline cursor-pointer bg-transparent border-none text-muted-foreground"

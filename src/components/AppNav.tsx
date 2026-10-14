@@ -2,11 +2,13 @@ import { useState, useEffect, useRef } from "react";
 import { Link } from "@tanstack/react-router";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
+import { usePlanTier } from "@/hooks/usePlanTier";
 import AuthModal from "@/components/AuthModal";
 import RetroLegend from "@/components/RetroLegend";
 
 const NAV_LINKS = [
   { to: "/", label: "Home", exact: true },
+  { to: "/features", label: "Features" },
   { to: "/pricing", label: "Pricing" },
   { to: "/compare", label: "Compare" },
   { to: "/blog", label: "Blog" },
@@ -15,6 +17,7 @@ const NAV_LINKS = [
 
 export function AppNav() {
   const { user, signIn, signUp, signOut } = useAuth();
+  const { plan } = usePlanTier(user);
   const [menuOpen, setMenuOpen] = useState(false);
   const [showAuthModal, setShowAuthModal] = useState(false);
   const menuRef = useRef<HTMLDivElement>(null);
@@ -44,18 +47,12 @@ export function AppNav() {
     setMenuOpen(false);
   };
 
-  const handleAuth = async (
-    email: string,
-    password: string,
-    mode: "signin" | "signup",
-  ) => {
+  const handleAuth = async (email: string, password: string, mode: "signin" | "signup") => {
     if (mode === "signin") return signIn(email, password);
 
     const { error, isNewUser } = await signUp(email, password);
     if (isNewUser) {
-      supabase.functions
-        .invoke("send-welcome-email", { body: { email } })
-        .catch(console.error);
+      supabase.functions.invoke("send-welcome-email", { body: { email } }).catch(console.error);
     }
     return error;
   };
@@ -73,12 +70,15 @@ export function AppNav() {
 
         {/* Desktop nav links */}
         <nav className="hidden sm:flex items-center gap-1 ml-1">
-          {NAV_LINKS.filter(l => l.to !== "/").map((link) => (
+          {NAV_LINKS.filter((l) => l.to !== "/").map((link) => (
             <Link
               key={link.to}
               to={link.to}
               className="win95-raised bg-[var(--win95-gray)] text-black px-2 py-0.5 text-win95-11 no-underline"
-              activeProps={{ className: "win95-pressed bg-[var(--win95-gray)] text-black px-2 py-0.5 text-win95-11 no-underline" }}
+              activeProps={{
+                className:
+                  "win95-pressed bg-[var(--win95-gray)] text-black px-2 py-0.5 text-win95-11 no-underline",
+              }}
             >
               {link.label}
             </Link>
@@ -90,18 +90,37 @@ export function AppNav() {
 
         {/* Desktop: user info + auth button */}
         <div className="hidden sm:flex items-center gap-2">
+          {userEmail && plan !== "free" && (
+            <span
+              className={`text-[10px] font-bold px-1.5 py-0.5 win95-raised ${
+                plan === "elite"
+                  ? "bg-[#404040] text-white border border-[#707070]"
+                  : "bg-[#800000] text-white"
+              }`}
+            >
+              {plan.toUpperCase()}
+            </span>
+          )}
           {userEmail && (
             <span className="text-win95-11 opacity-80 hidden md:inline truncate max-w-[160px]">
               {userEmail}
             </span>
           )}
           {userEmail ? (
-            <button
-              onClick={handleSignOut}
-              className="win95-raised bg-[var(--win95-gray)] text-black px-2 py-0.5 text-win95-11 cursor-pointer"
-            >
-              Sign Out
-            </button>
+            <div className="flex items-center gap-1.5">
+              <Link
+                to="/hub"
+                className="win95-raised bg-[var(--win95-gray)] text-black px-2 py-0.5 text-win95-11 no-underline font-bold"
+              >
+                Member Hub
+              </Link>
+              <button
+                onClick={handleSignOut}
+                className="win95-raised bg-[var(--win95-gray)] text-black px-2 py-0.5 text-win95-11 cursor-pointer"
+              >
+                Sign Out
+              </button>
+            </div>
           ) : (
             <button
               onClick={() => setShowAuthModal(true)}
@@ -126,10 +145,7 @@ export function AppNav() {
 
         {/* Mobile dropdown menu */}
         {menuOpen && (
-          <div
-            ref={menuRef}
-            className="absolute top-full left-0 right-0 z-50 px-2 pt-1 pb-2"
-          >
+          <div ref={menuRef} className="absolute top-full left-0 right-0 z-50 px-2 pt-1 pb-2">
             <div className="win95-window">
               <div className="win95-titlebar">
                 <span className="font-bold text-win95-12 truncate pl-1">Navigation</span>
@@ -147,7 +163,10 @@ export function AppNav() {
                     key={link.to}
                     to={link.to}
                     className="block w-full text-left px-4 py-1.5 text-win95-12 text-black no-underline hover:bg-[color:var(--win95-blue)] hover:text-white"
-                    activeProps={{ className: "block w-full text-left px-4 py-1.5 text-win95-12 no-underline bg-[color:var(--win95-blue)] text-white" }}
+                    activeProps={{
+                      className:
+                        "block w-full text-left px-4 py-1.5 text-win95-12 no-underline bg-[color:var(--win95-blue)] text-white",
+                    }}
                     activeOptions={"exact" in link && link.exact ? { exact: true } : undefined}
                     onClick={() => setMenuOpen(false)}
                   >
@@ -156,8 +175,28 @@ export function AppNav() {
                 ))}
                 <div className="border-t-2 border-[var(--win95-gray-dark)] my-1 mx-2" />
                 {userEmail ? (
-                  <div className="px-4 space-y-1">
-                    <p className="text-win95-11 text-muted-foreground truncate">{userEmail}</p>
+                  <div className="px-4 space-y-1.5">
+                    <div className="flex items-center gap-2">
+                      <p className="text-win95-11 text-muted-foreground truncate">{userEmail}</p>
+                      {plan !== "free" && (
+                        <span
+                          className={`text-[10px] font-bold px-1.5 py-0.5 win95-raised ${
+                            plan === "elite"
+                              ? "bg-[#404040] text-white border border-[#707070]"
+                              : "bg-[#800000] text-white"
+                          }`}
+                        >
+                          {plan.toUpperCase()}
+                        </span>
+                      )}
+                    </div>
+                    <Link
+                      to="/hub"
+                      onClick={() => setMenuOpen(false)}
+                      className="win95-raised px-3 py-1 text-win95-12 font-bold no-underline text-black block text-center bg-[var(--win95-gray)]"
+                    >
+                      Member Hub
+                    </Link>
                     <button
                       onClick={handleSignOut}
                       className="win95-raised px-3 py-0.5 text-win95-12 cursor-pointer w-full text-left"
@@ -168,7 +207,10 @@ export function AppNav() {
                 ) : (
                   <div className="px-4">
                     <button
-                      onClick={() => { setMenuOpen(false); setShowAuthModal(true); }}
+                      onClick={() => {
+                        setMenuOpen(false);
+                        setShowAuthModal(true);
+                      }}
                       className="win95-raised px-3 py-0.5 text-win95-12 cursor-pointer w-full text-left"
                     >
                       Sign In
@@ -181,12 +223,7 @@ export function AppNav() {
         )}
       </header>
 
-      {showAuthModal && (
-        <AuthModal
-          onClose={() => setShowAuthModal(false)}
-          onAuth={handleAuth}
-        />
-      )}
+      {showAuthModal && <AuthModal onClose={() => setShowAuthModal(false)} onAuth={handleAuth} />}
     </>
   );
 }

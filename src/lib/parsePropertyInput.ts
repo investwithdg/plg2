@@ -42,9 +42,7 @@ export function parsePropertyInput(raw: string): ParsedPropertyInput {
   return { address: trimmed };
 }
 
-export async function describeFunctionInvokeError(
-  error: unknown,
-): Promise<string> {
+export async function describeFunctionInvokeError(error: unknown): Promise<string> {
   if (!error || typeof error !== "object") {
     return "Please check the address or URL and try again.";
   }

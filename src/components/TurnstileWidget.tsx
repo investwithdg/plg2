@@ -26,17 +26,12 @@ interface TurnstileWidgetProps {
   onExpire?: () => void;
 }
 
-export default function TurnstileWidget({
-  siteKey,
-  onVerify,
-  onExpire,
-}: TurnstileWidgetProps) {
+export default function TurnstileWidget({ siteKey, onVerify, onExpire }: TurnstileWidgetProps) {
   const containerRef = useRef<HTMLDivElement>(null);
   const widgetIdRef = useRef<string | null>(null);
 
   const renderWidget = useCallback(() => {
-    if (!containerRef.current || !window.turnstile || widgetIdRef.current !== null)
-      return;
+    if (!containerRef.current || !window.turnstile || widgetIdRef.current !== null) return;
     widgetIdRef.current = window.turnstile.render(containerRef.current, {
       sitekey: siteKey,
       callback: onVerify,
@@ -61,8 +56,7 @@ export default function TurnstileWidget({
     }
 
     const script = document.createElement("script");
-    script.src =
-      "https://challenges.cloudflare.com/turnstile/v0/api.js?render=explicit";
+    script.src = "https://challenges.cloudflare.com/turnstile/v0/api.js?render=explicit";
     script.async = true;
     script.addEventListener("load", renderWidget);
     document.head.appendChild(script);
