@@ -7,7 +7,7 @@ export const Route = createFileRoute("/blog/$slug")({
     if (!article) throw notFound();
     return article;
   },
-  head: ({ loaderData }) => ({
+  head: ({ params, loaderData }) => ({
     meta: [
       { title: `${loaderData?.title ?? "Article"} — PLG Blog` },
       {
@@ -17,7 +17,45 @@ export const Route = createFileRoute("/blog/$slug")({
       { property: "og:title", content: loaderData?.title ?? "PLG Blog" },
       { property: "og:description", content: loaderData?.description ?? "" },
       { property: "og:type", content: "article" },
+      {
+        property: "og:url",
+        content: `https://propertylistinggenerator.com/blog/${params.slug}`,
+      },
+      ...(loaderData ? [] : [{ name: "robots", content: "noindex" }]),
     ],
+    links: [
+      {
+        rel: "canonical",
+        href: `https://propertylistinggenerator.com/blog/${params.slug}`,
+      },
+    ],
+    scripts: loaderData
+      ? [
+          {
+            type: "application/ld+json",
+            children: JSON.stringify({
+              "@context": "https://schema.org",
+              "@type": "Article",
+              headline: loaderData.title,
+              description: loaderData.description,
+              datePublished: loaderData.date,
+              mainEntityOfPage: `https://propertylistinggenerator.com/blog/${params.slug}`,
+              author: {
+                "@type": "Organization",
+                name: "PropertyListingGenerator.com",
+              },
+              publisher: {
+                "@type": "Organization",
+                name: "PropertyListingGenerator.com",
+                logo: {
+                  "@type": "ImageObject",
+                  url: "https://propertylistinggenerator.com/favicon-512.png",
+                },
+              },
+            }),
+          },
+        ]
+      : [],
   }),
   component: BlogPost,
   notFoundComponent: () => (

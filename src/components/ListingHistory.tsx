@@ -101,20 +101,18 @@ export default function ListingHistory({
     const propertyPromise = supabase
       .from("properties")
       .select(
-        "id, address, property_type, status, enrichment_step, extraction_status, failed_step, beds, baths, sqft, price, fha_violations, fha_compliant_listing_parts, existing_listing_raw, created_at",
+        "id, address, property_type, status, enrichment_step, extraction_status, failed_step, beds, baths, sqft, price, fha_violations, fha_compliant_listing_parts, existing_listing_raw, listing_agent, listing_office, fha_compliance_score, fha_categories, created_at",
       )
       .eq("id", id)
       .maybeSingle();
 
-    const enrichPromise = isProUser
-      ? supabase
-          .from("enrichments")
-          .select(
-            "schools, transit_options, nearby_amenities, walkability_score, market_overview, median_home_value, key_sources, perplexity_raw_response",
-          )
-          .eq("property_id", id)
-          .maybeSingle()
-      : Promise.resolve({ data: null, error: null });
+    const enrichPromise = supabase
+      .from("enrichments")
+      .select(
+        "schools, transit_options, nearby_amenities, walkability_score, market_overview, median_home_value, key_sources, perplexity_raw_response",
+      )
+      .eq("property_id", id)
+      .maybeSingle();
 
     const [copyRes, propertyRes, enrichRes] = await Promise.all([
       copyPromise,
@@ -136,11 +134,17 @@ export default function ListingHistory({
     }
 
     const enrichData = enrichRes?.data as unknown as EnrichmentData | null | undefined;
-    if (isProUser && enrichData?.perplexity_raw_response) {
+    const propertyData = (propertyRes?.data as unknown as PropertyWithCopies) || null;
+
+    if (enrichData || propertyData) {
       map.research = (
         <ResearchDossier
-          enrichmentData={enrichData}
-          property={(propertyRes?.data as unknown as PropertyWithCopies) || null}
+          enrichmentData={enrichData || {}}
+          property={propertyData}
+          isProUser={isProUser}
+          onUpgradeIntent={() => {
+            window.location.href = "/pricing";
+          }}
         />
       );
     }
@@ -222,6 +226,7 @@ export default function ListingHistory({
                   ) : expandedCopies ? (
                     <OutputTabsWindow
                       outputs={expandedCopies}
+                      isProUser={isProUser}
                       renderActions={(activeTab) => (
                         <div className="flex flex-wrap gap-2 mt-2">
                           {activeTab !== "research" && (

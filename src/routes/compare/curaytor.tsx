@@ -17,7 +17,9 @@ export const Route = createFileRoute("/compare/curaytor")({
         property: "og:description",
         content: "Full-service marketing platforms vs. a lightning-fast listing copy generator.",
       },
+      { property: "og:url", content: "https://propertylistinggenerator.com/compare/curaytor" },
     ],
+    links: [{ rel: "canonical", href: "https://propertylistinggenerator.com/compare/curaytor" }],
   }),
   component: VsCuraytor,
 });

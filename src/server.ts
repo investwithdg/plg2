@@ -2,6 +2,7 @@ import "./lib/error-capture";
 
 import { consumeLastCapturedError } from "./lib/error-capture";
 import { renderErrorPage } from "./lib/error-page";
+import { proxyMcpRequest } from "./lib/mcpProxy";
 
 type ServerEntry = {
   fetch: (request: Request, env: unknown, ctx: unknown) => Promise<Response> | Response;
@@ -37,9 +38,21 @@ async function normalizeCatastrophicSsrResponse(response: Response): Promise<Res
   });
 }
 
+function readSupabaseUrl(env: unknown): string | undefined {
+  // `nodejs_compat` mirrors Worker bindings onto process.env; env is the raw Workers
+  // binding object as a defensive fallback in case that shim isn't active for some reason.
+  return (
+    process.env.SUPABASE_URL ??
+    (env as Record<string, string | undefined> | undefined)?.SUPABASE_URL
+  );
+}
+
 export default {
   async fetch(request: Request, env: unknown, ctx: unknown) {
     try {
+      const proxied = await proxyMcpRequest(request, readSupabaseUrl(env));
+      if (proxied) return proxied;
+
       const handler = await getServerEntry();
       const response = await handler.fetch(request, env, ctx);
       return await normalizeCatastrophicSsrResponse(response);

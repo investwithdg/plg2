@@ -17,7 +17,9 @@ export const Route = createFileRoute("/compare/zillow")({
         property: "og:description",
         content: "Platform-locked vs. Portable copy. See the comparison.",
       },
+      { property: "og:url", content: "https://propertylistinggenerator.com/compare/zillow" },
     ],
+    links: [{ rel: "canonical", href: "https://propertylistinggenerator.com/compare/zillow" }],
   }),
   component: VsZillow,
 });

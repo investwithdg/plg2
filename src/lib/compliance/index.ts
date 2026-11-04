@@ -49,10 +49,8 @@ export async function checkListing(
   }
 
   try {
-    // mls_rules isn't in the generated Supabase types until the migration is applied
-    // and types are regenerated — same `as never`/`as any` escape hatch used elsewhere
-    // in this codebase for tables ahead of the generated schema (see usePropertyPolling.ts).
-    const { data } = await (supabase.from("mls_rules" as never) as any)
+    const { data } = await supabase
+      .from("mls_rules")
       .select("pattern, severity, guidance")
       .eq("active", true)
       .in("board", [board, "default"]);

@@ -20,7 +20,9 @@ export const Route = createFileRoute("/compare/listingai")({
         content:
           "Generic AI copy vs. FHA-compliant, research-backed listing copy. See why PLG wins for real estate agents.",
       },
+      { property: "og:url", content: "https://propertylistinggenerator.com/compare/listingai" },
     ],
+    links: [{ rel: "canonical", href: "https://propertylistinggenerator.com/compare/listingai" }],
   }),
   component: VsListingAI,
 });
@@ -38,7 +40,7 @@ const FEATURES = [
   },
   {
     feature: "Generation speed",
-    plg: "~15 seconds",
+    plg: "~30 seconds",
     rival: "Varies (30s–2min typical)",
   },
   {

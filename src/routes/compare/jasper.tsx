@@ -14,7 +14,9 @@ export const Route = createFileRoute("/compare/jasper")({
         property: "og:description",
         content: "Jasper writes marketing copy. PLG writes listing copy. See the full comparison.",
       },
+      { property: "og:url", content: "https://propertylistinggenerator.com/compare/jasper" },
     ],
+    links: [{ rel: "canonical", href: "https://propertylistinggenerator.com/compare/jasper" }],
   }),
   component: VsJasper,
 });
@@ -98,7 +100,7 @@ function VsJasper() {
             <p className="text-win95-12">
               <strong>PLG</strong> is built exclusively for real estate agents. It researches the
               actual property, formats for MLS, social, and email, and ensures every word passes FHA
-              compliance checks — all in 15 seconds from a single address.
+              compliance checks — all in 30 seconds from a single address.
             </p>
           </div>
         </div>

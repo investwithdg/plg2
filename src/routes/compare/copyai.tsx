@@ -15,7 +15,9 @@ export const Route = createFileRoute("/compare/copyai")({
         content:
           "Copy.ai writes marketing copy. PLG writes compliant listing copy. See why agents choose PLG.",
       },
+      { property: "og:url", content: "https://propertylistinggenerator.com/compare/copyai" },
     ],
+    links: [{ rel: "canonical", href: "https://propertylistinggenerator.com/compare/copyai" }],
   }),
   component: VsCopyAI,
 });

@@ -14,7 +14,9 @@ export const Route = createFileRoute("/compare/epique")({
         property: "og:description",
         content: "Broad AI suite vs. listing copy specialist. See the full comparison.",
       },
+      { property: "og:url", content: "https://propertylistinggenerator.com/compare/epique" },
     ],
+    links: [{ rel: "canonical", href: "https://propertylistinggenerator.com/compare/epique" }],
   }),
   component: VsEpique,
 });

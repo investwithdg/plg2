@@ -32,10 +32,10 @@ const SECTIONS: { title: string; body: ReactNode }[] = [
     title: "Free vs Pro",
     body: (
       <p>
-        10 free generations. <span className="font-bold">SFR</span> and{" "}
-        <span className="font-bold">FSBO</span> are always free. Types marked with{" "}
-        <span className="font-bold">*</span> (MF, STR, MTR, LTR, Estate, Commercial, Lease) require
-        Pro.
+        10 free generations. <span className="font-bold">SFR</span>,{" "}
+        <span className="font-bold">FSBO</span>, and <span className="font-bold">ROW</span> are
+        always free. Types marked with <span className="font-bold">★</span> (MF, STR, MTR, LTR,
+        Estate, Commercial, Lease) require Pro.
       </p>
     ),
   },
@@ -44,7 +44,7 @@ const SECTIONS: { title: string; body: ReactNode }[] = [
     body: (
       <p>
         Paste an address or a Zillow / Redfin / Realtor URL → we research the property and
-        neighborhood → we write all 3 pieces in ~15 seconds.
+        neighborhood → we write all 3 pieces in ~30 seconds.
       </p>
     ),
   },

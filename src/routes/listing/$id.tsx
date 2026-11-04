@@ -61,7 +61,7 @@ export const Route = createFileRoute("/listing/$id")({
       copies: copies as { copy_type: string; content: string }[],
     } satisfies ListingData;
   },
-  head: ({ loaderData }) => {
+  head: ({ params, loaderData }) => {
     const addr = loaderData?.address ?? "Property Listing";
     const typeLabel = loaderData?.property_type
       ? (TYPE_LABELS[loaderData.property_type] ?? loaderData.property_type)
@@ -69,6 +69,7 @@ export const Route = createFileRoute("/listing/$id")({
     const title = `${addr}${typeLabel ? ` — ${typeLabel}` : ""} | PLG`;
     const mls = loaderData?.copies.find((c) => c.copy_type === "mls")?.content ?? "";
     const description = mls.slice(0, 160) || "AI-generated property listing copy via PLG.";
+    const url = `https://propertylistinggenerator.com/listing/${params.id}`;
     return {
       meta: [
         { title },
@@ -76,7 +77,9 @@ export const Route = createFileRoute("/listing/$id")({
         { property: "og:title", content: title },
         { property: "og:description", content: description },
         { property: "og:type", content: "article" },
+        { property: "og:url", content: url },
       ],
+      links: [{ rel: "canonical", href: url }],
     };
   },
   component: ListingPage,
@@ -144,6 +147,17 @@ function ListingPage() {
   const handleShareUrl = () => {
     navigator.clipboard.writeText(window.location.href);
     sonnerToast.success("Link copied!", { description: "Share this listing with anyone" });
+  };
+
+  const handleShareTwitter = () => {
+    const text = encodeURIComponent(`Just generated FHA-compliant listing copy for ${listing.address} in 15 seconds with PLG`);
+    const url = encodeURIComponent(window.location.href);
+    window.open(`https://twitter.com/intent/tweet?text=${text}&url=${url}`, "_blank", "noopener");
+  };
+
+  const handleShareLinkedIn = () => {
+    const url = encodeURIComponent(window.location.href);
+    window.open(`https://www.linkedin.com/sharing/share-offsite/?url=${url}`, "_blank", "noopener");
   };
 
   const typeLabel = listing.property_type
@@ -228,7 +242,19 @@ function ListingPage() {
                 onClick={handleShareUrl}
                 className="win95-raised px-3 py-1 text-win95-11 cursor-pointer active:win95-pressed"
               >
-                Share Link
+                📋 Copy Link
+              </button>
+              <button
+                onClick={handleShareTwitter}
+                className="win95-raised px-3 py-1 text-win95-11 cursor-pointer active:win95-pressed"
+              >
+                𝕏 Share
+              </button>
+              <button
+                onClick={handleShareLinkedIn}
+                className="win95-raised px-3 py-1 text-win95-11 cursor-pointer active:win95-pressed"
+              >
+                in Share
               </button>
             </div>
           </div>
@@ -244,7 +270,7 @@ function ListingPage() {
           <div className="p-4 flex items-center justify-between gap-4">
             <p className="text-win95-11 text-muted-foreground">
               PLG researches the property and writes FHA-compliant MLS, social, and email copy in
-              ~15 seconds.
+              ~30 seconds.
             </p>
             <Link to="/">
               <button className="win95-raised px-4 py-1 text-win95-12 font-bold cursor-pointer active:win95-pressed shrink-0">

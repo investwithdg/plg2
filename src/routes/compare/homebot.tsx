@@ -15,7 +15,9 @@ export const Route = createFileRoute("/compare/homebot")({
         content:
           "Homebot engages homeowners. PLG writes listing copy. See why they're not competitors.",
       },
+      { property: "og:url", content: "https://propertylistinggenerator.com/compare/homebot" },
     ],
+    links: [{ rel: "canonical", href: "https://propertylistinggenerator.com/compare/homebot" }],
   }),
   component: VsHomebot,
 });

@@ -20,7 +20,9 @@ export const Route = createFileRoute("/features")({
         content:
           "Explore the features of PropertyListingGenerator.com. FHA-compliant, research-backed real estate listing copy in seconds, perfectly formatted.",
       },
+      { property: "og:url", content: "https://propertylistinggenerator.com/features" },
     ],
+    links: [{ rel: "canonical", href: "https://propertylistinggenerator.com/features" }],
   }),
   component: FeaturesPage,
 });
@@ -39,7 +41,7 @@ const FEATURES = [
   {
     title: "Triple Format Output",
     description:
-      "Generate copy optimized for your MLS, a punchy version for Instagram and Facebook, and a persuasive buyer-focused email—all simultaneously in just 15 seconds.",
+      "Generate copy optimized for your MLS, a punchy version for Instagram and Facebook, and a persuasive buyer-focused email—all simultaneously in just 30 seconds.",
   },
   {
     title: "Unlimited Generation Architecture",

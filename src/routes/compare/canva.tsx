@@ -14,7 +14,9 @@ export const Route = createFileRoute("/compare/canva")({
         property: "og:description",
         content: "Canva designs graphics. PLG writes compliant listing copy.",
       },
+      { property: "og:url", content: "https://propertylistinggenerator.com/compare/canva" },
     ],
+    links: [{ rel: "canonical", href: "https://propertylistinggenerator.com/compare/canva" }],
   }),
   component: VsCanva,
 });

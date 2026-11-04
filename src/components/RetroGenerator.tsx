@@ -12,11 +12,14 @@ import GenerationProgressModal from "@/components/GenerationProgressModal";
 import AuthModal from "@/components/AuthModal";
 import ListingHistory from "@/components/ListingHistory";
 import TurnstileWidget from "@/components/TurnstileWidget";
+import PhotoAttachmentTray from "@/components/PhotoAttachmentTray";
 import { RetroButton, RetroInput, RetroWindow } from "@/components/retro";
 import ResearchDossier from "@/components/ResearchDossier";
+import { analyzePropertyPhotos, uploadPropertyPhotos } from "@/lib/propertyPhotos";
 import { describeFunctionInvokeError, parsePropertyInput } from "@/lib/parsePropertyInput";
 import { track } from "@/lib/posthog";
 import { buildExportFilename, downloadTextFile } from "@/lib/export/listing-export";
+import { useGoogleAutocomplete } from "@/hooks/useGoogleAutocomplete";
 
 type PropertyType =
   | "sfr"
@@ -32,6 +35,9 @@ type PropertyType =
   | "row";
 
 type PaywallReason = "free_limit" | "pro_tier_limit" | "upgrade_intent";
+
+/** Vision+ background photo pipeline state (Elite only). */
+type PhotoEnhancementStatus = "idle" | "uploading" | "analyzing" | "complete" | "error";
 
 const MAX_GENERATIONS = 10;
 const FREE_PRO_TIER_LIMIT = 1;
@@ -115,8 +121,15 @@ export default function RetroGenerator() {
   const [propertyType, setPropertyType] = useState<PropertyType>("sfr");
   const [propertyId, setPropertyId] = useState<string | null>(null);
   const [showProgress, setShowProgress] = useState(false);
+
+  // Autocomplete state
+  const { predictions, getPredictions, clearPredictions, refreshSessionToken } =
+    useGoogleAutocomplete();
+  const [showPredictions, setShowPredictions] = useState(false);
+  const [focusedPredictionIdx, setFocusedPredictionIdx] = useState(-1);
   const [showPaywall, setShowPaywall] = useState(false);
   const [paywallReason, setPaywallReason] = useState<PaywallReason>("free_limit");
+  const [activePromoCode, setActivePromoCode] = useState<string | null>(null);
   const [showAuthModal, setShowAuthModal] = useState(false);
   const [anonymousId] = useState(() => getOrCreateAnonymousId());
   const [turnstileToken, setTurnstileToken] = useState<string | null>(null);
@@ -139,6 +152,24 @@ export default function RetroGenerator() {
   const [showMismatchWarning, setShowMismatchWarning] = useState(false);
   const { plan } = usePlanTier(user);
   const isProUser = plan === "pro" || plan === "elite";
+  // Vision+ is Elite-exclusive. Non-Elite users don't see the tray at all —
+  // this stays a clean upsell surface rather than a locked/disabled control.
+  const isEliteUser = plan === "elite" && !!user;
+
+  // Files currently sitting in the attachment tray (pre-upload), plus a key we
+  // bump to remount — and therefore clear — the tray after a successful submit.
+  const [attachedPhotos, setAttachedPhotos] = useState<File[]>([]);
+  const [photoTrayKey, setPhotoTrayKey] = useState(0);
+  const [photoEnhancement, setPhotoEnhancement] = useState<{
+    status: PhotoEnhancementStatus;
+    count: number;
+  }>({ status: "idle", count: 0 });
+
+  const activeEditedCopiesRef = useRef<{ mls: string; social: string; email: string }>({
+    mls: "",
+    social: "",
+    email: "",
+  });
 
   const {
     status,
@@ -151,6 +182,10 @@ export default function RetroGenerator() {
   } = usePropertyPolling(propertyId);
 
   const devBypassActive = isDevHost();
+  const [hasMounted, setHasMounted] = useState(false);
+  useEffect(() => {
+    setHasMounted(true);
+  }, []);
   const selectedProTier = isProTierPropertyType(propertyType);
   const generationsLeft = Math.max(0, MAX_GENERATIONS - generationsUsed);
   const proTierGenerationsLeft = Math.max(0, FREE_PRO_TIER_LIMIT - proTierGenerationsUsed);
@@ -171,6 +206,32 @@ export default function RetroGenerator() {
     setTurnstileWidgetKey((k) => k + 1);
   }, []);
 
+  // --- Checkout success/cancel toast handling ---
+  const checkoutToastShown = useRef(false);
+  useEffect(() => {
+    if (typeof window === "undefined" || checkoutToastShown.current) return;
+    const params = new URLSearchParams(window.location.search);
+    const checkoutStatus = params.get("checkout");
+    if (checkoutStatus === "success") {
+      checkoutToastShown.current = true;
+      sonnerToast.success("Welcome to PLG Pro! Your subscription is active.");
+      window.history.replaceState({}, "", window.location.pathname);
+    } else if (checkoutStatus === "cancel") {
+      checkoutToastShown.current = true;
+      sonnerToast("Checkout cancelled. You can upgrade anytime.");
+      window.history.replaceState({}, "", window.location.pathname);
+    } else if (params.get("upgrade") === "true") {
+      const promo = params.get("promo");
+      if (promo) setActivePromoCode(promo.toUpperCase());
+      setPaywallReason("free_limit");
+      setShowPaywall(true);
+      window.history.replaceState({}, "", window.location.pathname);
+    } else {
+      const promo = params.get("promo");
+      if (promo) setActivePromoCode(promo.toUpperCase());
+    }
+  }, []);
+
   const fireLoopsEvent = useCallback(
     (eventName: string, properties?: Record<string, unknown>) => {
       if (!user?.email) return;
@@ -180,6 +241,54 @@ export default function RetroGenerator() {
     },
     [user?.email],
   );
+
+  /**
+   * Vision+ background pipeline. Runs only after `receive-property` has handed
+   * back a real propertyId (the photos need a property_id to attach to), and is
+   * never awaited by the generation flow — the fast text-only listing renders on
+   * its normal ~15s timeline regardless of what happens in here. Any failure
+   * (bucket/table/function not deployed yet, RLS, network) is swallowed into a
+   * non-blocking toast.
+   */
+  const attachPhotos = useCallback(async (propId: string, userId: string, files: File[]) => {
+    setPhotoEnhancement({ status: "uploading", count: files.length });
+    try {
+      const { uploaded, failed } = await uploadPropertyPhotos({
+        propertyId: propId,
+        userId,
+        files,
+      });
+
+      if (uploaded === 0) {
+        setPhotoEnhancement({ status: "error", count: 0 });
+        sonnerToast.error("Couldn't attach your photos", {
+          description: "Your listing was generated without them.",
+        });
+        return;
+      }
+
+      if (failed > 0) {
+        sonnerToast.error(`${failed} photo${failed === 1 ? "" : "s"} failed to upload`, {
+          description: `Continuing with ${uploaded}.`,
+        });
+      }
+
+      setPhotoEnhancement({ status: "analyzing", count: uploaded });
+      track("vision_photos_uploaded", { property_id: propId, photo_count: uploaded });
+
+      await analyzePropertyPhotos(propId);
+
+      setPhotoEnhancement({ status: "complete", count: uploaded });
+      // Cheap refresh so the photo-enhanced copy shows up in listing history.
+      setHistoryKey((k) => k + 1);
+    } catch (err) {
+      console.error("Vision+ photo enhancement failed:", err);
+      setPhotoEnhancement({ status: "error", count: files.length });
+      sonnerToast.error("Photo enhancement unavailable", {
+        description: await describeFunctionInvokeError(err),
+      });
+    }
+  }, []);
 
   // --- Social proof: total generation count ---
   useEffect(() => {
@@ -219,9 +328,17 @@ export default function RetroGenerator() {
         if (key in outputMap) outputMap[key] = copy.content;
       });
 
-      if (isProUser && enrichmentData && enrichmentData.perplexity_raw_response) {
+      if (enrichmentData || property) {
         outputMap.research = (
-          <ResearchDossier enrichmentData={enrichmentData} property={property} />
+          <ResearchDossier
+            enrichmentData={enrichmentData || {}}
+            property={property}
+            isProUser={isProUser}
+            onUpgradeIntent={() => {
+              setPaywallReason("upgrade_intent");
+              setShowPaywall(true);
+            }}
+          />
         );
       }
 
@@ -232,7 +349,11 @@ export default function RetroGenerator() {
       // Check for property type mismatch warning (e.g. user selected residential/lux but search says raw land)
       if (property && property.property_type) {
         const ext = property.property_type.toLowerCase();
-        const isExtLand = ext.includes("land") || ext.includes("lot") || ext.includes("raw") || ext.includes("vacant");
+        const isExtLand =
+          ext.includes("land") ||
+          ext.includes("lot") ||
+          ext.includes("raw") ||
+          ext.includes("vacant");
         const isSelResidential = ["sfr", "lux", "row", "mf"].includes(propertyType);
         if (isExtLand && isSelResidential) {
           setShowMismatchWarning(true);
@@ -283,6 +404,7 @@ export default function RetroGenerator() {
 
     setOutputs(null);
     setPropertyId(null);
+    setPhotoEnhancement({ status: "idle", count: 0 });
     setShowProgress(true);
     isGeneratingRef.current = true;
 
@@ -299,6 +421,8 @@ export default function RetroGenerator() {
           ...parsed,
           propertyType,
           source: "generator",
+          // When outputs already exist, this is a regeneration — bypass dedup
+          ...(outputs ? { regenerate: true } : {}),
           ...(!user
             ? {
                 anonymousId,
@@ -325,6 +449,16 @@ export default function RetroGenerator() {
 
       if (data?.propertyId) {
         setPropertyId(data.propertyId);
+
+        // Vision+: the property row now exists, so photos have something to
+        // attach to. Fire-and-forget — never awaited, never blocks the listing.
+        if (isEliteUser && user && attachedPhotos.length > 0) {
+          const pendingPhotos = attachedPhotos;
+          setAttachedPhotos([]);
+          setPhotoTrayKey((k) => k + 1); // remount the tray => clears its state
+          void attachPhotos(data.propertyId as string, user.id, pendingPhotos);
+        }
+
         if (!user) {
           setGenerationsUsed((prev) => prev + 1);
           if (selectedProTier) setProTierGenerationsUsed((prev) => prev + 1);
@@ -381,7 +515,11 @@ export default function RetroGenerator() {
 
   const onCopyAll = () => {
     if (!outputs) return;
-    const allText = `MLS Description:\n${outputs.mls}\n\nSocial Post:\n${outputs.social}\n\nEmail:\n${outputs.email}`;
+    const copies = activeEditedCopiesRef.current;
+    const mlsText = copies.mls || (typeof outputs.mls === "string" ? outputs.mls : "");
+    const socialText = copies.social || (typeof outputs.social === "string" ? outputs.social : "");
+    const emailText = copies.email || (typeof outputs.email === "string" ? outputs.email : "");
+    const allText = `MLS Description:\n${mlsText}\n\nSocial Post:\n${socialText}\n\nEmail:\n${emailText}`;
     onCopy(allText, "all");
   };
 
@@ -448,7 +586,7 @@ export default function RetroGenerator() {
                 </div>
               )}
             </div>
-            <div className="text-win95-16 font-bold">listing copy in 15 seconds</div>
+            <h1 className="text-win95-16 font-bold">listing copy in 30 seconds</h1>
             <div className="text-win95-12 text-muted-foreground">
               paste an address or zillow link. pick the property type. hit generate. we research the
               property, analyze the neighborhood, and write 3 FHA-compliant listings — MLS, social,
@@ -456,14 +594,86 @@ export default function RetroGenerator() {
             </div>
 
             <div className="flex gap-2 flex-wrap">
-              <div className="flex-1 min-w-[200px] flex flex-col gap-1">
+              <div className="flex-1 min-w-[200px] flex flex-col gap-1 relative">
                 <RetroInput
                   placeholder="123 main st, austin, tx — or paste zillow url"
                   value={query}
-                  onChange={(e) => setQuery(e.target.value)}
-                  onKeyDown={(e) => e.key === "Enter" && handleGenerate()}
+                  onChange={(e) => {
+                    setQuery(e.target.value);
+                    getPredictions(e.target.value);
+                    setShowPredictions(true);
+                    setFocusedPredictionIdx(-1);
+                  }}
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter") {
+                      if (
+                        showPredictions &&
+                        focusedPredictionIdx >= 0 &&
+                        predictions[focusedPredictionIdx]
+                      ) {
+                        e.preventDefault();
+                        setQuery(predictions[focusedPredictionIdx].description);
+                        clearPredictions();
+                        setShowPredictions(false);
+                        refreshSessionToken();
+                      } else {
+                        handleGenerate();
+                      }
+                    } else if (e.key === "ArrowDown") {
+                      if (showPredictions && predictions.length > 0) {
+                        e.preventDefault();
+                        setFocusedPredictionIdx((prev) =>
+                          Math.min(prev + 1, predictions.length - 1),
+                        );
+                      }
+                    } else if (e.key === "ArrowUp") {
+                      if (showPredictions && predictions.length > 0) {
+                        e.preventDefault();
+                        setFocusedPredictionIdx((prev) => Math.max(prev - 1, 0));
+                      }
+                    } else if (e.key === "Escape") {
+                      setShowPredictions(false);
+                    }
+                  }}
+                  onBlur={() => {
+                    // Small delay to allow clicking predictions listbox before hide
+                    setTimeout(() => setShowPredictions(false), 200);
+                  }}
+                  onFocus={() => {
+                    if (predictions.length > 0) setShowPredictions(true);
+                  }}
                   className="w-full"
                 />
+
+                {showPredictions && predictions.length > 0 && (
+                  <div className="absolute top-[38px] left-0 right-0 z-50 win95-window">
+                    <div className="win95-inset bg-white max-h-56 overflow-y-auto divide-y divide-slate-100 shadow-lg text-win95-11">
+                      {predictions.map((p, idx) => {
+                        const isFocused = idx === focusedPredictionIdx;
+                        return (
+                          <div
+                            key={p.placeId}
+                            onMouseDown={() => {
+                              setQuery(p.description);
+                              clearPredictions();
+                              setShowPredictions(false);
+                              refreshSessionToken();
+                            }}
+                            onMouseEnter={() => setFocusedPredictionIdx(idx)}
+                            className={`p-2 cursor-pointer transition-colors leading-relaxed select-none ${
+                              isFocused
+                                ? "bg-[#000080] text-white font-bold text-win95-11"
+                                : "text-black hover:bg-slate-50 text-win95-11"
+                            }`}
+                          >
+                            {p.description}
+                          </div>
+                        );
+                      })}
+                    </div>
+                  </div>
+                )}
+
                 <span className="text-[10px] text-muted-foreground ml-1">
                   Please be specific (e.g., 123 Main St, Austin TX) for best research results.
                 </span>
@@ -473,6 +683,10 @@ export default function RetroGenerator() {
               </RetroButton>
             </div>
 
+            {isEliteUser && (
+              <PhotoAttachmentTray key={photoTrayKey} onPhotosChange={setAttachedPhotos} />
+            )}
+
             <PropertyTypeToggle
               value={propertyType}
               onChange={setPropertyType}
@@ -480,7 +694,7 @@ export default function RetroGenerator() {
               isProUser={isProUser}
             />
 
-            {anonymousTurnstileRequired && (
+            {hasMounted && anonymousTurnstileRequired && (
               <div className="flex justify-center">
                 <TurnstileWidget
                   key={turnstileWidgetKey}
@@ -504,27 +718,91 @@ export default function RetroGenerator() {
           </div>
         </RetroWindow>
 
-        {outputs && (
+        {photoEnhancement.status !== "idle" && (
           <div className="w-full max-w-3xl">
+            <div className="win95-raised bg-card px-3 py-2 flex items-center justify-between gap-2 flex-wrap">
+              <span className="text-win95-11">
+                {photoEnhancement.status === "uploading" &&
+                  `Uploading ${photoEnhancement.count} photo${
+                    photoEnhancement.count === 1 ? "" : "s"
+                  }...`}
+                {photoEnhancement.status === "analyzing" &&
+                  `Enhancing with your photos... (${photoEnhancement.count} analyzing in the background)`}
+                {photoEnhancement.status === "complete" &&
+                  "Photo enhancement complete — reopen this listing to see the photo-aware copy."}
+                {photoEnhancement.status === "error" &&
+                  "Photo enhancement didn't run. Your listing copy is unaffected."}
+              </span>
+              <button
+                className="win95-control-btn"
+                aria-label="Dismiss"
+                onClick={() => setPhotoEnhancement({ status: "idle", count: 0 })}
+              >
+                x
+              </button>
+            </div>
+          </div>
+        )}
+
+        {outputs && (
+          <div className="w-full max-w-3xl space-y-2">
+            {propertyId && (
+              <div className="win95-window">
+                <div className="win95-titlebar" style={{ background: "linear-gradient(to right, #006400, #228B22)" }}>
+                  <span className="font-bold text-win95-12 pl-1">
+                    ✓ Listing ready — share it
+                  </span>
+                </div>
+                <div className="p-3 flex flex-col sm:flex-row items-start sm:items-center gap-2">
+                  <span className="win95-inset bg-input px-2 py-1 text-win95-11 flex-1 truncate select-all cursor-text font-mono">
+                    {typeof window !== "undefined" ? `${window.location.origin}/listing/${propertyId}` : ""}
+                  </span>
+                  <div className="flex gap-2 shrink-0 flex-wrap">
+                    <RetroButton onClick={() => {
+                      navigator.clipboard.writeText(`${window.location.origin}/listing/${propertyId}`);
+                      sonnerToast.success("Link copied!", { description: "Send this to anyone" });
+                    }}>
+                      📋 copy link
+                    </RetroButton>
+                    <RetroButton onClick={() => {
+                      const text = encodeURIComponent(`Just generated listing copy in 15 seconds with PLG`);
+                      const url = encodeURIComponent(`${window.location.origin}/listing/${propertyId}`);
+                      window.open(`https://twitter.com/intent/tweet?text=${text}&url=${url}`, "_blank", "noopener");
+                    }}>
+                      𝕏
+                    </RetroButton>
+                    <RetroButton onClick={() => {
+                      const url = encodeURIComponent(`${window.location.origin}/listing/${propertyId}`);
+                      window.open(`https://www.linkedin.com/sharing/share-offsite/?url=${url}`, "_blank", "noopener");
+                    }}>
+                      in
+                    </RetroButton>
+                  </div>
+                </div>
+              </div>
+            )}
             <OutputTabsWindow
               outputs={outputs}
+              propertyAddress={property?.address || query}
+              isProUser={isProUser}
+              onCopiesChange={(updatedCopies) => {
+                activeEditedCopiesRef.current = updatedCopies;
+              }}
               headerRight={
-                <button className="win95-control-btn" onClick={() => setOutputs(null)}>
+                <button
+                  type="button"
+                  className="win95-control-btn"
+                  aria-label="Close results"
+                  onClick={() => setOutputs(null)}
+                >
                   x
                 </button>
               }
-              renderActions={(activeTab) => (
+              renderActions={(activeTab, currentContent) => (
                 <div className="flex flex-wrap gap-2 mt-3">
                   {activeTab !== "research" && (
                     <RetroButton
-                      onClick={() =>
-                        onCopy(
-                          typeof outputs[activeTab] === "string"
-                            ? (outputs[activeTab] as string)
-                            : "",
-                          activeTab,
-                        )
-                      }
+                      onClick={() => onCopy(currentContent, activeTab)}
                     >
                       copy {activeTab}
                     </RetroButton>
@@ -590,6 +868,7 @@ export default function RetroGenerator() {
           <Win95PaywallModal
             reason={paywallReason}
             isSignedIn={!!user}
+            activePromoCode={activePromoCode}
             onClose={() => setShowPaywall(false)}
             onSignIn={() => {
               setShowPaywall(false);
@@ -614,17 +893,18 @@ export default function RetroGenerator() {
                   <div className="space-y-1">
                     <h3 className="font-bold text-win95-12">Property Type Mismatch</h3>
                     <p className="text-win95-11 text-slate-800 leading-relaxed">
-                      Our research indicates this property is categorized as <strong className="underline">{property?.property_type}</strong>, but you selected <strong>{propertyType.toUpperCase()}</strong>.
+                      Our research indicates this property is categorized as{" "}
+                      <strong className="underline">{property?.property_type}</strong>, but you
+                      selected <strong>{propertyType.toUpperCase()}</strong>.
                     </p>
                     <p className="text-win95-10 text-slate-600 leading-relaxed">
-                      If this is a new home development built on raw land, this warning can be ignored.
+                      If this is a new home development built on raw land, this warning can be
+                      ignored.
                     </p>
                   </div>
                 </div>
                 <div className="flex justify-end gap-2 pt-2">
-                  <RetroButton onClick={() => setShowMismatchWarning(false)}>
-                    Keep Copy
-                  </RetroButton>
+                  <RetroButton onClick={() => setShowMismatchWarning(false)}>Keep Copy</RetroButton>
                   <RetroButton variant="primary" onClick={() => setShowMismatchWarning(false)}>
                     Acknowledge
                   </RetroButton>
@@ -763,11 +1043,13 @@ function Win95PaywallModal({
   onClose,
   onSignIn,
   isSignedIn,
+  activePromoCode,
 }: {
   reason: PaywallReason;
   onClose: () => void;
   onSignIn: () => void;
   isSignedIn: boolean;
+  activePromoCode?: string | null;
 }) {
   const [loading, setLoading] = useState<"month" | "year" | null>(null);
 
@@ -809,7 +1091,12 @@ function Win95PaywallModal({
                 ? "Pro-Tier Limit Used"
                 : "Free Generations Used"}
           </span>
-          <button className="win95-control-btn" onClick={onClose}>
+          <button
+            type="button"
+            className="win95-control-btn"
+            aria-label="Close dialog"
+            onClick={onClose}
+          >
             x
           </button>
         </div>
@@ -865,6 +1152,15 @@ function Win95PaywallModal({
               <li>* FHA compliance checks</li>
             </ul>
           </div>
+
+          {activePromoCode && (
+            <div className="win95-raised px-3 py-2 mb-3 text-center">
+              <p className="text-win95-11 font-bold">
+                🎟 Promo code active: <span className="font-mono">{activePromoCode}</span>
+              </p>
+              <p className="text-win95-11 text-muted-foreground">Enter this code at checkout for your discount.</p>
+            </div>
+          )}
 
           {!isSignedIn && (
             <p className="text-win95-11 text-muted-foreground text-center mb-3">
@@ -922,7 +1218,7 @@ function HowItWorks() {
     },
     {
       n: "3.",
-      title: "Generate in ~15 seconds",
+      title: "Generate in ~30 seconds",
       body: "PLG researches the property, pulls neighborhood data, and writes FHA-compliant copy — automatically.",
     },
     {
@@ -964,8 +1260,8 @@ function WhyPLG() {
       body: "MLS description, Instagram/Facebook post, and buyer email — all in one click. No copy-pasting between tools.",
     },
     {
-      title: "15 seconds vs. 45 minutes",
-      body: "Agents average 45 minutes writing listing copy from scratch. PLG cuts that to under 15 seconds. Across 50 listings, that's 37 hours back.",
+      title: "30 seconds vs. 45 minutes",
+      body: "Agents average 45 minutes writing listing copy from scratch. PLG cuts that to under 30 seconds. Across 50 listings, that's 37 hours back.",
     },
   ];
   return (

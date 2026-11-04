@@ -12,7 +12,14 @@ export const Route = createFileRoute("/blog/")({
           "Tips, guides, and resources for real estate agents — listing copy, Fair Housing compliance, and how to write MLS descriptions that convert.",
       },
       { property: "og:title", content: "PLG Blog — Real Estate Listing Tips" },
+      {
+        property: "og:description",
+        content:
+          "Guides on MLS descriptions, Fair Housing compliance, and listing copy that converts.",
+      },
+      { property: "og:url", content: "https://propertylistinggenerator.com/blog" },
     ],
+    links: [{ rel: "canonical", href: "https://propertylistinggenerator.com/blog" }],
   }),
   component: BlogIndex,
 });
@@ -166,7 +173,7 @@ function BlogIndex() {
         <div className="win95-window">
           <div className="win95-titlebar">
             <span className="font-bold text-win95-12 truncate pl-1">
-              Generate listing copy in 15 seconds
+              Generate listing copy in 30 seconds
             </span>
           </div>
           <div className="p-4 flex items-center justify-between gap-4">

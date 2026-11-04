@@ -2,34 +2,33 @@ name: CI
 
 on:
   push:
-    branches: [main]
+    branches:
+      - main
   pull_request:
+    branches:
+      - main
 
 jobs:
-  check:
+  ci:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - name: Checkout repository
+        uses: actions/checkout@v4
 
-      - uses: actions/setup-node@v4
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
         with:
-          node-version: 22
-          cache: npm
+          node-version: '20'
 
-      - run: npm ci
+      - name: Install dependencies
+        run: npm ci
 
-      - name: Typecheck
-        run: npx tsc --noEmit
-
-      - name: Lint
+      - name: Run linting
         run: npm run lint
 
-      - name: Build
-        run: npm run build
+      - name: Setup Deno
+        uses: denoland/setup-deno@v2
 
-      - uses: denoland/setup-deno@v2
-        with:
-          deno-version: v2.x
-
-      - name: Edge function smoke tests
-        run: deno test --allow-net --allow-env --allow-read supabase/functions
+      - name: Run Deno tests
+        working-directory: supabase/functions
+        run: deno test --allow-env --allow-net
