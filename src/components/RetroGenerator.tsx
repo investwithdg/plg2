@@ -200,7 +200,10 @@ export default function RetroGenerator() {
   const handleTurnstileExpire = useCallback(() => {
     setTurnstileToken(null);
   }, []);
-<<<<<<< HEAD
+  const resetAnonymousTurnstile = useCallback(() => {
+    setTurnstileToken(null);
+    setTurnstileWidgetKey((k) => k + 1);
+  }, []);
 
   // --- Checkout success/cancel toast handling ---
   const checkoutToastShown = useRef(false);
@@ -226,11 +229,6 @@ export default function RetroGenerator() {
       const promo = params.get("promo");
       if (promo) setActivePromoCode(promo.toUpperCase());
     }
-=======
-  const resetAnonymousTurnstile = useCallback(() => {
-    setTurnstileToken(null);
-    setTurnstileWidgetKey((k) => k + 1);
->>>>>>> origin/main
   }, []);
 
   const fireLoopsEvent = useCallback(
@@ -522,13 +520,6 @@ export default function RetroGenerator() {
     const emailText = copies.email || (typeof outputs.email === "string" ? outputs.email : "");
     const allText = `MLS Description:\n${mlsText}\n\nSocial Post:\n${socialText}\n\nEmail:\n${emailText}`;
     onCopy(allText, "all");
-  };
-
-  const fireLoopsEvent = (eventName: string, properties?: Record<string, unknown>) => {
-    if (!user?.email) return;
-    supabase.functions
-      .invoke("send-loops-event", { body: { email: user.email, eventName, properties } })
-      .catch(console.error);
   };
 
   const handleAuth = async (email: string, password: string, mode: "signin" | "signup") => {
@@ -846,6 +837,7 @@ export default function RetroGenerator() {
           <Win95PaywallModal
             reason={paywallReason}
             isSignedIn={!!user}
+            activePromoCode={activePromoCode}
             onClose={() => setShowPaywall(false)}
             onSignIn={() => {
               setShowPaywall(false);
@@ -1020,11 +1012,13 @@ function Win95PaywallModal({
   onClose,
   onSignIn,
   isSignedIn,
+  activePromoCode,
 }: {
   reason: PaywallReason;
   onClose: () => void;
   onSignIn: () => void;
   isSignedIn: boolean;
+  activePromoCode?: string | null;
 }) {
   const [loading, setLoading] = useState<"month" | "year" | null>(null);
 

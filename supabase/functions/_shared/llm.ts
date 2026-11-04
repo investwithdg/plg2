@@ -198,7 +198,7 @@ export async function enrichWithPerplexity(
         "Content-Type": "application/json",
       },
       body: JSON.stringify({
-        model: "sonar",
+        model: "sonar-pro",
         messages: [
           {
             role: "system",
@@ -222,7 +222,7 @@ export async function enrichWithPerplexity(
   const data = await res.json();
   const content = data.choices?.[0]?.message?.content ?? "{}";
   const usage = computeCost(
-    "sonar",
+    "sonar-pro",
     data.usage?.prompt_tokens ?? 0,
     data.usage?.completion_tokens ?? 0,
   );
