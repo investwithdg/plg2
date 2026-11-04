@@ -118,6 +118,10 @@ async function sendLoopsEvent(
   }
 }
 
+function resolvePlanFromMetadata(metadata: Record<string, unknown> | undefined | null): string {
+  return metadata?.plan === "elite" ? "elite" : "pro";
+}
+
 async function handleCheckoutCompleted(
   supabase: ReturnType<typeof createClient>,
   session: Record<string, any>,
@@ -125,20 +129,21 @@ async function handleCheckoutCompleted(
   const userId = session.client_reference_id || session.metadata?.user_id;
   const customerId = session.customer;
   const subscriptionId = session.subscription;
+  const plan = resolvePlanFromMetadata(session.metadata);
 
   if (!userId || !subscriptionId) {
     log("checkout_missing_data", { userId, subscriptionId });
     return;
   }
 
-  log("checkout_completed", { userId, customerId, subscriptionId });
+  log("checkout_completed", { userId, plan, customerId, subscriptionId });
 
   const { error } = await supabase.from("subscriptions").upsert(
     {
       user_id: userId,
       stripe_customer_id: customerId,
       stripe_subscription_id: subscriptionId,
-      plan: "pro",
+      plan,
       status: "active",
       updated_at: new Date().toISOString(),
     },
@@ -147,7 +152,7 @@ async function handleCheckoutCompleted(
 
   if (error) log("checkout_upsert_error", { error: error.message });
 
-  // Fire Loops 'upgraded' event so the Pro onboarding sequence starts
+  // Fire Loops 'upgraded' event so the Pro/Elite onboarding sequence starts
   const loopsKey = Deno.env.get("LOOPS_API_KEY");
   if (loopsKey) {
     const { data: userData } = await supabase.auth.admin.getUserById(userId);
@@ -160,9 +165,9 @@ async function handleCheckoutCompleted(
           Authorization: `Bearer ${loopsKey}`,
           "Content-Type": "application/json",
         },
-        body: JSON.stringify({ email, userGroup: "pro", source: "plg_signup" }),
+        body: JSON.stringify({ email, userGroup: plan, source: "plg_signup" }),
       }).catch(() => {});
-      await sendLoopsEvent(loopsKey, email, "upgraded");
+      await sendLoopsEvent(loopsKey, email, "upgraded", { plan });
     }
   }
 }
@@ -176,8 +181,9 @@ async function handleSubscriptionChange(
   const customerId = subscription.customer;
   const status = subscription.status;
   const userId = subscription.metadata?.user_id;
+  const plan = resolvePlanFromMetadata(subscription.metadata);
 
-  log("subscription_change", { eventType, subscriptionId, status });
+  log("subscription_change", { eventType, subscriptionId, status, plan });
 
   const periodStart = subscription.current_period_start
     ? new Date(subscription.current_period_start * 1000).toISOString()
@@ -195,7 +201,7 @@ async function handleSubscriptionChange(
   const payload = {
     stripe_customer_id: customerId,
     stripe_subscription_id: subscriptionId,
-    plan: "pro",
+    plan,
     status,
     current_period_start: periodStart,
     current_period_end: periodEnd,

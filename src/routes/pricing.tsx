@@ -1,24 +1,25 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useState } from "react";
+import { toast as sonnerToast } from "sonner";
 import { useAuth } from "@/hooks/useAuth";
 import { usePlanTier } from "@/hooks/usePlanTier";
 import { supabase } from "@/integrations/supabase/client";
-import { RetroButton, RetroInput } from "@/components/retro";
+import { RetroButton } from "@/components/retro";
 
 export const Route = createFileRoute("/pricing")({
   head: () => ({
     meta: [
-      { title: "PLG Pricing — Free & Pro Plans" },
+      { title: "PLG Pricing — Free, Pro & Elite Plans" },
       {
         name: "description",
         content:
-          "PropertyListingGenerator.com pricing: 10 free generations with 1 Pro-tier property sample, or Pro at $49/mo for unlimited generations and all Pro-tier property types.",
+          "PropertyListingGenerator.com pricing: 10 free generations with 1 Pro-tier property sample, Pro at $49/mo for unlimited generations, or Elite at $99/mo for Vision+ photo-aware copy and bilingual generation.",
       },
-      { property: "og:title", content: "PLG Pricing — Free & Pro Plans" },
+      { property: "og:title", content: "PLG Pricing — Free, Pro & Elite Plans" },
       {
         property: "og:description",
         content:
-          "Free: 10 generations with 1 Pro-tier sample. Pro: $49/mo for unlimited listing copy generation.",
+          "Free: 10 generations with 1 Pro-tier sample. Pro: $49/mo unlimited. Elite: $99/mo with Vision+ and bilingual generation.",
       },
     ],
   }),
@@ -30,29 +31,32 @@ function Pricing() {
   const { plan } = usePlanTier(user);
   const isProUser = plan === "pro" || plan === "elite";
 
-  const [waitlistEmail, setWaitlistEmail] = useState(user?.email ?? "");
-  const [waitlistSubmitting, setWaitlistSubmitting] = useState(false);
-  const [waitlistJoined, setWaitlistJoined] = useState(false);
-  const [waitlistError, setWaitlistError] = useState<string | null>(null);
+  const isEliteUser = plan === "elite";
+  const [checkoutLoading, setCheckoutLoading] = useState<{
+    plan: "pro" | "elite";
+    interval: "month" | "year";
+  } | null>(null);
 
-  const handleJoinWaitlist = async () => {
-    const email = waitlistEmail.trim();
-    if (!email) {
-      setWaitlistError("Enter an email address.");
+  const handleCheckout = async (checkoutPlan: "pro" | "elite", interval: "month" | "year") => {
+    if (!user) {
+      window.location.href = "/?upgrade=true";
       return;
     }
-    setWaitlistSubmitting(true);
-    setWaitlistError(null);
+    setCheckoutLoading({ plan: checkoutPlan, interval });
     try {
-      const { error } = await supabase.from("elite_waitlist").insert({ email });
-      // Unique-violation on email — they're already on the list, treat as success.
-      if (error && error.code !== "23505") throw error;
-      setWaitlistJoined(true);
+      const { data, error } = await supabase.functions.invoke("create-checkout", {
+        body: { plan: checkoutPlan, interval },
+      });
+      if (error) throw error;
+      if (data?.url) {
+        window.location.href = data.url;
+      } else {
+        throw new Error("No checkout URL returned");
+      }
     } catch (err) {
-      console.error("Failed to join Elite waitlist:", err);
-      setWaitlistError("Something went wrong. Try again in a moment.");
-    } finally {
-      setWaitlistSubmitting(false);
+      console.error("Checkout error:", err);
+      sonnerToast.error("Failed to start checkout");
+      setCheckoutLoading(null);
     }
   };
 
@@ -254,64 +258,71 @@ function Pricing() {
               }}
             >
               <span className="font-bold text-win95-12 truncate pl-1">Elite Plan</span>
-              <span className="text-win95-11 opacity-90">coming soon</span>
             </div>
             <div className="p-4 space-y-3 flex flex-col flex-1">
               <div className="text-center">
-                <span className="text-win95-16 font-bold text-muted-foreground">—</span>
-                <div className="text-[10px] text-muted-foreground mt-0.5">in development</div>
+                <span className="text-win95-16 font-bold">$99</span>
+                <span className="text-win95-11 text-muted-foreground"> / month</span>
+                <div className="text-[10px] text-muted-foreground mt-0.5">
+                  or $79/mo billed annually
+                </div>
               </div>
               <div className="win95-inset p-3 flex-grow">
-                <ul className="space-y-1.5 text-win95-11 text-muted-foreground">
+                <ul className="space-y-1.5 text-win95-11">
                   <li className="flex gap-2">
-                    <span className="font-bold">+</span>
+                    <span className="font-bold text-[var(--win95-blue)]">+</span>
                     <span>Everything in Pro, plus:</span>
                   </li>
                   <li className="flex gap-2">
-                    <span className="font-bold">+</span>
+                    <span className="font-bold text-[var(--win95-blue)]">+</span>
                     <span>
-                      <strong>Vision+</strong> Photo analysis & feature extraction
+                      <strong>Vision+</strong> — attach photos, get feature-aware copy
                     </span>
                   </li>
                   <li className="flex gap-2">
-                    <span className="font-bold">+</span>
-                    <span>Custom brand voice training</span>
+                    <span className="font-bold text-[var(--win95-blue)]">+</span>
+                    <span>
+                      <strong>Bilingual generation</strong> — a second language alongside English
+                    </span>
                   </li>
                   <li className="flex gap-2">
-                    <span className="font-bold">+</span>
-                    <span>Team collaboration</span>
+                    <span className="font-bold text-[var(--win95-blue)]">+</span>
+                    <span>Auto-post to social (coming soon)</span>
                   </li>
                 </ul>
               </div>
               <div className="pt-1 mt-auto">
-                {waitlistJoined ? (
-                  <p className="text-win95-11 text-center font-bold text-[var(--win95-blue)]">
-                    You're on the list — we'll email you when Elite opens up.
-                  </p>
+                {isEliteUser ? (
+                  <button
+                    type="button"
+                    disabled
+                    className="win95-raised px-4 py-1 text-win95-12 font-bold cursor-default opacity-60 w-full"
+                  >
+                    Current Plan
+                  </button>
                 ) : (
-                  <div className="space-y-1.5">
-                    <RetroInput
-                      type="email"
-                      placeholder="you@brokerage.com"
-                      value={waitlistEmail}
-                      onChange={(e) => setWaitlistEmail(e.target.value)}
-                      onKeyDown={(e) => {
-                        if (e.key === "Enter") handleJoinWaitlist();
-                      }}
-                      className="w-full"
-                      maxLength={320}
-                    />
-                    <RetroButton
-                      variant="primary"
-                      onClick={handleJoinWaitlist}
-                      disabled={waitlistSubmitting}
-                      className="w-full"
-                    >
-                      {waitlistSubmitting ? "Joining..." : "Join the Elite Waitlist"}
-                    </RetroButton>
-                    {waitlistError && (
-                      <p className="text-win95-11 text-red-800 text-center">{waitlistError}</p>
-                    )}
+                  <div className="space-y-2">
+                    <div className="flex gap-2 justify-center">
+                      <RetroButton
+                        variant="primary"
+                        onClick={() => handleCheckout("elite", "month")}
+                        disabled={checkoutLoading !== null}
+                      >
+                        {checkoutLoading?.plan === "elite" && checkoutLoading.interval === "month"
+                          ? "Loading..."
+                          : "Elite $99/mo"}
+                      </RetroButton>
+                    </div>
+                    <div className="flex gap-2 justify-center">
+                      <RetroButton
+                        onClick={() => handleCheckout("elite", "year")}
+                        disabled={checkoutLoading !== null}
+                      >
+                        {checkoutLoading?.plan === "elite" && checkoutLoading.interval === "year"
+                          ? "Loading..."
+                          : "$79/mo — billed annually"}
+                      </RetroButton>
+                    </div>
                   </div>
                 )}
               </div>
@@ -338,10 +349,10 @@ function Pricing() {
               </p>
             </div>
             <div>
-              <p className="text-win95-12 font-bold">Can I cancel Pro?</p>
+              <p className="text-win95-12 font-bold">Can I cancel Pro or Elite?</p>
               <p className="text-win95-11 text-muted-foreground">
-                Yes. Cancel anytime from the Stripe customer portal. Your account returns to the
-                Free plan after the paid period ends.
+                Yes. Cancel anytime from the Stripe customer portal (Member Hub → Manage
+                Subscription). Your account returns to the Free plan after the paid period ends.
               </p>
             </div>
             <div>
