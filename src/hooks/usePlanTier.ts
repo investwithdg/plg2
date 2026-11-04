@@ -31,22 +31,27 @@ export function usePlanTier(user: User | null): {
     setLoading(true);
 
     (async () => {
+      // Immediate metadata check (e.g. manual admin override or cached claim)
+      const userMeta = user.user_metadata || {};
+      const appMeta = user.app_metadata || {};
+      const metaPlan = (appMeta.plan || userMeta.plan) as string | undefined;
+
       const { data } = await supabase
         .from("subscriptions")
         .select("plan, status")
         .eq("user_id", user.id)
-        .eq("status", "active")
+        .in("status", ["active", "trialing"])
+        .order("created_at", { ascending: false })
         .limit(1);
 
       if (cancelled) return;
 
-      const activeRow = data?.find(
-        (row: { plan?: string; status?: string }) => row.status === "active",
-      );
+      const activeRow = data?.[0];
+      const resolvedPlan = activeRow?.plan || metaPlan;
 
-      if (activeRow?.plan === "elite") {
+      if (resolvedPlan === "elite") {
         setPlan("elite");
-      } else if (activeRow?.plan === "pro") {
+      } else if (resolvedPlan === "pro") {
         setPlan("pro");
       } else {
         setPlan("free");
