@@ -1,9 +1,5 @@
 import { describe, it, expect } from "vitest";
-import {
-  detectStateFromAddress,
-  getRecommendedMlsLimit,
-  autoTrimToLimit,
-} from "./mlsLimits";
+import { detectStateFromAddress, getRecommendedMlsLimit, autoTrimToLimit } from "./mlsLimits";
 
 describe("mlsLimits utility", () => {
   describe("detectStateFromAddress", () => {

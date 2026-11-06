@@ -1,10 +1,6 @@
 import { useRef, useState } from "react";
 import { RetroButton, RetroWindow } from "@/components/retro";
-import type {
-  EnrichmentData,
-  FhaCategories,
-  PropertyWithCopies,
-} from "@/hooks/usePropertyPolling";
+import type { EnrichmentData, FhaCategories, PropertyWithCopies } from "@/hooks/usePropertyPolling";
 import { toast as sonnerToast } from "sonner";
 
 interface FhaComplianceCertificateModalProps {
@@ -121,15 +117,16 @@ export default function FhaComplianceCertificateModal({
   const address = property?.address || "Verified Listing Property";
   const propertyType = (property?.property_type || "SFR").toUpperCase();
 
-  const specs = [
-    property?.beds != null ? `${property.beds} BD` : null,
-    property?.baths != null ? `${property.baths} BA` : null,
-    property?.sqft != null && !isNaN(Number(property.sqft))
-      ? `${Number(property.sqft).toLocaleString()} SQFT`
-      : null,
-  ]
-    .filter(Boolean)
-    .join(" • ") || "Verified Listing";
+  const specs =
+    [
+      property?.beds != null ? `${property.beds} BD` : null,
+      property?.baths != null ? `${property.baths} BA` : null,
+      property?.sqft != null && !isNaN(Number(property.sqft))
+        ? `${Number(property.sqft).toLocaleString()} SQFT`
+        : null,
+    ]
+      .filter(Boolean)
+      .join(" • ") || "Verified Listing";
 
   return (
     <div className="fixed inset-0 bg-black/60 z-50 flex items-center justify-center p-2 sm:p-4 overflow-y-auto">
@@ -168,7 +165,9 @@ export default function FhaComplianceCertificateModal({
           {!isProUser && (
             <div className="win95-raised bg-[#ffffd0] border border-amber-600 p-2.5 mb-3 flex flex-wrap items-center justify-between gap-2 print:hidden">
               <div className="text-win95-11 text-amber-950">
-                <span className="font-bold">PRO PREVIEW:</span> Free accounts can preview certificate formatting. Upgrade to Pro ($49/mo) to unlock official unwatermarked PDF exports for your broker transaction file.
+                <span className="font-bold">PRO PREVIEW:</span> Free accounts can preview
+                certificate formatting. Upgrade to Pro ($49/mo) to unlock official unwatermarked PDF
+                exports for your broker transaction file.
               </div>
               {onUpgradeIntent && (
                 <RetroButton
@@ -218,7 +217,8 @@ export default function FhaComplianceCertificateModal({
             {!isProUser && (
               <div className="absolute inset-0 flex items-center justify-center pointer-events-none select-none z-10 overflow-hidden">
                 <div className="text-slate-200 text-5xl sm:text-6xl font-black -rotate-45 uppercase tracking-widest text-center border-4 border-slate-200 p-6 opacity-60">
-                  SAMPLE PREVIEW<br />
+                  SAMPLE PREVIEW
+                  <br />
                   <span className="text-2xl font-bold tracking-normal block mt-2">
                     PRO TIER REQUIRED FOR OFFICIAL FILING
                   </span>
@@ -241,13 +241,18 @@ export default function FhaComplianceCertificateModal({
                   FAIR HOUSING ACT (FHA) COMPLIANCE AUDIT CERTIFICATE
                 </h1>
                 <p className="text-[11px] text-slate-600">
-                  Statutory Audit Authority: Title VIII Civil Rights Act of 1968 (42 U.S.C. § 3604(c)) &amp; 24 CFR Part 100
+                  Statutory Audit Authority: Title VIII Civil Rights Act of 1968 (42 U.S.C. §
+                  3604(c)) &amp; 24 CFR Part 100
                 </p>
               </div>
 
               <div className="win95-raised p-2.5 text-center bg-slate-50 border border-black shrink-0 sm:min-w-[150px]">
-                <div className="text-[10px] uppercase font-bold text-slate-600">AUDIT DETERMINATION</div>
-                <div className={`text-win95-14 font-bold ${score >= 100 ? "text-emerald-700" : "text-amber-800"}`}>
+                <div className="text-[10px] uppercase font-bold text-slate-600">
+                  AUDIT DETERMINATION
+                </div>
+                <div
+                  className={`text-win95-14 font-bold ${score >= 100 ? "text-emerald-700" : "text-amber-800"}`}
+                >
                   {score >= 100 ? "100% PASSED" : `${score}% COMPLIANT`}
                 </div>
                 <div className="text-[9px] text-slate-500 font-mono mt-0.5">{auditId}</div>
@@ -257,11 +262,15 @@ export default function FhaComplianceCertificateModal({
             {/* Property Specification Details */}
             <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 bg-slate-50 p-3 border border-slate-300 text-win95-11">
               <div>
-                <span className="text-slate-500 block text-[10px] uppercase font-bold">Property Address</span>
+                <span className="text-slate-500 block text-[10px] uppercase font-bold">
+                  Property Address
+                </span>
                 <span className="font-bold text-slate-900">{address}</span>
               </div>
               <div>
-                <span className="text-slate-500 block text-[10px] uppercase font-bold">Property Type</span>
+                <span className="text-slate-500 block text-[10px] uppercase font-bold">
+                  Property Type
+                </span>
                 <span className="font-bold text-slate-900">{propertyType}</span>
               </div>
               <div>
@@ -269,7 +278,9 @@ export default function FhaComplianceCertificateModal({
                 <span className="font-bold text-slate-900">{specs}</span>
               </div>
               <div>
-                <span className="text-slate-500 block text-[10px] uppercase font-bold">Audit Timestamp</span>
+                <span className="text-slate-500 block text-[10px] uppercase font-bold">
+                  Audit Timestamp
+                </span>
                 <span className="font-mono text-slate-800">{auditDate}</span>
               </div>
             </div>
@@ -284,7 +295,8 @@ export default function FhaComplianceCertificateModal({
                 <div className="border border-slate-200 p-2.5 bg-slate-50/50">
                   <div className="flex items-center justify-between mb-1">
                     <span className="font-bold text-slate-900">
-                      Check 1: Protected Classes (Race, Color, Religion, Sex, Disability, Familial Status, Origin)
+                      Check 1: Protected Classes (Race, Color, Religion, Sex, Disability, Familial
+                      Status, Origin)
                     </span>
                     <span className="font-mono font-bold text-emerald-700 bg-emerald-50 px-2 py-0.5 border border-emerald-300 text-[10px]">
                       [PASSED - 42 U.S.C. § 3604(c)]
@@ -300,7 +312,8 @@ export default function FhaComplianceCertificateModal({
                 <div className="border border-slate-200 p-2.5 bg-slate-50/50">
                   <div className="flex items-center justify-between mb-1">
                     <span className="font-bold text-slate-900">
-                      Check 2: Steering &amp; Coded Terminology (Churches, Resident Character, Demographics)
+                      Check 2: Steering &amp; Coded Terminology (Churches, Resident Character,
+                      Demographics)
                     </span>
                     <span className="font-mono font-bold text-emerald-700 bg-emerald-50 px-2 py-0.5 border border-emerald-300 text-[10px]">
                       [PASSED - HUD FAIR HOUSING GUIDELINES]
@@ -342,7 +355,8 @@ export default function FhaComplianceCertificateModal({
                   </span>
                 </div>
                 <div className="text-[11px] text-amber-900">
-                  Original listing text contained prohibited or borderline steering terminology that was automatically neutralized into compliant property facts:
+                  Original listing text contained prohibited or borderline steering terminology that
+                  was automatically neutralized into compliant property facts:
                 </div>
                 <div className="flex flex-wrap gap-1.5 pt-1">
                   {violations.map((v, i) => (
@@ -364,25 +378,35 @@ export default function FhaComplianceCertificateModal({
               </h2>
               <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 text-win95-11">
                 <div className="border border-slate-200 p-2.5 bg-slate-50">
-                  <span className="font-bold text-slate-700 block text-[10px] uppercase">Walkability Index</span>
+                  <span className="font-bold text-slate-700 block text-[10px] uppercase">
+                    Walkability Index
+                  </span>
                   <div className="text-base font-bold text-slate-900 mt-0.5">
-                    {enrichmentData?.walkability_score != null ? `${enrichmentData.walkability_score} / 100` : "Indexed (Standard)"}
+                    {enrichmentData?.walkability_score != null
+                      ? `${enrichmentData.walkability_score} / 100`
+                      : "Indexed (Standard)"}
                   </div>
                   <span className="text-[10px] text-slate-500">WalkScore™ Metric Grounding</span>
                 </div>
 
                 <div className="border border-slate-200 p-2.5 bg-slate-50">
-                  <span className="font-bold text-slate-700 block text-[10px] uppercase">Nearby Schools Directory</span>
+                  <span className="font-bold text-slate-700 block text-[10px] uppercase">
+                    Nearby Schools Directory
+                  </span>
                   <div className="text-base font-bold text-slate-900 mt-0.5">
                     {enrichmentData?.schools && enrichmentData.schools.length > 0
                       ? `${enrichmentData.schools.length} Schools Verified`
                       : "General District Indexed"}
                   </div>
-                  <span className="text-[10px] text-slate-500">Objective Boundary Distance Records</span>
+                  <span className="text-[10px] text-slate-500">
+                    Objective Boundary Distance Records
+                  </span>
                 </div>
 
                 <div className="border border-slate-200 p-2.5 bg-slate-50">
-                  <span className="font-bold text-slate-700 block text-[10px] uppercase">Brokerage Representation</span>
+                  <span className="font-bold text-slate-700 block text-[10px] uppercase">
+                    Brokerage Representation
+                  </span>
                   <div className="text-win95-11 font-bold text-slate-900 mt-1 truncate">
                     {property?.listing_office || property?.listing_agent || "Direct Agent File"}
                   </div>
@@ -394,7 +418,10 @@ export default function FhaComplianceCertificateModal({
             {/* Compliance Sign-Off Lines */}
             <div className="pt-4 border-t-2 border-black space-y-4">
               <p className="text-[10px] text-slate-500 leading-relaxed italic">
-                DISCLAIMER: This automated compliance certification was executed by PropertyListingGenerator.com using multi-pass LLM guardrails grounded against 42 U.S.C. § 3604(c) guidelines. Retain this signed certificate with the broker transaction file for compliance audit documentation.
+                DISCLAIMER: This automated compliance certification was executed by
+                PropertyListingGenerator.com using multi-pass LLM guardrails grounded against 42
+                U.S.C. § 3604(c) guidelines. Retain this signed certificate with the broker
+                transaction file for compliance audit documentation.
               </p>
 
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-8 pt-4">
@@ -403,7 +430,9 @@ export default function FhaComplianceCertificateModal({
                     <span className="font-bold">Listing Agent Signature</span>
                     <span className="text-slate-500">Date: _______________</span>
                   </div>
-                  <div className="text-[10px] text-slate-500 mt-0.5">Print Name: _____________________________________</div>
+                  <div className="text-[10px] text-slate-500 mt-0.5">
+                    Print Name: _____________________________________
+                  </div>
                 </div>
 
                 <div className="border-t border-black pt-1">
@@ -411,7 +440,9 @@ export default function FhaComplianceCertificateModal({
                     <span className="font-bold">Managing Broker / Compliance Officer</span>
                     <span className="text-slate-500">Date: _______________</span>
                   </div>
-                  <div className="text-[10px] text-slate-500 mt-0.5">Brokerage File ID: ______________________________</div>
+                  <div className="text-[10px] text-slate-500 mt-0.5">
+                    Brokerage File ID: ______________________________
+                  </div>
                 </div>
               </div>
             </div>

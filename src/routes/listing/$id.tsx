@@ -150,7 +150,9 @@ function ListingPage() {
   };
 
   const handleShareTwitter = () => {
-    const text = encodeURIComponent(`Just generated FHA-compliant listing copy for ${listing.address} in 15 seconds with PLG`);
+    const text = encodeURIComponent(
+      `Just generated FHA-compliant listing copy for ${listing.address} in 15 seconds with PLG`,
+    );
     const url = encodeURIComponent(window.location.href);
     window.open(`https://twitter.com/intent/tweet?text=${text}&url=${url}`, "_blank", "noopener");
   };

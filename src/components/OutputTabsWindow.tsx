@@ -59,7 +59,7 @@ export default function OutputTabsWindow({
   // MLS character limit preset
   const detectedState = detectStateFromAddress(propertyAddress);
   const [selectedMlsPreset, setSelectedMlsPreset] = useState<MlsLimitPreset>(() =>
-    getRecommendedMlsLimit(propertyAddress)
+    getRecommendedMlsLimit(propertyAddress),
   );
 
   // Update copies when outputs change
@@ -254,8 +254,8 @@ export default function OutputTabsWindow({
             <div className="win95-inset bg-slate-50 px-2 py-1 flex flex-wrap items-center justify-between text-win95-11 text-slate-700">
               <div className="flex items-center gap-3">
                 <span className="font-mono">
-                  {charCount.toLocaleString()} {charCount === 1 ? "char" : "chars"} • {wordCount.toLocaleString()}{" "}
-                  {wordCount === 1 ? "word" : "words"}
+                  {charCount.toLocaleString()} {charCount === 1 ? "char" : "chars"} •{" "}
+                  {wordCount.toLocaleString()} {wordCount === 1 ? "word" : "words"}
                 </span>
 
                 {activeTab === "mls" && mlsLimit > 0 && (

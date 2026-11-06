@@ -22,9 +22,7 @@ export const Route = createFileRoute("/compare/dealmachine")({
       },
       { property: "og:url", content: "https://propertylistinggenerator.com/compare/dealmachine" },
     ],
-    links: [
-      { rel: "canonical", href: "https://propertylistinggenerator.com/compare/dealmachine" },
-    ],
+    links: [{ rel: "canonical", href: "https://propertylistinggenerator.com/compare/dealmachine" }],
   }),
   component: VsDealMachine,
 });
