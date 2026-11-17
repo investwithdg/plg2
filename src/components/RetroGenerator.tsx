@@ -22,17 +22,7 @@ import { buildExportFilename, downloadTextFile } from "@/lib/export/listing-expo
 import { useGoogleAutocomplete } from "@/hooks/useGoogleAutocomplete";
 
 type PropertyType =
-  | "sfr"
-  | "mf"
-  | "str"
-  | "mtr"
-  | "ltr"
-  | "fsbo"
-  | "estate"
-  | "lux"
-  | "commercial"
-  | "lease"
-  | "row";
+  "sfr" | "mf" | "str" | "mtr" | "ltr" | "fsbo" | "estate" | "lux" | "commercial" | "lease" | "row";
 
 type PaywallReason = "free_limit" | "pro_tier_limit" | "upgrade_intent";
 
