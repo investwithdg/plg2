@@ -2,6 +2,7 @@ import { createFileRoute, Link, notFound } from "@tanstack/react-router";
 import { useState } from "react";
 import { toast as sonnerToast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
+import { buildExportFilename, downloadTextFile } from "@/lib/export/listing-export";
 
 const TYPE_LABELS: Record<string, string> = {
   sfr: "Single-Family",
@@ -135,13 +136,23 @@ function ListingPage() {
     sonnerToast.success("Copied!", { description: "Text copied to clipboard" });
   };
 
+  const handleDownload = () => {
+    const text = copyMap[activeTab] ?? "";
+    if (!text) return;
+    const filename = buildExportFilename(listing.address, activeTab);
+    downloadTextFile(filename, text);
+    sonnerToast.success("Downloaded!", { description: `Saved as ${filename}.txt` });
+  };
+
   const handleShareUrl = () => {
     navigator.clipboard.writeText(window.location.href);
     sonnerToast.success("Link copied!", { description: "Share this listing with anyone" });
   };
 
   const handleShareTwitter = () => {
-    const text = encodeURIComponent(`Just generated FHA-compliant listing copy for ${listing.address} in 15 seconds with PLG`);
+    const text = encodeURIComponent(
+      `Just generated FHA-compliant listing copy for ${listing.address} in 15 seconds with PLG`,
+    );
     const url = encodeURIComponent(window.location.href);
     window.open(`https://twitter.com/intent/tweet?text=${text}&url=${url}`, "_blank", "noopener");
   };
@@ -222,6 +233,12 @@ function ListingPage() {
                 className="win95-raised px-3 py-1 text-win95-11 cursor-pointer active:win95-pressed font-bold"
               >
                 Copy {TAB_LABELS[activeTab]}
+              </button>
+              <button
+                onClick={handleDownload}
+                className="win95-raised px-3 py-1 text-win95-11 cursor-pointer active:win95-pressed"
+              >
+                Download .txt
               </button>
               <button
                 onClick={handleShareUrl}

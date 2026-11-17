@@ -227,7 +227,11 @@ describe("Tier 4: Real-World Application Scenarios", () => {
       Array.isArray(ruralAmenities) &&
       ruralAmenities.length > 0 &&
       ruralAmenities.some(
-        (item) => typeof item === "object" && item !== null && typeof item.name === "string" && item.name.length > 0,
+        (item) =>
+          typeof item === "object" &&
+          item !== null &&
+          typeof item.name === "string" &&
+          item.name.length > 0,
       );
     expect(isValid).toBe(true);
 

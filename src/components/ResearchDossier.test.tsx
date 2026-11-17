@@ -34,9 +34,7 @@ describe("ResearchDossier Component", () => {
       expect(screen.getByText("PRO PREVIEW")).toBeInTheDocument();
 
       // Paywall teaser modal is displayed
-      expect(
-        screen.getByText("PLG Research+ Intelligence Dossier [PRO ONLY]"),
-      ).toBeInTheDocument();
+      expect(screen.getByText("PLG Research+ Intelligence Dossier [PRO ONLY]")).toBeInTheDocument();
       expect(
         screen.getByText("Unlock Full Property & Neighborhood Intelligence"),
       ).toBeInTheDocument();
@@ -109,9 +107,7 @@ describe("ResearchDossier Component", () => {
         screen.queryByText("Fair Housing Act (FHA) Compliance Audit & Mitigation Report"),
       ).not.toBeInTheDocument();
       expect(screen.queryByText(/AUTO-MITIGATED/i)).not.toBeInTheDocument();
-      expect(
-        screen.queryByText(/Restricted Phrasing Pattern/i),
-      ).not.toBeInTheDocument();
+      expect(screen.queryByText(/Restricted Phrasing Pattern/i)).not.toBeInTheDocument();
       expect(
         screen.queryByText(/Sanitized Compliant Facts Integrated into Copy:/i),
       ).not.toBeInTheDocument();
@@ -172,9 +168,7 @@ describe("ResearchDossier Component", () => {
       // Click to inspect
       fireEvent.click(toggleBtn);
       expect(toggleBtn).toHaveTextContent("Hide Original Listing Text");
-      expect(
-        screen.getByText(mockViolationsProperty.existing_listing_raw!),
-      ).toBeInTheDocument();
+      expect(screen.getByText(mockViolationsProperty.existing_listing_raw!)).toBeInTheDocument();
 
       // Click again to hide
       fireEvent.click(toggleBtn);

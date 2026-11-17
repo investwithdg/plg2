@@ -7,10 +7,7 @@ import {
   mockViolationsProperty,
   mockEnrichmentData,
 } from "@/test/mocks/fixtures";
-import {
-  setupWindowPrintMock,
-  setupNavigatorClipboardMock,
-} from "@/test/mocks/browser";
+import { setupWindowPrintMock, setupNavigatorClipboardMock } from "@/test/mocks/browser";
 import { toast as sonnerToast } from "sonner";
 
 // Mock sonner toast
@@ -147,9 +144,7 @@ describe("FhaComplianceCertificateModal Component", () => {
       const copyBtn = screen.getByRole("button", { name: /Copy ID/i });
       fireEvent.click(copyBtn);
 
-      expect(clipboardMock.writeText).toHaveBeenCalledWith(
-        expect.stringMatching(/^PLG-FHA-/),
-      );
+      expect(clipboardMock.writeText).toHaveBeenCalledWith(expect.stringMatching(/^PLG-FHA-/));
       expect(sonnerToast.success).toHaveBeenCalledWith(
         "Audit ID Copied!",
         expect.objectContaining({

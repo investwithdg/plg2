@@ -173,7 +173,9 @@ describe("Milestone 3: Rich Amenities Procurement & Perplexity Pipeline", () => 
       };
 
       // In getCachedEnrichment, empty amenities must return null (bypass cache)
-      function mockGetCachedEnrichment(data: typeof poisonedCacheRow | typeof healthyCacheRow | null) {
+      function mockGetCachedEnrichment(
+        data: typeof poisonedCacheRow | typeof healthyCacheRow | null,
+      ) {
         if (!data) return null;
         if (!data.key_sources || data.key_sources.length === 0) return null; // legacy check
         if (!isValidAmenityList(data.nearby_amenities)) return null; // anti-poison check

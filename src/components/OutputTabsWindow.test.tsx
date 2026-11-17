@@ -3,10 +3,7 @@ import { describe, expect, it, vi } from "vitest";
 import { render, screen, fireEvent } from "@testing-library/react";
 import OutputTabsWindow from "@/components/OutputTabsWindow";
 import ResearchDossier from "@/components/ResearchDossier";
-import {
-  mockCompleteProperty,
-  mockEnrichmentData,
-} from "@/test/mocks/fixtures";
+import { mockCompleteProperty, mockEnrichmentData } from "@/test/mocks/fixtures";
 
 // Mock sonner toast
 vi.mock("sonner", () => ({
@@ -45,9 +42,7 @@ describe("OutputTabsWindow Dynamic Reactivity", () => {
 
     // ResearchDossier receives isProUser=false => shows Pro Preview and teaser
     expect(screen.getByText("PRO PREVIEW")).toBeInTheDocument();
-    expect(
-      screen.getByText("PLG Research+ Intelligence Dossier [PRO ONLY]"),
-    ).toBeInTheDocument();
+    expect(screen.getByText("PLG Research+ Intelligence Dossier [PRO ONLY]")).toBeInTheDocument();
 
     // 2. usePlanTier resolves: isProUser flips to true in parent container
     // The exact same frozenOutputs object reference is passed, but live isProUser is now true
@@ -84,21 +79,13 @@ describe("OutputTabsWindow Dynamic Reactivity", () => {
     };
 
     const { rerender } = render(
-      <OutputTabsWindow
-        outputs={outputsWithRenderFn}
-        isProUser={false}
-        initialTab="research"
-      />,
+      <OutputTabsWindow outputs={outputsWithRenderFn} isProUser={false} initialTab="research" />,
     );
 
     expect(screen.getByText("FREE PREVIEW CONTENT")).toBeInTheDocument();
 
     rerender(
-      <OutputTabsWindow
-        outputs={outputsWithRenderFn}
-        isProUser={true}
-        initialTab="research"
-      />,
+      <OutputTabsWindow outputs={outputsWithRenderFn} isProUser={true} initialTab="research" />,
     );
 
     expect(screen.getByText("PRO UNLOCKED CONTENT")).toBeInTheDocument();

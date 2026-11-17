@@ -49,7 +49,9 @@ describe("Feature 3: FHA Compliance Audit & Remarks Boundaries", () => {
 
     // Verified 100% badge rendered in Section 1 Header
     expect(screen.getByText("100% FHA COMPLIANT")).toBeInTheDocument();
-    expect(screen.queryByText(/Verified 100% FHA Compliant — Zero Violations/i)).not.toBeInTheDocument();
+    expect(
+      screen.queryByText(/Verified 100% FHA Compliant — Zero Violations/i),
+    ).not.toBeInTheDocument();
 
     // No warning or AUTO-MITIGATED badge
     expect(screen.queryByText(/AUTO-MITIGATED/i)).not.toBeInTheDocument();
@@ -110,7 +112,9 @@ describe("Feature 3: FHA Compliance Audit & Remarks Boundaries", () => {
     // Status badge indicates 5 mitigated violations
     expect(screen.getByText(/FHA MITIGATED \(5\)/i)).toBeInTheDocument();
     // Section 2 filler report is absent
-    expect(screen.queryByText(/5 Restricted Phrasing Patterns Neutralized/i)).not.toBeInTheDocument();
+    expect(
+      screen.queryByText(/5 Restricted Phrasing Patterns Neutralized/i),
+    ).not.toBeInTheDocument();
   });
 
   // Test 3: Empty remarks string / null / undefined

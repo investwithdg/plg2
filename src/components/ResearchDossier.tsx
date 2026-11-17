@@ -230,7 +230,6 @@ export default function ResearchDossier({
                   {hasViolations ? `FHA MITIGATED (${violations.length})` : "100% FHA COMPLIANT"}
                 </span>
               </div>
-
               {/* View original listing remarks toggle */}
               {property?.existing_listing_raw && (
                 <button
@@ -276,7 +275,9 @@ export default function ResearchDossier({
           {/* ── 3. AT-A-GLANCE NEIGHBORHOOD & MARKET CARD ── */}
           <div className="win95-window">
             <div className="win95-titlebar">
-              <span className="font-bold text-win95-12 pl-1">Local Market &amp; Walkability Overview</span>
+              <span className="font-bold text-win95-12 pl-1">
+                Local Market &amp; Walkability Overview
+              </span>
             </div>
             <div className="p-3 bg-[var(--win95-gray)] space-y-3">
               {/* Top Row: Metric Stats Side by Side */}
@@ -511,7 +512,8 @@ export default function ResearchDossier({
             </div>
             <div className="p-3 bg-[var(--win95-gray)] space-y-2">
               <p className="text-win95-11 text-muted-foreground">
-                The property facts and neighborhood metrics above were verified using real-time search queries across public records and real estate sources:
+                The property facts and neighborhood metrics above were verified using real-time
+                search queries across public records and real estate sources:
               </p>
               {hasKeySources ? (
                 <div className="win95-inset bg-white divide-y divide-slate-100 max-h-56 overflow-y-auto">
@@ -526,7 +528,9 @@ export default function ResearchDossier({
                       <div className="min-w-0">
                         <div className="font-bold text-win95-11 truncate underline">
                           {source.name || (source.url ? getDomainName(source.url) : "Source")}
-                          <span className="text-[10px] text-muted-foreground font-normal ml-1">↗</span>
+                          <span className="text-[10px] text-muted-foreground font-normal ml-1">
+                            ↗
+                          </span>
                         </div>
                         {source.facts_provided && (
                           <div className="text-win95-11 text-muted-foreground">
@@ -576,10 +580,13 @@ export default function ResearchDossier({
                     Unlock Full Property &amp; Neighborhood Intelligence
                   </h4>
                   <p className="text-win95-11 text-slate-700 leading-relaxed">
-                    We indexed nearby schools with ratings &amp; boundaries, walkability score ({enrichmentData?.walkability_score ?? "80+"}/100), transit hubs, and market pricing for <strong>{property?.address || "this property"}</strong>.
+                    We indexed nearby schools with ratings &amp; boundaries, walkability score (
+                    {enrichmentData?.walkability_score ?? "80+"}/100), transit hubs, and market
+                    pricing for <strong>{property?.address || "this property"}</strong>.
                   </p>
                   <p className="text-win95-11 text-slate-600 leading-relaxed">
-                    Upgrade to Pro ($49/mo) to unlock the full unredacted intelligence dossier, verified school directories, and printable official FHA compliance certificates.
+                    Upgrade to Pro ($49/mo) to unlock the full unredacted intelligence dossier,
+                    verified school directories, and printable official FHA compliance certificates.
                   </p>
                 </div>
                 <div className="flex justify-end gap-2 pt-2 border-t border-[var(--win95-gray-dark)]">

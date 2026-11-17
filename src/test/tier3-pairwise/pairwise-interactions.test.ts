@@ -177,7 +177,9 @@ describe("Tier 3 Pairwise Interactions", () => {
     expect(screen.getByText(/FHA MITIGATED \(3\)/i)).toBeInTheDocument();
 
     // Section 2 filler card is cleanly omitted
-    expect(screen.queryByText(/3 Restricted Phrasing Patterns Neutralized/i)).not.toBeInTheDocument();
+    expect(
+      screen.queryByText(/3 Restricted Phrasing Patterns Neutralized/i),
+    ).not.toBeInTheDocument();
     expect(screen.queryByText(/AUTO-MITIGATED/i)).not.toBeInTheDocument();
 
     // Section 3: Neighborhood intelligence is unblurred and accessible
@@ -241,7 +243,9 @@ describe("Tier 3 Pairwise Interactions", () => {
 
     // 1. FHA compliance status badge verified in header, Section 2 filler omitted
     expect(screen.getByText("100% FHA COMPLIANT")).toBeInTheDocument();
-    expect(screen.queryByText(/Verified 100% FHA Compliant — Zero Violations/i)).not.toBeInTheDocument();
+    expect(
+      screen.queryByText(/Verified 100% FHA Compliant — Zero Violations/i),
+    ).not.toBeInTheDocument();
 
     // 2. Multi-category amenities with drive-time strings rendered cleanly
     expect(screen.getByText(/Costco Wholesale/i)).toBeInTheDocument();

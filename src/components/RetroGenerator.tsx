@@ -18,6 +18,7 @@ import ResearchDossier from "@/components/ResearchDossier";
 import { analyzePropertyPhotos, uploadPropertyPhotos } from "@/lib/propertyPhotos";
 import { describeFunctionInvokeError, parsePropertyInput } from "@/lib/parsePropertyInput";
 import { track } from "@/lib/posthog";
+import { buildExportFilename, downloadTextFile } from "@/lib/export/listing-export";
 import { useGoogleAutocomplete } from "@/hooks/useGoogleAutocomplete";
 
 type PropertyType =
@@ -395,6 +396,7 @@ export default function RetroGenerator() {
     copies,
     property,
     enrichmentData,
+    isProUser,
     propertyType,
     propertyId,
     fireLoopsEvent,
@@ -551,6 +553,23 @@ export default function RetroGenerator() {
     onCopy(allText, "all");
   };
 
+  const onDownload = (text: string, tabLabel: string, tabKey?: string) => {
+    if (!text) return;
+    const filename = buildExportFilename(query, tabLabel);
+    downloadTextFile(filename, text);
+    sonnerToast.success("Downloaded!", { description: `Saved as ${filename}.txt` });
+    track("download_clicked", { tab: tabKey ?? "unknown", property_id: propertyId });
+  };
+
+  const onDownloadAll = () => {
+    if (!outputs) return;
+    const copies = activeEditedCopiesRef.current;
+    const mlsText = copies.mls || (typeof outputs.mls === "string" ? outputs.mls : "");
+    const socialText = copies.social || (typeof outputs.social === "string" ? outputs.social : "");
+    const emailText = copies.email || (typeof outputs.email === "string" ? outputs.email : "");
+    const allText = `MLS Description:\n${mlsText}\n\nSocial Post:\n${socialText}\n\nEmail:\n${emailText}`;
+    onDownload(allText, "all", "all");
+  };
   const handleAuth = async (email: string, password: string, mode: "signin" | "signup") => {
     if (mode === "signin") return signIn(email, password);
     const { error, isNewUser } = await signUp(email, password);
@@ -762,33 +781,58 @@ export default function RetroGenerator() {
           <div className="w-full max-w-3xl space-y-2">
             {propertyId && (
               <div className="win95-window">
-                <div className="win95-titlebar" style={{ background: "linear-gradient(to right, #006400, #228B22)" }}>
-                  <span className="font-bold text-win95-12 pl-1">
-                    ✓ Listing ready — share it
-                  </span>
+                <div
+                  className="win95-titlebar"
+                  style={{ background: "linear-gradient(to right, #006400, #228B22)" }}
+                >
+                  <span className="font-bold text-win95-12 pl-1">✓ Listing ready — share it</span>
                 </div>
                 <div className="p-3 flex flex-col sm:flex-row items-start sm:items-center gap-2">
                   <span className="win95-inset bg-input px-2 py-1 text-win95-11 flex-1 truncate select-all cursor-text font-mono">
-                    {typeof window !== "undefined" ? `${window.location.origin}/listing/${propertyId}` : ""}
+                    {typeof window !== "undefined"
+                      ? `${window.location.origin}/listing/${propertyId}`
+                      : ""}
                   </span>
                   <div className="flex gap-2 shrink-0 flex-wrap">
-                    <RetroButton onClick={() => {
-                      navigator.clipboard.writeText(`${window.location.origin}/listing/${propertyId}`);
-                      sonnerToast.success("Link copied!", { description: "Send this to anyone" });
-                    }}>
+                    <RetroButton
+                      onClick={() => {
+                        navigator.clipboard.writeText(
+                          `${window.location.origin}/listing/${propertyId}`,
+                        );
+                        sonnerToast.success("Link copied!", { description: "Send this to anyone" });
+                      }}
+                    >
                       📋 copy link
                     </RetroButton>
-                    <RetroButton onClick={() => {
-                      const text = encodeURIComponent(`Just generated listing copy in 15 seconds with PLG`);
-                      const url = encodeURIComponent(`${window.location.origin}/listing/${propertyId}`);
-                      window.open(`https://twitter.com/intent/tweet?text=${text}&url=${url}`, "_blank", "noopener");
-                    }}>
+                    <RetroButton
+                      onClick={() => {
+                        const text = encodeURIComponent(
+                          `Just generated listing copy in 15 seconds with PLG`,
+                        );
+                        const url = encodeURIComponent(
+                          `${window.location.origin}/listing/${propertyId}`,
+                        );
+                        window.open(
+                          `https://twitter.com/intent/tweet?text=${text}&url=${url}`,
+                          "_blank",
+                          "noopener",
+                        );
+                      }}
+                    >
                       𝕏
                     </RetroButton>
-                    <RetroButton onClick={() => {
-                      const url = encodeURIComponent(`${window.location.origin}/listing/${propertyId}`);
-                      window.open(`https://www.linkedin.com/sharing/share-offsite/?url=${url}`, "_blank", "noopener");
-                    }}>
+                    <RetroButton
+                      onClick={() => {
+                        const url = encodeURIComponent(
+                          `${window.location.origin}/listing/${propertyId}`,
+                        );
+                        window.open(
+                          `https://www.linkedin.com/sharing/share-offsite/?url=${url}`,
+                          "_blank",
+                          "noopener",
+                        );
+                      }}
+                    >
                       in
                     </RetroButton>
                   </div>
@@ -815,13 +859,27 @@ export default function RetroGenerator() {
               renderActions={(activeTab, currentContent) => (
                 <div className="flex flex-wrap gap-2 mt-3">
                   {activeTab !== "research" && (
-                    <RetroButton
-                      onClick={() => onCopy(currentContent, activeTab)}
-                    >
+                    <RetroButton onClick={() => onCopy(currentContent, activeTab)}>
                       copy {activeTab}
                     </RetroButton>
                   )}
+                  {activeTab !== "research" && (
+                    <RetroButton
+                      onClick={() =>
+                        onDownload(
+                          typeof outputs[activeTab] === "string"
+                            ? (outputs[activeTab] as string)
+                            : "",
+                          activeTab,
+                          activeTab,
+                        )
+                      }
+                    >
+                      download {activeTab}
+                    </RetroButton>
+                  )}
                   <RetroButton onClick={onCopyAll}>copy all</RetroButton>
+                  <RetroButton onClick={onDownloadAll}>download all</RetroButton>
                   {propertyId && (
                     <RetroButton
                       onClick={() => {
@@ -1156,7 +1214,9 @@ function Win95PaywallModal({
               <p className="text-win95-11 font-bold">
                 🎟 Promo code active: <span className="font-mono">{activePromoCode}</span>
               </p>
-              <p className="text-win95-11 text-muted-foreground">Enter this code at checkout for your discount.</p>
+              <p className="text-win95-11 text-muted-foreground">
+                Enter this code at checkout for your discount.
+              </p>
             </div>
           )}
 
