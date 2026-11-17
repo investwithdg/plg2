@@ -45,7 +45,7 @@ const FEATURES = [
   },
   {
     feature: "Property types",
-    plg: "SFR/FSBO free; Pro-tier sample included",
+    plg: "All 11 types (SFR, MF, STR, Commercial, etc.)",
     rival: "Generic residential only",
   },
   {
@@ -74,8 +74,8 @@ const FEATURES = [
     rival: "General-purpose AI wrapper",
   },
   {
-    feature: "Free tier",
-    plg: "10 free generations + 1 Pro-tier sample",
+    feature: "Free trial",
+    plg: "7-day free Pro trial (card required)",
     rival: "Varies (often limited)",
   },
   {
@@ -203,7 +203,7 @@ function VsListingAI() {
                   type="button"
                   className="win95-raised px-4 py-1 text-win95-12 font-bold cursor-pointer active:win95-pressed"
                 >
-                  Try PLG Free
+                  Start 7-Day Free Trial
                 </button>
               </Link>
               <Link to="/compare">

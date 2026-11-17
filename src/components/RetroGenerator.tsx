@@ -11,7 +11,6 @@ import OutputTabsWindow, { type OutputTabKey } from "@/components/OutputTabsWind
 import GenerationProgressModal from "@/components/GenerationProgressModal";
 import AuthModal from "@/components/AuthModal";
 import ListingHistory from "@/components/ListingHistory";
-import TurnstileWidget from "@/components/TurnstileWidget";
 import PhotoAttachmentTray from "@/components/PhotoAttachmentTray";
 import { RetroButton, RetroInput, RetroWindow } from "@/components/retro";
 import ResearchDossier from "@/components/ResearchDossier";
@@ -24,70 +23,12 @@ import { useGoogleAutocomplete } from "@/hooks/useGoogleAutocomplete";
 type PropertyType =
   "sfr" | "mf" | "str" | "mtr" | "ltr" | "fsbo" | "estate" | "lux" | "commercial" | "lease" | "row";
 
-type PaywallReason = "free_limit" | "pro_tier_limit" | "upgrade_intent";
+type PaywallReason = "trial_required" | "upgrade_intent";
 
 /** Vision+ background photo pipeline state (Elite only). */
 type PhotoEnhancementStatus = "idle" | "uploading" | "analyzing" | "complete" | "error";
 
-const MAX_GENERATIONS = 10;
-const FREE_PRO_TIER_LIMIT = 1;
-const STORAGE_KEY = "plg_generations_used";
-const PRO_TIER_STORAGE_KEY = "plg_pro_tier_generations_used";
-const ANON_ID_COOKIE = "plg_anon_id";
-const FREE_PROPERTY_TYPES: PropertyType[] = ["sfr", "fsbo", "row"];
-const TURNSTILE_SITE_KEY = import.meta.env.VITE_TURNSTILE_SITE_KEY as string | undefined;
-
-const isProTierPropertyType = (type: PropertyType) => !FREE_PROPERTY_TYPES.includes(type);
-
-const isDevHost = () => {
-  if (typeof window === "undefined") return false;
-  const h = window.location.hostname;
-  return (
-    h === "localhost" ||
-    h === "127.0.0.1" ||
-    h.endsWith(".lovable.app") ||
-    h.endsWith(".lovableproject.com")
-  );
-};
-
-function getCookieValue(name: string): string | null {
-  if (typeof document === "undefined") return null;
-  const prefix = `${name}=`;
-  return (
-    document.cookie
-      .split(";")
-      .map((part) => part.trim())
-      .find((part) => part.startsWith(prefix))
-      ?.slice(prefix.length) || null
-  );
-}
-
-function setCookieValue(name: string, value: string) {
-  if (typeof document === "undefined") return;
-  const secure = window.location.protocol === "https:" ? "; Secure" : "";
-  document.cookie = `${name}=${value}; Max-Age=31536000; Path=/; SameSite=Lax${secure}`;
-}
-
-function createAnonymousId(): string {
-  if (typeof window !== "undefined" && window.crypto?.randomUUID) {
-    return window.crypto.randomUUID();
-  }
-  const bytes = new Uint8Array(16);
-  crypto.getRandomValues(bytes);
-  return Array.from(bytes)
-    .map((byte) => byte.toString(16).padStart(2, "0"))
-    .join("");
-}
-
-function getOrCreateAnonymousId(): string {
-  if (typeof window === "undefined") return "";
-  const existing = getCookieValue(ANON_ID_COOKIE);
-  if (existing) return existing;
-
-  const next = createAnonymousId();
-  setCookieValue(ANON_ID_COOKIE, next);
-  return next;
-}
+const PENDING_TRIAL_STORAGE_KEY = "plg_pending_pro_trial";
 
 async function readFunctionInvokeErrorBody(
   error: unknown,
@@ -118,57 +59,34 @@ export default function RetroGenerator() {
   const [showPredictions, setShowPredictions] = useState(false);
   const [focusedPredictionIdx, setFocusedPredictionIdx] = useState(-1);
   const [showPaywall, setShowPaywall] = useState(false);
-  const [paywallReason, setPaywallReason] = useState<PaywallReason>("free_limit");
+  const [paywallReason, setPaywallReason] = useState<PaywallReason>("trial_required");
   const [activePromoCode, setActivePromoCode] = useState<string | null>(null);
   const [showAuthModal, setShowAuthModal] = useState(false);
-  const [anonymousId] = useState(() => getOrCreateAnonymousId());
-  const [turnstileToken, setTurnstileToken] = useState<string | null>(null);
-  const [turnstileWidgetKey, setTurnstileWidgetKey] = useState(0);
-  const [generationsUsed, setGenerationsUsed] = useState<number>(() => {
-    if (typeof window === "undefined") return 0;
-    const raw = window.localStorage.getItem(STORAGE_KEY);
-    return raw ? Number(raw) || 0 : 0;
-  });
-  const [proTierGenerationsUsed, setProTierGenerationsUsed] = useState<number>(() => {
-    if (typeof window === "undefined") return 0;
-    const raw = window.localStorage.getItem(PRO_TIER_STORAGE_KEY);
-    return raw ? Number(raw) || 0 : 0;
-  });
   const [outputs, setOutputs] = useState<Partial<Record<OutputTabKey, ReactNode>> | null>(null);
   const [historyKey, setHistoryKey] = useState(0);
   const [portalLoading, setPortalLoading] = useState(false);
   const [totalGenerations, setTotalGenerations] = useState<number | null>(null);
   const isGeneratingRef = useRef(false);
   const [showMismatchWarning, setShowMismatchWarning] = useState(false);
-  const { plan } = usePlanTier(user);
+  const { plan, isLoading: planLoading } = usePlanTier(user);
   const isProUser = plan === "pro" || plan === "elite";
   // Vision+ is Elite-exclusive. Non-Elite users don't see the tray at all —
   // this stays a clean upsell surface rather than a locked/disabled control.
   const isEliteUser = plan === "elite" && !!user;
 
-  // Sync signed-in free user generation usage with Supabase properties table
+  // Reopen the Pro 7-day trial modal automatically after signing in from the paywall flow.
   useEffect(() => {
-    if (!user || isProUser) return;
-    let cancelled = false;
-
-    (async () => {
-      const sinceWindow = new Date(Date.now() - 30 * 86400_000).toISOString();
-      const { count, error } = await supabase
-        .from("properties")
-        .select("id", { count: "exact", head: true })
-        .eq("user_id", user.id)
-        .neq("status", "error")
-        .gte("created_at", sinceWindow);
-
-      if (!cancelled && !error && count !== null) {
-        setGenerationsUsed(count);
-      }
-    })();
-
-    return () => {
-      cancelled = true;
-    };
-  }, [user, isProUser]);
+    if (typeof window === "undefined") return;
+    if (authLoading || planLoading) return;
+    if (!user) return;
+    const pending = window.sessionStorage.getItem(PENDING_TRIAL_STORAGE_KEY);
+    if (!pending) return;
+    window.sessionStorage.removeItem(PENDING_TRIAL_STORAGE_KEY);
+    if (!isProUser) {
+      setPaywallReason("trial_required");
+      setShowPaywall(true);
+    }
+  }, [user, authLoading, planLoading, isProUser]);
 
   // Files currently sitting in the attachment tray (pre-upload), plus a key we
   // bump to remount — and therefore clear — the tray after a successful submit.
@@ -196,30 +114,7 @@ export default function RetroGenerator() {
     stopPolling,
   } = usePropertyPolling(propertyId);
 
-  const devBypassActive = isDevHost();
-  const [hasMounted, setHasMounted] = useState(false);
-  useEffect(() => {
-    setHasMounted(true);
-  }, []);
-  const selectedProTier = isProTierPropertyType(propertyType);
-  const generationsLeft = Math.max(0, MAX_GENERATIONS - generationsUsed);
-  const proTierGenerationsLeft = Math.max(0, FREE_PRO_TIER_LIMIT - proTierGenerationsUsed);
-  const isUnlimited = devBypassActive || isProUser;
-  const generationCountLabel = isUnlimited ? "unlimited" : `${generationsLeft} left`;
-  const anonymousTurnstileRequired = Boolean(!user && !devBypassActive && TURNSTILE_SITE_KEY);
-  const generateDisabled =
-    showProgress || !query.trim() || (anonymousTurnstileRequired && !turnstileToken);
-
-  const handleTurnstileVerify = useCallback((token: string) => {
-    setTurnstileToken(token);
-  }, []);
-  const handleTurnstileExpire = useCallback(() => {
-    setTurnstileToken(null);
-  }, []);
-  const resetAnonymousTurnstile = useCallback(() => {
-    setTurnstileToken(null);
-    setTurnstileWidgetKey((k) => k + 1);
-  }, []);
+  const generateDisabled = showProgress || !query.trim() || authLoading || (!!user && planLoading);
 
   // --- Checkout success/cancel toast handling ---
   const checkoutToastShown = useRef(false);
@@ -229,16 +124,16 @@ export default function RetroGenerator() {
     const checkoutStatus = params.get("checkout");
     if (checkoutStatus === "success") {
       checkoutToastShown.current = true;
-      sonnerToast.success("Welcome to PLG Pro! Your subscription is active.");
+      sonnerToast.success("Welcome to PLG Pro! Your 7-day trial / subscription is active.");
       window.history.replaceState({}, "", window.location.pathname);
     } else if (checkoutStatus === "cancel") {
       checkoutToastShown.current = true;
-      sonnerToast("Checkout cancelled. You can upgrade anytime.");
+      sonnerToast("Checkout cancelled. You can start your 7-day Pro trial anytime.");
       window.history.replaceState({}, "", window.location.pathname);
     } else if (params.get("upgrade") === "true") {
       const promo = params.get("promo");
       if (promo) setActivePromoCode(promo.toUpperCase());
-      setPaywallReason("free_limit");
+      setPaywallReason("trial_required");
       setShowPaywall(true);
       window.history.replaceState({}, "", window.location.pathname);
     } else {
@@ -322,16 +217,6 @@ export default function RetroGenerator() {
   }, []);
 
   useEffect(() => {
-    if (typeof window === "undefined") return;
-    window.localStorage.setItem(STORAGE_KEY, String(generationsUsed));
-  }, [generationsUsed]);
-
-  useEffect(() => {
-    if (typeof window === "undefined") return;
-    window.localStorage.setItem(PRO_TIER_STORAGE_KEY, String(proTierGenerationsUsed));
-  }, [proTierGenerationsUsed]);
-
-  useEffect(() => {
     if (status === "complete" && copies.length > 0) {
       const outputMap: Partial<Record<OutputTabKey, ReactNode>> = {
         mls: "",
@@ -396,27 +281,15 @@ export default function RetroGenerator() {
     if (isGeneratingRef.current) return;
     if (!query.trim()) return;
 
-    if (anonymousTurnstileRequired && !turnstileToken) {
-      sonnerToast.error("Complete the security check to generate.");
-      return;
-    }
-
-    if (!devBypassActive && generationsUsed >= MAX_GENERATIONS && !user) {
-      setPaywallReason("free_limit");
+    // Interactive preview: visitors without an active/trialing Pro or Elite plan
+    // are guided directly into the sign-in + 7-day Pro trial modal.
+    if (!user || !isProUser) {
+      setPaywallReason("trial_required");
       setShowPaywall(true);
-      track("paywall_shown", { reason: "free_limit_exceeded_local", property_type: propertyType });
-      return;
-    }
-
-    if (
-      !devBypassActive &&
-      !user &&
-      selectedProTier &&
-      proTierGenerationsUsed >= FREE_PRO_TIER_LIMIT
-    ) {
-      setPaywallReason("pro_tier_limit");
-      setShowPaywall(true);
-      track("paywall_shown", { reason: "pro_tier_limit_local", property_type: propertyType });
+      track("paywall_shown", {
+        reason: user ? "subscription_required" : "auth_required",
+        property_type: propertyType,
+      });
       return;
     }
 
@@ -426,7 +299,7 @@ export default function RetroGenerator() {
     setShowProgress(true);
     isGeneratingRef.current = true;
 
-    track("generation_started", { property_type: propertyType, is_authenticated: !!user });
+    track("generation_started", { property_type: propertyType, is_authenticated: true });
 
     try {
       const parsed = parsePropertyInput(query);
@@ -441,22 +314,20 @@ export default function RetroGenerator() {
           source: "generator",
           // When outputs already exist, this is a regeneration — bypass dedup
           ...(outputs ? { regenerate: true } : {}),
-          ...(!user
-            ? {
-                anonymousId,
-                turnstileToken,
-              }
-            : {}),
         },
       });
 
       if (error) throw error;
 
       if (data?.error && !data?.propertyId) {
-        if (data.error === "pro_required" || data.error === "free_limit_exceeded") {
+        if (
+          data.error === "auth_required" ||
+          data.error === "subscription_required" ||
+          data.error === "pro_required" ||
+          data.error === "free_limit_exceeded"
+        ) {
           setShowProgress(false);
-          if (!user) resetAnonymousTurnstile();
-          setPaywallReason(data.error === "pro_required" ? "pro_tier_limit" : "free_limit");
+          setPaywallReason("trial_required");
           setShowPaywall(true);
           track("paywall_shown", { reason: data.error, property_type: propertyType });
           fireLoopsEvent("limit_reached", { reason: data.error, property_type: propertyType });
@@ -476,26 +347,22 @@ export default function RetroGenerator() {
           setPhotoTrayKey((k) => k + 1); // remount the tray => clears its state
           void attachPhotos(data.propertyId as string, user.id, pendingPhotos);
         }
-
-        if (!isProUser) {
-          setGenerationsUsed((prev) => prev + 1);
-        }
-        if (!user) {
-          if (selectedProTier) setProTierGenerationsUsed((prev) => prev + 1);
-          resetAnonymousTurnstile();
-        }
       } else {
         throw new Error("No property ID returned");
       }
     } catch (err) {
       console.error("Error starting generation:", err);
       setShowProgress(false);
-      if (!user) resetAnonymousTurnstile();
       const errorBody = await readFunctionInvokeErrorBody(err);
       const errorCode = typeof errorBody?.error === "string" ? errorBody.error : null;
 
-      if (errorCode === "pro_required" || errorCode === "free_limit_exceeded") {
-        setPaywallReason(errorCode === "pro_required" ? "pro_tier_limit" : "free_limit");
+      if (
+        errorCode === "auth_required" ||
+        errorCode === "subscription_required" ||
+        errorCode === "pro_required" ||
+        errorCode === "free_limit_exceeded"
+      ) {
+        setPaywallReason("trial_required");
         setShowPaywall(true);
         track("paywall_shown", { reason: errorCode, property_type: propertyType });
         return;
@@ -702,7 +569,7 @@ export default function RetroGenerator() {
                 </span>
               </div>
               <RetroButton variant="primary" onClick={handleGenerate} disabled={generateDisabled}>
-                {outputs ? `regenerate (${generationCountLabel})` : "generate"}
+                {outputs ? "regenerate" : "generate"}
               </RetroButton>
             </div>
 
@@ -710,33 +577,16 @@ export default function RetroGenerator() {
               <PhotoAttachmentTray key={photoTrayKey} onPhotosChange={setAttachedPhotos} />
             )}
 
-            <PropertyTypeToggle
-              value={propertyType}
-              onChange={setPropertyType}
-              proTierUsed={proTierGenerationsUsed >= FREE_PRO_TIER_LIMIT}
-              isProUser={isProUser}
-            />
-
-            {hasMounted && anonymousTurnstileRequired && (
-              <div className="flex justify-center">
-                <TurnstileWidget
-                  key={turnstileWidgetKey}
-                  siteKey={TURNSTILE_SITE_KEY!}
-                  onVerify={handleTurnstileVerify}
-                  onExpire={handleTurnstileExpire}
-                />
-              </div>
-            )}
+            <PropertyTypeToggle value={propertyType} onChange={setPropertyType} />
 
             <div className="flex gap-3 text-win95-11 justify-center text-muted-foreground flex-wrap items-center">
               <span>fha trained</span>
               <span>real property research</span>
               <span>
-                {isProUser ? "unlimited generations" : "10 free generations, 1 Pro-tier included"}
+                {isProUser
+                  ? "unlimited generations"
+                  : "7-day free Pro trial (card required) · cancel anytime"}
               </span>
-              {!user && !isProUser && selectedProTier && (
-                <span>{proTierGenerationsLeft} Pro-tier left</span>
-              )}
             </div>
           </div>
         </RetroWindow>
@@ -887,11 +737,9 @@ export default function RetroGenerator() {
                   <RetroButton
                     variant="primary"
                     onClick={handleGenerate}
-                    disabled={
-                      generateDisabled || (!devBypassActive && !isProUser && generationsLeft <= 0)
-                    }
+                    disabled={generateDisabled}
                   >
-                    regenerate ({generationCountLabel})
+                    regenerate
                   </RetroButton>
                 </div>
               )}
@@ -917,6 +765,9 @@ export default function RetroGenerator() {
             activePromoCode={activePromoCode}
             onClose={() => setShowPaywall(false)}
             onSignIn={() => {
+              if (typeof window !== "undefined") {
+                window.sessionStorage.setItem(PENDING_TRIAL_STORAGE_KEY, "1");
+              }
               setShowPaywall(false);
               setShowAuthModal(true);
             }}
@@ -1013,13 +864,9 @@ export default function RetroGenerator() {
 function PropertyTypeToggle({
   value,
   onChange,
-  proTierUsed,
-  isProUser,
 }: {
   value: PropertyType;
   onChange: (v: PropertyType) => void;
-  proTierUsed: boolean;
-  isProUser: boolean;
 }) {
   const options: { key: PropertyType; label: string; fullName: string }[] = [
     { key: "sfr", label: "SFR", fullName: "Single Family Residential" },
@@ -1039,43 +886,21 @@ function PropertyTypeToggle({
     <div className="flex flex-wrap gap-1">
       {options.map((opt) => {
         const isActive = value === opt.key;
-        const isProTier = isProTierPropertyType(opt.key);
         return (
           <button
             key={opt.key}
             onClick={() => onChange(opt.key)}
-            title={
-              isProTier
-                ? isProUser
-                  ? "Pro tier (included)"
-                  : proTierUsed
-                    ? "0 Pro tier generations left — upgrade to unlock"
-                    : "Pro tier: 1 included free, then Pro"
-                : "Free tier"
-            }
+            title={`${opt.fullName} — Included in Pro & Elite`}
             className={`px-2 py-1 text-win95-11 font-bold cursor-pointer relative group ${
               isActive ? "win95-pressed bg-input" : "win95-raised bg-card"
             }`}
           >
             {opt.label}
-            {isProTier && !isProUser && (
-              <span
-                className={`absolute -top-2.5 -right-1 text-[10px] font-bold leading-none ${
-                  proTierUsed
-                    ? "text-muted-foreground"
-                    : "text-[#FFD700] [text-shadow:1px_1px_0_rgba(0,0,0,0.8)]"
-                }`}
-              >
-                {proTierUsed ? "🔒" : "★"}
-              </span>
-            )}
 
             {/* Win95 style hover tooltip */}
             <div className="absolute bottom-full mb-1 left-1/2 -translate-x-1/2 hidden group-hover:block z-50 bg-[#ffffe1] text-black border border-black p-1 text-[10px] whitespace-nowrap shadow-sm font-normal pointer-events-none">
               <span className="font-bold">{opt.fullName}</span>
-              <span className="text-[9px] text-slate-500 block">
-                {isProTier ? "Pro Tier" : "Free Tier"}
-              </span>
+              <span className="text-[9px] text-slate-500 block">Included in Pro &amp; Elite</span>
             </div>
           </button>
         );
@@ -1123,7 +948,6 @@ function Win95PaywallModal({
     }
   };
 
-  const proTierLimit = reason === "pro_tier_limit";
   const upgradeIntent = reason === "upgrade_intent";
 
   return (
@@ -1131,11 +955,7 @@ function Win95PaywallModal({
       <div className="win95-window w-full max-w-md">
         <div className="win95-titlebar">
           <span className="font-bold text-win95-12">
-            {upgradeIntent
-              ? "Ready to Upgrade?"
-              : proTierLimit
-                ? "Pro-Tier Limit Used"
-                : "Free Generations Used"}
+            {upgradeIntent ? "Upgrade to PLG Pro" : "Start Your 7-Day Free Pro Trial"}
           </span>
           <button
             type="button"
@@ -1147,55 +967,24 @@ function Win95PaywallModal({
           </button>
         </div>
         <div className="p-4 bg-card">
-          {upgradeIntent ? (
-            <>
-              <p className="text-win95-12 mb-2">
-                Ready to take your real estate listings to the next level?
-              </p>
-              <p className="text-win95-11 text-muted-foreground mb-3">
-                Upgrade to Pro to unlock unlimited generations, all property types, and advanced
-                research features.
-              </p>
-            </>
-          ) : proTierLimit ? (
-            <>
-              <p className="text-win95-12 mb-2">
-                You&apos;ve used your included Pro-tier property generation.
-              </p>
-              <p className="text-win95-11 text-muted-foreground mb-3">
-                Free users can use 1 of their 10 generations on MF, STR, MTR, LTR, Estate Sale,
-                Luxury, Commercial, or Lease. Pro makes those unlimited.
-              </p>
-            </>
-          ) : isSignedIn ? (
-            <>
-              <p className="text-win95-12 mb-2">
-                You&apos;ve used your 10 free monthly generations.
-              </p>
-              <p className="text-win95-11 text-muted-foreground mb-3">
-                Pro removes the cap and keeps generation unlimited.
-              </p>
-            </>
-          ) : (
-            <>
-              <p className="text-win95-12 mb-2">
-                You&apos;ve used your 10 free anonymous generations.
-              </p>
-              <p className="text-win95-11 text-muted-foreground mb-3">
-                Create an account for 10 free generations each month, or upgrade to Pro for
-                unlimited volume.
-              </p>
-            </>
-          )}
+          <p className="text-win95-12 mb-2">
+            {upgradeIntent
+              ? "Unlock unlimited listing copy, Research+ dossiers, and official FHA certificates."
+              : "Try PLG Pro free for 7 days — unlimited generations across all 11 property types."}
+          </p>
+          <p className="text-win95-11 text-muted-foreground mb-3">
+            Credit card required to start your 7-day trial ($49/mo or $39/mo billed annually
+            afterward). Cancel anytime before day 7.
+          </p>
 
           <div className="win95-inset bg-input p-2 mb-4">
-            <p className="text-win95-12 font-bold mb-2">Pro includes:</p>
+            <p className="text-win95-12 font-bold mb-2">Pro (7-day free trial) includes:</p>
             <ul className="text-win95-11 space-y-1">
-              <li>* Unlimited generations</li>
-              <li>* Unlimited Pro-tier property types</li>
+              <li>* Unlimited generations across all 11 property types</li>
+              <li>* Research+ property &amp; neighborhood intelligence</li>
+              <li>* Official FHA compliance certificates (PDF)</li>
               <li>* Listing history &amp; portfolio</li>
-              <li>* Real property research</li>
-              <li>* FHA compliance checks</li>
+              <li>* Connect PLG to Claude via MCP</li>
             </ul>
           </div>
 
@@ -1212,7 +1001,7 @@ function Win95PaywallModal({
 
           {!isSignedIn && (
             <p className="text-win95-11 text-muted-foreground text-center mb-3">
-              Sign in or create an account before checkout.
+              Sign in or create an account first, then enter your card to start the 7-day trial.
             </p>
           )}
 
@@ -1223,12 +1012,20 @@ function Win95PaywallModal({
                 onClick={() => handleCheckout("month")}
                 disabled={loading !== null}
               >
-                {loading === "month" ? "Loading..." : "Pro $49/mo"}
+                {loading === "month"
+                  ? "Loading..."
+                  : isSignedIn
+                    ? "Start 7-Day Free Trial ($49/mo after)"
+                    : "Sign In & Start 7-Day Trial ($49/mo)"}
               </RetroButton>
             </div>
             <div className="flex gap-2 justify-center">
               <RetroButton onClick={() => handleCheckout("year")} disabled={loading !== null}>
-                {loading === "year" ? "Loading..." : "Pro $39/mo — billed annually"}
+                {loading === "year"
+                  ? "Loading..."
+                  : isSignedIn
+                    ? "Start 7-Day Free Trial ($39/mo billed annually)"
+                    : "Sign In & Start 7-Day Trial ($39/mo annual)"}
               </RetroButton>
             </div>
           </div>
@@ -1242,7 +1039,9 @@ function Win95PaywallModal({
                 Sign in / create account
               </button>
             ) : (
-              <span className="text-win95-11 text-muted-foreground">Cancel anytime</span>
+              <span className="text-win95-11 text-muted-foreground">
+                Cancel anytime before day 7
+              </span>
             )}
             <RetroButton onClick={onClose}>Cancel</RetroButton>
           </div>
@@ -1262,7 +1061,7 @@ function HowItWorks() {
     {
       n: "2.",
       title: "Pick property type",
-      body: "SFR and FSBO are free-tier. One Pro-tier property generation is included; Pro unlocks unlimited MF, STR, MTR, LTR, Estate Sale, Luxury, Commercial, and Lease.",
+      body: "All 11 property types are included: SFR, FSBO, Rowhouse, Multi-Family, STR, MTR, LTR, Estate Sale, Luxury, Commercial, and Lease.",
     },
     {
       n: "3.",
@@ -1271,8 +1070,8 @@ function HowItWorks() {
     },
     {
       n: "4.",
-      title: "Use 10 free, then go Pro",
-      body: "Anonymous users get 10 generations total. Signed-in free accounts get 10 per month. Each free allowance includes 1 Pro-tier generation.",
+      title: "Start a 7-day free Pro trial",
+      body: "Get unlimited generations, Research+ neighborhood intelligence, and official FHA certificates. Card required; cancel anytime.",
     },
   ];
   return (

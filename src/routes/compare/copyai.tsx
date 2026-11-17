@@ -55,7 +55,11 @@ const FEATURES = [
     plg: "Purpose-built for agents",
     rival: "None — SaaS/e-commerce focused",
   },
-  { feature: "Free tier", plg: "10 free generations", rival: "Free plan with limits" },
+  {
+    feature: "Free trial",
+    plg: "7-day free Pro trial (card required)",
+    rival: "Free plan with limits",
+  },
   { feature: "Pro price", plg: "$49/mo ($39/mo annual)", rival: "$49/mo+" },
 ];
 
@@ -177,7 +181,7 @@ function VsCopyAI() {
                   type="button"
                   className="win95-raised px-4 py-1 text-win95-12 font-bold cursor-pointer active:win95-pressed"
                 >
-                  Try PLG Free
+                  Start 7-Day Free Trial
                 </button>
               </Link>
               <Link to="/compare">

@@ -22,6 +22,23 @@ export function defaultDeps(): CreateCheckoutDeps {
       };
     },
 
+    async hasPriorSubscription(userId: string): Promise<boolean> {
+      const supabase = createClient(
+        Deno.env.get("SUPABASE_URL")!,
+        Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!,
+      );
+      const { data, error } = await supabase
+        .from("subscriptions")
+        .select("id")
+        .eq("user_id", userId)
+        .limit(1);
+      if (error) {
+        // Fail closed on trial eligibility if DB lookup errors so we don't grant repeat trials.
+        return true;
+      }
+      return (data?.length ?? 0) > 0;
+    },
+
     async createStripeSession(params, stripeKey): Promise<StripeSessionResult> {
       const stripeRes = await fetch("https://api.stripe.com/v1/checkout/sessions", {
         method: "POST",

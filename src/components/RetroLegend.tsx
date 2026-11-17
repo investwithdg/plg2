@@ -29,13 +29,15 @@ const SECTIONS: { title: string; body: ReactNode }[] = [
     ),
   },
   {
-    title: "Free vs Pro",
+    title: "Plans & 7-Day Trial",
     body: (
       <p>
-        10 free generations. <span className="font-bold">SFR</span>,{" "}
-        <span className="font-bold">FSBO</span>, and <span className="font-bold">ROW</span> are
-        always free. Types marked with <span className="font-bold">★</span> (MF, STR, MTR, LTR,
-        Estate, Commercial, Lease) require Pro.
+        All 11 property types (<span className="font-bold">SFR</span>,{" "}
+        <span className="font-bold">FSBO</span>, <span className="font-bold">ROW</span>,{" "}
+        <span className="font-bold">MF</span>, <span className="font-bold">STR</span>,{" "}
+        <span className="font-bold">MTR</span>, <span className="font-bold">LTR</span>, Estate,
+        Luxury, Commercial, Lease) are included in Pro ($49/mo with a 7-day free trial, card
+        required) and Elite ($99/mo).
       </p>
     ),
   },

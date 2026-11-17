@@ -56,7 +56,7 @@ function VsGrammarly() {
                   type="button"
                   className="win95-raised px-4 py-1 text-win95-12 font-bold cursor-pointer active:win95-pressed"
                 >
-                  Try PLG Free
+                  Start 7-Day Free Trial
                 </button>
               </Link>
               <Link to="/compare">

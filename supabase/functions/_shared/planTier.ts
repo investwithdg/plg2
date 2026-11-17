@@ -13,14 +13,27 @@ export interface SubscriptionRow {
 /**
  * Given the caller's `subscriptions` rows (any shape returned by
  * `.select("plan, status").eq("user_id", id)`), resolves their effective plan tier.
- * Mirrors usePlanTier.ts: only rows with status "active" count. A user should only ever
- * have one active row (see the `subscriptions_user_active_idx` partial unique index), but
- * if more than one is ever active, elite wins over pro rather than depending on row order.
+ * Mirrors usePlanTier.ts: rows with status "active" or "trialing" count. A user should
+ * only ever have one active row (see the `subscriptions_user_active_idx` partial unique
+ * index), but if more than one is ever active, elite wins over pro rather than depending
+ * on row order.
  */
+function normalizePlanName(plan: string | null | undefined): PlanTier {
+  if (typeof plan !== "string") return "free";
+  const cleaned = plan.trim().toLowerCase();
+  if (cleaned.startsWith("elite")) return "elite";
+  if (cleaned.startsWith("pro")) return "pro";
+  return "free";
+}
+
 export function resolvePlanTier(rows: SubscriptionRow[] | null | undefined): PlanTier {
-  const activeRows = rows?.filter((row) => row.status === "active") ?? [];
-  if (activeRows.some((row) => row.plan === "elite")) return "elite";
-  if (activeRows.some((row) => row.plan === "pro")) return "pro";
+  const activeRows =
+    rows?.filter((row) => {
+      const status = row.status?.trim().toLowerCase();
+      return status === "active" || status === "trialing";
+    }) ?? [];
+  if (activeRows.some((row) => normalizePlanName(row.plan) === "elite")) return "elite";
+  if (activeRows.some((row) => normalizePlanName(row.plan) === "pro")) return "pro";
   return "free";
 }
 

@@ -8,17 +8,17 @@ import { toast as sonnerToast } from "sonner";
 export const Route = createFileRoute("/pricing")({
   head: () => ({
     meta: [
-      { title: "PLG Pricing — Free, Pro & Elite Plans" },
+      { title: "PLG Pricing — Pro (7-Day Free Trial) & Elite Plans" },
       {
         name: "description",
         content:
-          "PropertyListingGenerator.com pricing: 10 free generations, Pro at $49/mo for unlimited generations, or Elite at $99/mo with Vision+ photo analysis and custom brand voice.",
+          "PropertyListingGenerator.com pricing: Pro at $49/mo with a 7-day free trial (card required) for unlimited generations, or Elite at $99/mo with Vision+ photo analysis and custom brand voice.",
       },
-      { property: "og:title", content: "PLG Pricing — Free, Pro & Elite Plans" },
+      { property: "og:title", content: "PLG Pricing — Pro (7-Day Free Trial) & Elite Plans" },
       {
         property: "og:description",
         content:
-          "Free: 10 generations. Pro: $49/mo unlimited. Elite: $99/mo with Vision+ photo analysis and brand voice.",
+          "Pro: 7-day free trial, then $49/mo unlimited. Elite: $99/mo with Vision+ photo analysis and brand voice.",
       },
       { property: "og:url", content: "https://propertylistinggenerator.com/pricing" },
     ],
@@ -30,9 +30,32 @@ export const Route = createFileRoute("/pricing")({
 function Pricing() {
   const { user } = useAuth();
   const { plan } = usePlanTier(user);
-  const isProUser = plan === "pro" || plan === "elite";
   const isEliteUser = plan === "elite";
+  const [proLoading, setProLoading] = useState(false);
   const [eliteLoading, setEliteLoading] = useState(false);
+
+  const handleProTrialCheckout = async () => {
+    if (!user) {
+      window.location.href = "/?upgrade=true";
+      return;
+    }
+    setProLoading(true);
+    try {
+      const { data, error } = await supabase.functions.invoke("create-checkout", {
+        body: { interval: "month", plan: "pro" },
+      });
+      if (error) throw error;
+      if (data?.url) {
+        window.location.href = data.url;
+      } else {
+        throw new Error("No checkout URL returned");
+      }
+    } catch (err) {
+      console.error("Pro checkout error:", err);
+      sonnerToast.error("Failed to start Pro trial checkout");
+      setProLoading(false);
+    }
+  };
 
   const handleEliteCheckout = async () => {
     if (!user) {
@@ -71,102 +94,17 @@ function Pricing() {
             </div>
           </div>
           <div className="p-4">
-            <h1 className="text-win95-16 font-bold mb-2">Simple pricing. No surprises.</h1>
+            <h1 className="text-win95-16 font-bold mb-2">Simple pricing. 7-day free trial.</h1>
             <p className="text-win95-12">
-              Start free. Upgrade when you need unlimited volume and unlimited Pro-tier property
-              types. Every plan includes FHA-compliant copy and real property research.
+              Start Pro with a 7-day free trial (card required), or go straight to Elite for Vision+
+              photo analysis and custom brand voice. Every plan includes unlimited generations
+              across all 11 property types and FHA-compliant copy.
             </p>
           </div>
         </div>
 
         {/* Pricing cards side by side */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-          {/* Free plan */}
-          <div className="win95-window flex flex-col h-full">
-            <div
-              className="win95-titlebar"
-              style={{
-                background: "linear-gradient(to right, #000080, #1084d0)",
-                color: "white",
-              }}
-            >
-              <span className="font-bold text-win95-12 truncate pl-1">Free Plan</span>
-            </div>
-            <div className="p-4 space-y-3 flex flex-col flex-1">
-              <div className="text-center">
-                <span className="text-win95-16 font-bold">$0</span>
-                <span className="text-win95-11 text-muted-foreground"> / month</span>
-                <div className="text-[10px] text-transparent mt-0.5 pointer-events-none">
-                  spacer
-                </div>
-              </div>
-              <div className="win95-inset p-3 flex-grow">
-                <ul className="space-y-1.5 text-win95-11">
-                  <li className="flex gap-2">
-                    <span className="font-bold text-[#000080]">+</span>
-                    <span>10 free generations</span>
-                  </li>
-                  <li className="flex gap-2">
-                    <span className="font-bold text-[#000080]">+</span>
-                    <span>Signed-in accounts reset monthly</span>
-                  </li>
-                  <li className="flex gap-2">
-                    <span className="font-bold text-[#000080]">+</span>
-                    <span>SFR + FSBO included</span>
-                  </li>
-                  <li className="flex gap-2">
-                    <span className="font-bold text-[#000080]">+</span>
-                    <span>1 Pro-tier property generation included</span>
-                  </li>
-                  <li className="flex gap-2">
-                    <span className="font-bold text-[#000080]">+</span>
-                    <span>MLS, Social, Email copy</span>
-                  </li>
-                  <li className="flex gap-2">
-                    <span className="font-bold text-[#000080]">+</span>
-                    <span>FHA Fair Housing compliant</span>
-                  </li>
-                  <li className="flex gap-2">
-                    <span className="font-bold text-[#000080]">+</span>
-                    <span>Automated property research</span>
-                  </li>
-                  <li className="flex gap-2 text-muted-foreground">
-                    <span className="font-bold">-</span>
-                    <span>Unlimited generation volume</span>
-                  </li>
-                  <li className="flex gap-2 text-muted-foreground">
-                    <span className="font-bold">-</span>
-                    <span>Unlimited Pro-tier property types</span>
-                  </li>
-                  <li className="flex gap-2 text-muted-foreground">
-                    <span className="font-bold">-</span>
-                    <span>Priority support</span>
-                  </li>
-                </ul>
-              </div>
-              <div className="text-center pt-1 mt-auto">
-                {user && !isProUser ? (
-                  <button
-                    type="button"
-                    disabled
-                    className="win95-raised px-4 py-1 text-win95-12 font-bold cursor-default opacity-60"
-                  >
-                    Current Plan
-                  </button>
-                ) : (
-                  <Link to="/">
-                    <button
-                      type="button"
-                      className="win95-raised px-4 py-1 text-win95-12 font-bold cursor-pointer active:win95-pressed"
-                    >
-                      Start Free
-                    </button>
-                  </Link>
-                )}
-              </div>
-            </div>
-          </div>
-
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           {/* Pro plan */}
           <div className="win95-window flex flex-col h-full">
             <div
@@ -177,21 +115,23 @@ function Pricing() {
               }}
             >
               <span className="font-bold text-win95-12 truncate pl-1">Pro Plan</span>
-              <span className="text-win95-11 opacity-90">unlimited</span>
+              <span className="text-win95-11 opacity-90">7-day free trial</span>
             </div>
             <div className="p-4 space-y-3 flex flex-col flex-1">
               <div className="text-center">
                 <span className="text-win95-16 font-bold">$49</span>
                 <span className="text-win95-11 text-muted-foreground"> / month</span>
                 <div className="text-[10px] text-muted-foreground mt-0.5">
-                  or $39/mo billed annually
+                  7-day free trial (card required) · or $39/mo billed annually
                 </div>
               </div>
               <div className="win95-inset p-3 flex-grow">
                 <ul className="space-y-1.5 text-win95-11">
                   <li className="flex gap-2">
                     <span className="font-bold text-[#800000]">+</span>
-                    <span>Everything in Free, plus:</span>
+                    <span>
+                      <strong>7-day free trial</strong> (card required, cancel anytime)
+                    </span>
                   </li>
                   <li className="flex gap-2">
                     <span className="font-bold text-[#800000]">+</span>
@@ -199,13 +139,16 @@ function Pricing() {
                   </li>
                   <li className="flex gap-2">
                     <span className="font-bold text-[#800000]">+</span>
-                    <span>Unlimited Pro-tier property types</span>
+                    <span>All 11 property types (SFR, MF, STR, MTR, LTR, Commercial, etc.)</span>
                   </li>
-
+                  <li className="flex gap-2">
+                    <span className="font-bold text-[#800000]">+</span>
+                    <span>MLS, Social, Email copy + FHA compliance certificates</span>
+                  </li>
                   <li className="flex gap-2">
                     <span className="font-bold text-[#800000]">+</span>
                     <span>
-                      <strong>Research+</strong> — property & neighborhood data
+                      <strong>Research+</strong> — property &amp; neighborhood data
                     </span>
                   </li>
                   <li className="flex gap-2">
@@ -238,15 +181,15 @@ function Pricing() {
                     Current Plan
                   </button>
                 ) : (
-                  <a href="/?upgrade=true">
-                    <button
-                      type="button"
-                      className="win95-raised px-4 py-1 text-win95-12 font-bold cursor-pointer active:win95-pressed"
-                      style={{ color: "#800000" }}
-                    >
-                      Go Pro
-                    </button>
-                  </a>
+                  <button
+                    type="button"
+                    onClick={handleProTrialCheckout}
+                    disabled={proLoading}
+                    className="win95-raised px-4 py-1 text-win95-12 font-bold cursor-pointer active:win95-pressed"
+                    style={{ color: "#800000" }}
+                  >
+                    {proLoading ? "Loading..." : "Start 7-Day Free Trial"}
+                  </button>
                 )}
               </div>
             </div>
@@ -281,7 +224,7 @@ function Pricing() {
                   <li className="flex gap-2">
                     <span className="font-bold text-[#404040]">+</span>
                     <span>
-                      <strong>Vision+</strong> — photo analysis & feature extraction
+                      <strong>Vision+</strong> — photo analysis &amp; feature extraction
                     </span>
                   </li>
                   <li className="flex gap-2">
@@ -336,20 +279,28 @@ function Pricing() {
           </div>
           <div className="p-4 space-y-3">
             <div>
-              <p className="text-win95-12 font-bold">
-                What property types are included in each plan?
-              </p>
+              <p className="text-win95-12 font-bold">How does the 7-day free Pro trial work?</p>
               <p className="text-win95-11 text-muted-foreground">
-                Free includes SFR and FSBO, plus 1 Pro-tier property generation from MF, STR, MTR,
-                LTR, Estate Sale, Luxury, Commercial, or Lease. Pro removes both the generation cap
-                and the Pro-tier cap.
+                Create an account and enter a payment method to start a 7-day free trial of Pro. You
+                get unlimited generations across all 11 property types, Research+ dossiers, and FHA
+                compliance certificates. Cancel anytime before day 7 and you won&apos;t be charged.
               </p>
             </div>
             <div>
-              <p className="text-win95-12 font-bold">Can I cancel Pro?</p>
+              <p className="text-win95-12 font-bold">
+                What property types are included in Pro and Elite?
+              </p>
               <p className="text-win95-11 text-muted-foreground">
-                Yes. Cancel anytime from the Stripe customer portal. Your account returns to the
-                Free plan after the paid period ends.
+                All 11 property types — SFR, FSBO, Rowhouse/Condo, Multi-Family, STR, MTR, LTR,
+                Estate Sale, Luxury, Commercial, and Lease — are unlimited on both Pro (including
+                during the 7-day trial) and Elite.
+              </p>
+            </div>
+            <div>
+              <p className="text-win95-12 font-bold">Can I cancel anytime?</p>
+              <p className="text-win95-11 text-muted-foreground">
+                Yes. Cancel anytime from the Stripe customer portal. Access continues through the
+                end of your trial or current billing period, with no further charges.
               </p>
             </div>
             <div>
@@ -358,14 +309,6 @@ function Pricing() {
                 Every listing generated by PLG is screened to avoid language that violates the Fair
                 Housing Act — discriminatory terms, steering language, and restricted phrases are
                 automatically filtered out.
-              </p>
-            </div>
-            <div>
-              <p className="text-win95-12 font-bold">Do I need to sign up to use the free tier?</p>
-              <p className="text-win95-11 text-muted-foreground">
-                No. You can generate 10 listings without an account, including 1 Pro-tier property
-                type. Sign up to get 10 free generations per month with 1 monthly Pro-tier sample
-                and keep your listing history.
               </p>
             </div>
           </div>

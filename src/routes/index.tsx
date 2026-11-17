@@ -8,7 +8,7 @@ export const Route = createFileRoute("/")({
       {
         name: "description",
         content:
-          "Paste an address or Zillow link. Get FHA-compliant MLS, social, and email copy in 30 seconds. 10 free generations, no sign-up required.",
+          "Paste an address or Zillow link. Get FHA-compliant MLS, social, and email copy in 30 seconds. Start with a 7-day free Pro trial.",
       },
       {
         property: "og:title",

@@ -110,7 +110,7 @@ function UserHubPage() {
                           : "text-[#000080]"
                     }`}
                   >
-                    {plan?.toUpperCase() || "FREE"}
+                    {plan === "free" ? "NO ACTIVE PLAN" : plan.toUpperCase()}
                   </span>
                 </div>
               </div>
@@ -148,11 +148,12 @@ function UserHubPage() {
                 ) : (
                   <>
                     <p className="text-win95-11 text-slate-700 max-w-md">
-                      Upgrade to PLG Pro for unlimited generations, advanced property research,
-                      detailed school directories, and Fair Housing Act compliance reviews.
+                      Start a 7-day free Pro trial (card required) for unlimited generations,
+                      Research+ property intelligence, detailed school directories, and Fair Housing
+                      Act compliance certificates.
                     </p>
                     <Link to="/pricing">
-                      <RetroButton variant="primary">Upgrade to Pro</RetroButton>
+                      <RetroButton variant="primary">Start 7-Day Free Trial</RetroButton>
                     </Link>
                   </>
                 )}

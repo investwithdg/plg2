@@ -38,7 +38,11 @@ const FEATURES = [
   { feature: "Email copy", plg: "Yes — buyer list blurbs", rival: "No" },
   { feature: "Input method", plg: "Paste an address or URL", rival: "Type a prompt in the editor" },
   { feature: "Real estate expertise", plg: "Purpose-built", rival: "None" },
-  { feature: "Free tier", plg: "10 free generations", rival: "Limited Magic Write uses" },
+  {
+    feature: "Free trial",
+    plg: "7-day free Pro trial (card required)",
+    rival: "Limited Magic Write uses",
+  },
   { feature: "Pro price", plg: "$49/mo ($39/mo annual)", rival: "$13/mo (Canva Pro)" },
 ];
 
@@ -134,7 +138,7 @@ function VsCanva() {
                   type="button"
                   className="win95-raised px-4 py-1 text-win95-12 font-bold cursor-pointer active:win95-pressed"
                 >
-                  Try PLG Free
+                  Start 7-Day Free Trial
                 </button>
               </Link>
               <Link to="/compare">

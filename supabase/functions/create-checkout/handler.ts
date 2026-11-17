@@ -12,8 +12,11 @@ export interface StripeSessionResult {
   session: { id?: string; url?: string; error?: { message?: string } };
 }
 
+export const PRO_TRIAL_DAYS = 7;
+
 export interface CreateCheckoutDeps {
   verifyCaller: (authHeader: string | null) => Promise<VerifyCallerResult>;
+  hasPriorSubscription?: (userId: string) => Promise<boolean>;
   createStripeSession: (params: URLSearchParams, stripeKey: string) => Promise<StripeSessionResult>;
   log: (step: string, data?: Record<string, unknown>) => void;
 }
@@ -75,7 +78,19 @@ export async function handleRequest(req: Request, deps: CreateCheckoutDeps): Pro
     params.set("metadata[plan]", plan);
     params.set("subscription_data[metadata][user_id]", userId);
     params.set("subscription_data[metadata][plan]", plan);
+    params.set("payment_method_collection", "always");
     params.set("allow_promotion_codes", "true");
+
+    // Grant a 7-day card-required trial on first-time Pro checkout.
+    if (plan === "pro") {
+      const alreadySubscribed = deps.hasPriorSubscription
+        ? await deps.hasPriorSubscription(userId)
+        : false;
+      if (!alreadySubscribed) {
+        params.set("subscription_data[trial_period_days]", String(PRO_TRIAL_DAYS));
+      }
+    }
+
     if (userEmail) {
       params.set("customer_email", userEmail);
     }
