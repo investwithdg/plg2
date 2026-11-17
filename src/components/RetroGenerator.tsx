@@ -146,6 +146,30 @@ export default function RetroGenerator() {
   // this stays a clean upsell surface rather than a locked/disabled control.
   const isEliteUser = plan === "elite" && !!user;
 
+  // Sync signed-in free user generation usage with Supabase properties table
+  useEffect(() => {
+    if (!user || isProUser) return;
+    let cancelled = false;
+
+    (async () => {
+      const sinceWindow = new Date(Date.now() - 30 * 86400_000).toISOString();
+      const { count, error } = await supabase
+        .from("properties")
+        .select("id", { count: "exact", head: true })
+        .eq("user_id", user.id)
+        .neq("status", "error")
+        .gte("created_at", sinceWindow);
+
+      if (!cancelled && !error && count !== null) {
+        setGenerationsUsed(count);
+      }
+    })();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [user, isProUser]);
+
   // Files currently sitting in the attachment tray (pre-upload), plus a key we
   // bump to remount — and therefore clear — the tray after a successful submit.
   const [attachedPhotos, setAttachedPhotos] = useState<File[]>([]);
@@ -160,6 +184,7 @@ export default function RetroGenerator() {
     social: "",
     email: "",
   });
+  const trackedGenerationPropertyIdRef = useRef<string | null>(null);
 
   const {
     status,
@@ -179,8 +204,8 @@ export default function RetroGenerator() {
   const selectedProTier = isProTierPropertyType(propertyType);
   const generationsLeft = Math.max(0, MAX_GENERATIONS - generationsUsed);
   const proTierGenerationsLeft = Math.max(0, FREE_PRO_TIER_LIMIT - proTierGenerationsUsed);
-  const generationCountLabel =
-    user || devBypassActive || isProUser ? "unlimited" : `${generationsLeft} left`;
+  const isUnlimited = devBypassActive || isProUser;
+  const generationCountLabel = isUnlimited ? "unlimited" : `${generationsLeft} left`;
   const anonymousTurnstileRequired = Boolean(!user && !devBypassActive && TURNSTILE_SITE_KEY);
   const generateDisabled =
     showProgress || !query.trim() || (anonymousTurnstileRequired && !turnstileToken);
@@ -350,8 +375,11 @@ export default function RetroGenerator() {
         }
       }
 
-      track("generation_completed", { property_type: propertyType, property_id: propertyId });
-      fireLoopsEvent("generation_created", { property_type: propertyType });
+      if (propertyId && trackedGenerationPropertyIdRef.current !== propertyId) {
+        trackedGenerationPropertyIdRef.current = propertyId;
+        track("generation_completed", { property_type: propertyType, property_id: propertyId });
+        fireLoopsEvent("generation_created", { property_type: propertyType });
+      }
     }
   }, [
     status,
@@ -449,8 +477,10 @@ export default function RetroGenerator() {
           void attachPhotos(data.propertyId as string, user.id, pendingPhotos);
         }
 
-        if (!user) {
+        if (!isProUser) {
           setGenerationsUsed((prev) => prev + 1);
+        }
+        if (!user) {
           if (selectedProTier) setProTierGenerationsUsed((prev) => prev + 1);
           resetAnonymousTurnstile();
         }
@@ -523,10 +553,13 @@ export default function RetroGenerator() {
 
   const onDownloadAll = () => {
     if (!outputs) return;
-    const allText = `MLS Description:\n${outputs.mls}\n\nSocial Post:\n${outputs.social}\n\nEmail:\n${outputs.email}`;
+    const copies = activeEditedCopiesRef.current;
+    const mlsText = copies.mls || (typeof outputs.mls === "string" ? outputs.mls : "");
+    const socialText = copies.social || (typeof outputs.social === "string" ? outputs.social : "");
+    const emailText = copies.email || (typeof outputs.email === "string" ? outputs.email : "");
+    const allText = `MLS Description:\n${mlsText}\n\nSocial Post:\n${socialText}\n\nEmail:\n${emailText}`;
     onDownload(allText, "all", "all");
   };
-
   const handleAuth = async (email: string, password: string, mode: "signin" | "signup") => {
     if (mode === "signin") return signIn(email, password);
     const { error, isNewUser } = await signUp(email, password);
@@ -855,7 +888,7 @@ export default function RetroGenerator() {
                     variant="primary"
                     onClick={handleGenerate}
                     disabled={
-                      generateDisabled || (!devBypassActive && !user && generationsLeft <= 0)
+                      generateDisabled || (!devBypassActive && !isProUser && generationsLeft <= 0)
                     }
                   >
                     regenerate ({generationCountLabel})

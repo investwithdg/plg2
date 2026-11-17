@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, cloneElement, isValidElement } from "react";
 import type { ReactNode } from "react";
 import {
   MLS_LIMIT_PRESETS,
@@ -10,9 +10,10 @@ import {
 import { RetroButton } from "@/components/retro";
 
 export type OutputTabKey = "mls" | "social" | "email" | "research";
+export type OutputTabContent = ReactNode | ((props: { isProUser: boolean }) => ReactNode);
 
 type OutputTabsWindowProps = {
-  outputs: Partial<Record<OutputTabKey, ReactNode>>;
+  outputs: Partial<Record<OutputTabKey, OutputTabContent>>;
   initialTab?: OutputTabKey;
   onTabChange?: (tab: OutputTabKey) => void;
   headerRight?: ReactNode;
@@ -285,7 +286,15 @@ export default function OutputTabsWindow({
             </div>
           </div>
         ) : (
-          <div className="win95-inset bg-input p-3">{outputs.research}</div>
+          <div className="win95-inset bg-input p-3">
+            {typeof outputs.research === "function"
+              ? (outputs.research as (props: { isProUser: boolean }) => ReactNode)({ isProUser })
+              : isValidElement(outputs.research)
+                ? cloneElement(outputs.research as React.ReactElement<{ isProUser?: boolean }>, {
+                    isProUser,
+                  })
+                : outputs.research}
+          </div>
         )}
 
         {renderActions?.(activeTab, currentText)}

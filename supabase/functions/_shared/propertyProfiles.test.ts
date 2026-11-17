@@ -6,7 +6,7 @@ import { getProfile, PROFILES } from "./propertyProfiles.ts";
 Deno.test("PROFILES: every key has all required fields", () => {
   const requiredKeys = [
     "sfr", "mf", "str", "mtr", "ltr", "fsbo",
-    "estate", "lux", "commercial", "lease", "row",
+    "estate", "lux", "commercial", "lease", "row", "land",
   ];
   for (const key of requiredKeys) {
     const profile = PROFILES[key];
@@ -47,6 +47,19 @@ Deno.test("getProfile: 'luxury' alias resolves to lux profile", () => {
   assertEquals(getProfile("lux").label, "Luxury Property");
 });
 
+Deno.test("getProfile: 'lot' alias resolves to land profile", () => {
+  assertEquals(getProfile("lot").label, "Land / Lot");
+  assertEquals(getProfile("land").label, "Land / Lot");
+});
+
+Deno.test("getProfile: multi_family, vacation_rental, and residential aliases resolve correctly", () => {
+  assertEquals(getProfile("multi_family").label, "Multi-Family");
+  assertEquals(getProfile("multi-family").label, "Multi-Family");
+  assertEquals(getProfile("vacation_rental").label, "Short-Term Rental");
+  assertEquals(getProfile("short-term rental").label, "Short-Term Rental");
+  assertEquals(getProfile("residential").label, "Single Family Residential");
+});
+
 // ─── Commercial skips schools ──────────────────────────────────────────────
 
 Deno.test("commercial profile has includeSchools === false", () => {
@@ -63,8 +76,8 @@ Deno.test("str profile has includeSchools === false", () => {
 
 // ─── Residential types include schools ─────────────────────────────────────
 
-Deno.test("sfr/mf/ltr/fsbo/estate/lux/row/mtr include schools", () => {
-  const schoolTypes = ["sfr", "mf", "ltr", "fsbo", "estate", "lux", "row", "mtr"];
+Deno.test("sfr/mf/ltr/fsbo/estate/lux/row/mtr/land include schools", () => {
+  const schoolTypes = ["sfr", "mf", "ltr", "fsbo", "estate", "lux", "row", "mtr", "land"];
   for (const key of schoolTypes) {
     assertEquals(PROFILES[key].enrichment.includeSchools, true, `${key} should includeSchools`);
   }
@@ -75,7 +88,7 @@ Deno.test("sfr/mf/ltr/fsbo/estate/lux/row/mtr include schools", () => {
 Deno.test("enrichment.userPrompt includes the address for every profile", () => {
   const testAddr = "123 Test St, Austin, TX";
   for (const [key, profile] of Object.entries(PROFILES)) {
-    if (key === "luxury") continue; // alias, skip
+    if (key === "luxury" || key === "lot") continue; // alias, skip
     const result = profile.enrichment.userPrompt(testAddr);
     assertEquals(typeof result, "string", `${key}: userPrompt must return string`);
     assertEquals(result.includes(testAddr), true, `${key}: userPrompt must include the address`);
