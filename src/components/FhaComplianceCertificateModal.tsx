@@ -30,24 +30,25 @@ export default function FhaComplianceCertificateModal({
   if (!isOpen) return null;
 
   // Safe audit date calculation
-  let auditDate = new Date().toLocaleString("en-US", {
-    timeZoneName: "short",
-    dateStyle: "medium",
-    timeStyle: "medium",
-  });
+  let auditDate = "Nov 16, 2026, 12:00:00 PM PST";
   try {
-    if (property?.created_at) {
-      const d = new Date(property.created_at);
-      if (!isNaN(d.getTime())) {
-        auditDate = d.toLocaleString("en-US", {
-          timeZoneName: "short",
-          dateStyle: "medium",
-          timeStyle: "medium",
-        });
-      }
-    }
+    const rawDate = property?.created_at ? new Date(property.created_at) : new Date();
+    const d = !isNaN(rawDate.getTime()) ? rawDate : new Date();
+    auditDate = d.toLocaleString("en-US", {
+      month: "short",
+      day: "numeric",
+      year: "numeric",
+      hour: "numeric",
+      minute: "numeric",
+      second: "numeric",
+      timeZoneName: "short",
+    });
   } catch {
-    /* fallback to current date */
+    try {
+      auditDate = new Date().toLocaleString("en-US");
+    } catch {
+      auditDate = new Date().toISOString();
+    }
   }
 
   const auditId = property?.id
@@ -106,7 +107,15 @@ export default function FhaComplianceCertificateModal({
       onUpgradeIntent();
       return;
     }
-    window.print();
+    try {
+      window.print();
+    } catch (err) {
+      console.error("Certificate print failed:", err);
+      sonnerToast.error("Direct printing blocked by browser sandbox", {
+        description:
+          "Please open this page directly in a new tab or use your browser's Print command.",
+      });
+    }
   };
 
   const handleCopyAuditId = () => {

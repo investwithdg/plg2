@@ -7,7 +7,14 @@ import {
   aggregatePhotoAnalyses,
   PHOTO_FEATURES_PROMPT_ADDENDUM,
 } from "../_shared/photoAnalysis.ts";
-import { type TokenUsage, pickKey, extractWithPerplexity, enrichWithPerplexity, generateCopy } from "../_shared/llm.ts";
+import {
+  type TokenUsage,
+  pickKey,
+  extractWithPerplexity,
+  enrichWithPerplexity,
+  generateCopy,
+  buildAnchoredAddress,
+} from "../_shared/llm.ts";
 import { parseExistingListingFHA } from "../_shared/fha.ts";
 import { sanitizeForLLM } from "../_shared/security.ts";
 import { resolvePlanTier } from "../_shared/planTier.ts";
@@ -81,12 +88,21 @@ async function updateStep(
 
 // Normalize address to a cache key (lowercase, collapse whitespace, strip unit/apt)
 // Property type is appended so commercial and residential don't share cached enrichments.
-function enrichmentCacheKey(address: string, propertyType?: string): string {
+export function enrichmentCacheKey(address: string, propertyType?: string): string {
   const parts = address.toLowerCase().trim().replace(/\s+/g, " ").split(",");
   // Use city + state + zip (skip street number for neighborhood-level caching)
   const base = parts.length >= 2 ? parts.slice(1).join(",").trim() : parts[0];
   const typeSuffix = propertyType ? `|${propertyType.toLowerCase().trim()}` : "";
   return base + typeSuffix;
+}
+
+export function isValidAmenityList(amenities: unknown): boolean {
+  if (!Array.isArray(amenities) || amenities.length === 0) {
+    return false;
+  }
+  return amenities.some(
+    (item) => item && typeof item === "object" && typeof (item as any).name === "string" && (item as any).name.trim().length > 0
+  );
 }
 
 async function getCachedEnrichment(
@@ -120,6 +136,12 @@ async function getCachedEnrichment(
     return null;
   }
 
+  // Bypass cache if nearby_amenities is missing or empty array (prevent cache poisoning)
+  if (!isValidAmenityList(parsed.nearby_amenities)) {
+    log(propertyId, "enrichment_cache_bypass_empty_amenities", { cacheKey });
+    return null;
+  }
+
   log(propertyId, "enrichment_cache_hit", { cacheKey });
   return {
     parsed,
@@ -134,7 +156,16 @@ async function setCachedEnrichment(
   parsed: Record<string, unknown>,
   raw: unknown,
   propertyType?: string,
+  propertyId?: string,
 ) {
+  // Prevent poisoning the cache with empty amenity results
+  if (!isValidAmenityList(parsed.nearby_amenities)) {
+    if (propertyId) {
+      log(propertyId, "enrichment_cache_skip_empty_amenities", { address, propertyType });
+    }
+    return;
+  }
+
   const cacheKey = enrichmentCacheKey(address, propertyType);
   await supabase.from("enrichment_cache").upsert(
     {
@@ -301,10 +332,22 @@ async function process(propertyId: string, reason?: string) {
       };
     }
 
+    const extractedCity = typeof extracted.city === "string" ? extracted.city : null;
+    const extractedState = typeof extracted.state === "string" ? extracted.state : null;
+    const extractedZip = typeof extracted.zip === "string" ? extracted.zip : null;
+
+    const resolvedAddress = buildAnchoredAddress(
+      extracted.address as string | undefined,
+      safeAddress,
+      extractedCity,
+      extractedState,
+      extractedZip,
+    );
+
     await supabase
       .from("properties")
       .update({
-        address: extracted.address || property.address,
+        address: resolvedAddress || (extracted.address as string) || property.address,
         beds: extracted.beds ?? null,
         baths: extracted.baths ?? null,
         sqft: extracted.sqft ?? null,
@@ -328,7 +371,6 @@ async function process(propertyId: string, reason?: string) {
     // 2) ENRICHMENT (with neighborhood cache)
     failedStep = "enrichment";
     await updateStep(supabase, propertyId, "researching_schools");
-    const resolvedAddress = (extracted.address as string) || safeAddress;
 
     let enrich: Record<string, unknown>;
     let enrichRaw: unknown;
@@ -349,7 +391,7 @@ async function process(propertyId: string, reason?: string) {
       enrichmentUsage = result.usage;
       enrichmentLatency = Date.now() - enrichStart;
       // Cache for future requests in this neighborhood (keyed by property type)
-      await setCachedEnrichment(supabase, resolvedAddress, enrich, enrichRaw, propertyType);
+      await setCachedEnrichment(supabase, resolvedAddress, enrich, enrichRaw, propertyType, propertyId);
     }
 
     log(propertyId, "enrichment_done", {
@@ -371,7 +413,7 @@ async function process(propertyId: string, reason?: string) {
       key_sources: enrich.key_sources ?? null,
       perplexity_raw_response: enrichRaw,
       enrichment_latency_ms: enrichmentLatency,
-      enrichment_model_version: cached ? "cache" : "perplexity-sonar",
+      enrichment_model_version: cached ? "cache" : "perplexity-sonar-pro",
     });
 
     // 3) COPY GENERATION (3 parallel chat completions)

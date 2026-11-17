@@ -414,8 +414,9 @@ serve(async (req) => {
           const proTierQuery = supabase
             .from("properties")
             .select("id", { count: "exact", head: true })
-            .not("property_type", "in", `("${FREE_PROPERTY_TYPES.join('","')}")`)
+            .not("property_type", "in", `(${FREE_PROPERTY_TYPES.join(",")})`)
             .eq("user_id", userId)
+            .neq("status", "error")
             .gte("created_at", sinceWindow);
 
           const { count: proTierCount, error: proTierCountErr } = await proTierQuery;
@@ -438,6 +439,7 @@ serve(async (req) => {
           .from("properties")
           .select("id", { count: "exact", head: true })
           .eq("user_id", userId)
+          .neq("status", "error")
           .gte("created_at", sinceWindow);
 
         const { count, error: countErr } = await countQuery;
@@ -506,6 +508,12 @@ serve(async (req) => {
             propertyId: property.id,
             error: error.message,
           });
+          if (anonymousUsageReserved && anonymousUsageKey) {
+            await supabase.rpc("refund_anonymous_generation", {
+              p_anon_key: anonymousUsageKey,
+              p_is_pro_tier: proTierRequest,
+            });
+          }
           await supabase
             .from("properties")
             .update({

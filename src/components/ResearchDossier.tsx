@@ -175,14 +175,6 @@ export default function ResearchDossier({
   }
   const hasViolations = violations.length > 0;
 
-  const rawScore = property?.fha_compliance_score;
-  const complianceScore =
-    typeof rawScore === "number" && !isNaN(rawScore)
-      ? rawScore
-      : hasViolations
-        ? Math.max(70, 100 - violations.length * 10)
-        : 100;
-
   return (
     <div className="space-y-4 font-system text-win95-12">
       {/* ── 1. PROPERTY & AUDIT HEADER ── */}
@@ -239,6 +231,17 @@ export default function ResearchDossier({
                 </span>
               </div>
 
+              {/* View original listing remarks toggle */}
+              {property?.existing_listing_raw && (
+                <button
+                  type="button"
+                  onClick={() => setShowRawListing((v) => !v)}
+                  className="text-[11px] text-blue-700 underline font-bold hover:text-blue-900 cursor-pointer px-1"
+                >
+                  {showRawListing ? "Hide Original Listing Text" : "View Original Listing Remarks"}
+                </button>
+              )}
+
               {/* Primary action to view/print official certificate */}
               <RetroButton
                 variant="primary"
@@ -248,95 +251,6 @@ export default function ResearchDossier({
               >
                 <span>📋</span>
                 <span>Official Certificate (PDF)</span>
-              </RetroButton>
-            </div>
-          </div>
-        </div>
-      </div>
-
-      {/* ── 2. FHA COMPLIANCE AUDIT & MITIGATION REPORT (CLEAN, NO DECORATION) ── */}
-      <div className="win95-window">
-        <div className="win95-titlebar bg-[var(--win95-blue)] text-white flex items-center justify-between">
-          <span className="font-bold text-win95-12 pl-1 flex items-center gap-1.5">
-            Fair Housing Act (FHA) Compliance Audit &amp; Mitigation Report
-          </span>
-          <span className="text-[10px] text-slate-200 font-mono pr-1">
-            42 U.S.C. § 3604(c)
-          </span>
-        </div>
-        <div className="p-3 bg-[var(--win95-gray)] space-y-3">
-          {hasViolations ? (
-            /* Violations Found & Mitigated */
-            <div className="space-y-2.5">
-              <div className="win95-inset bg-amber-50 border-amber-600 p-3 space-y-2">
-                <div className="flex items-center justify-between">
-                  <span className="font-bold text-amber-950 text-win95-12 flex items-center gap-1.5">
-                    <span>⚠</span> {violations.length} Restricted Phrasing Pattern{violations.length > 1 ? "s" : ""} Neutralized
-                  </span>
-                  <span className="bg-amber-200 text-amber-950 border border-amber-400 text-[10px] font-bold px-1.5 py-0.5">
-                    AUTO-MITIGATED
-                  </span>
-                </div>
-                <p className="text-win95-11 text-amber-900 leading-relaxed">
-                  The original market listing remarks contained terms that violate Fair Housing Act guidelines regarding resident demographics, accessibility, or steering. PLG automatically sanitized these elements into compliant, neutral property features:
-                </p>
-                <div className="flex flex-wrap gap-1.5 pt-1">
-                  {violations.map((v, i) => (
-                    <span
-                      key={i}
-                      className="win95-raised bg-white text-red-900 border-red-300 font-mono text-[11px] px-2 py-0.5 flex items-center gap-1"
-                    >
-                      <span className="text-red-600 font-bold">✕</span> &quot;{v}&quot;
-                    </span>
-                  ))}
-                </div>
-              </div>
-
-              {property?.fha_compliant_listing_parts && (
-                <div className="win95-inset bg-emerald-50 border-emerald-600 p-3 space-y-1.5">
-                  <div className="font-bold text-emerald-950 text-win95-11 flex items-center gap-1">
-                    <span>✔</span> Sanitized Compliant Facts Integrated into Copy:
-                  </div>
-                  <div className="bg-white p-2 text-win95-11 font-mono text-slate-800 border border-slate-300 max-h-28 overflow-y-auto whitespace-pre-wrap leading-relaxed">
-                    {property.fha_compliant_listing_parts}
-                  </div>
-                </div>
-              )}
-            </div>
-          ) : (
-            /* 100% Compliant Clean Determination */
-            <div className="win95-inset bg-emerald-50 border-emerald-600 p-3 space-y-1.5">
-              <div className="font-bold text-emerald-950 text-win95-12 flex items-center gap-1.5">
-                <span>✔</span> Verified 100% FHA Compliant — Zero Violations
-              </div>
-              <p className="text-win95-11 text-emerald-900 leading-relaxed">
-                All property remarks, amenities, and location facts were scanned against Title VIII of the Civil Rights Act of 1968 (42 U.S.C. § 3604(c)) and HUD guidelines. No discriminatory phrasing, protected-class references, or geographic steering were detected.
-              </p>
-            </div>
-          )}
-
-          {/* Action Row: Direct button to view/print official certificate */}
-          <div className="flex flex-wrap items-center justify-between gap-2 pt-1 border-t border-[var(--win95-gray-dark)]">
-            <div className="text-win95-11 text-slate-700">
-              Audit Determination: <strong className="text-slate-900">{complianceScore}% Compliant</strong> (Record ready for transaction file)
-            </div>
-            <div className="flex items-center gap-2">
-              {property?.existing_listing_raw && (
-                <button
-                  type="button"
-                  onClick={() => setShowRawListing((v) => !v)}
-                  className="text-[11px] text-blue-700 underline font-bold hover:text-blue-900 cursor-pointer"
-                >
-                  {showRawListing ? "Hide Original Listing Text" : "View Original Listing Remarks"}
-                </button>
-              )}
-              <RetroButton
-                variant="primary"
-                onClick={() => setShowCertModal(true)}
-                className="bg-[var(--win95-blue)] text-white font-bold flex items-center gap-1 px-2.5 py-1 text-win95-11"
-              >
-                <span>📄</span>
-                <span>View Full Audit Certificate</span>
               </RetroButton>
             </div>
           </div>
@@ -350,7 +264,7 @@ export default function ResearchDossier({
         </div>
       </div>
 
-      {/* ── 3-6. NEIGHBORHOOD INTELLIGENCE (UNBLURRED FOR PRO USERS) ── */}
+      {/* ── 2-5. NEIGHBORHOOD INTELLIGENCE (UNBLURRED FOR PRO USERS) ── */}
       <div className="relative">
         <div
           className={
