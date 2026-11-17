@@ -1,4 +1,5 @@
 import { Link } from "@tanstack/react-router";
+import { APP_RELEASE_TAG } from "@/lib/version";
 
 const compareLinks = [
   { to: "/compare/chatgpt", label: "ChatGPT" },
@@ -87,7 +88,9 @@ export function AppFooter() {
           <FooterColumn title="Compare" links={compareLinks} columns={2} />
         </div>
         <div className="mt-6 pt-3 border-t border-black/30 flex flex-wrap gap-2 justify-between text-win95-11">
-          <span>© {new Date().getFullYear()} PropertyListingGenerator.com</span>
+          <span>
+            © {new Date().getFullYear()} PropertyListingGenerator.com · {APP_RELEASE_TAG}
+          </span>
           <span>Built for agents who value their time.</span>
         </div>
       </div>

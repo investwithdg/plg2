@@ -1,5 +1,6 @@
 {
   "name": "plg2",
+  "version": "2.7.1",
   "private": true,
   "sideEffects": false,
   "type": "module",

@@ -295,7 +295,7 @@ export async function runTool(
 // reaching tools/list, regardless of what auth/OAuth is configured. See the "initialize"
 // branch below.
 const PROTOCOL_VERSION = "2025-06-18";
-const SERVER_INFO = { name: "plg-mcp", version: "1.0.0" };
+const SERVER_INFO = { name: "plg-mcp", version: "2.7.1" };
 
 interface JsonRpcRequestBody {
   jsonrpc?: string;
