@@ -14,6 +14,7 @@ import {
   enrichWithPerplexity,
   generateCopy,
   buildAnchoredAddress,
+  hasGeographicAnchor,
 } from "../_shared/llm.ts";
 import { parseExistingListingFHA } from "../_shared/fha.ts";
 import { sanitizeForLLM } from "../_shared/security.ts";
@@ -275,75 +276,250 @@ async function process(propertyId: string, reason?: string) {
 
     const safeAddress = sanitizeForLLM(property.address as string);
     const safeSourceUrl = property.source_url ? sanitizeForLLM(property.source_url as string) : null;
+    const googleMapsKey = Deno.env.get("GOOGLE_MAPS_API_KEY");
+    const hasGooglePlaces = Boolean(googleMapsKey && googleMapsKey.trim());
 
-    // 1) EXTRACTION
-    failedStep = "extraction";
-    await updateStep(supabase, propertyId, "researching_property", "processing");
-    const extractStart = Date.now();
-    const {
-      parsed: extracted,
-      raw: extractRaw,
-      usage: extractionUsage,
-    } = await extractWithPerplexity(
-      perplexityKey,
-      propertyId,
-      {
-        address: safeAddress,
-        source_url: safeSourceUrl,
-      },
-      profile.extraction.supplementalInstruction,
-    );
-    const extractionLatency = Date.now() - extractStart;
-    log(propertyId, "extraction_done", {
-      latencyMs: extractionLatency,
-      tokens: extractionUsage.inputTokens + extractionUsage.outputTokens,
-      costUsd: extractionUsage.costUsd,
-    });
+    type FhaResult = {
+      compliantParts: string | null;
+      violations: string[] | null;
+      complianceScore: number;
+      categories: Record<string, unknown> | null;
+      latencyMs: number;
+      usage: TokenUsage;
+    };
 
-    let existingListingRaw = extracted.existing_listing_description as string | undefined;
-    let fhaCompliantParts: string | null = null;
-    let fhaViolations: string[] | null = null;
-    let fhaComplianceScore: number | null = null;
-    let fhaCategories: Record<string, unknown> | null = null;
-    let fhaParseLatency = 0;
-    let fhaParseUsage = { inputTokens: 0, outputTokens: 0, costUsd: 0 };
+    const runFhaAudit = async (existingListingRaw?: string): Promise<FhaResult> => {
+      if (!existingListingRaw) {
+        return {
+          compliantParts: null,
+          violations: null,
+          complianceScore: 100,
+          categories: {
+            protected_classes: {
+              passed: true,
+              reasoning: "No existing description text supplied or found to audit.",
+            },
+            steering_coded_language: {
+              passed: true,
+              reasoning: "No existing description text supplied or found to audit.",
+            },
+            demographics_character: {
+              passed: true,
+              reasoning: "No existing description text supplied or found to audit.",
+            },
+          },
+          latencyMs: 0,
+          usage: { inputTokens: 0, outputTokens: 0, costUsd: 0 },
+        };
+      }
 
-    if (existingListingRaw) {
       log(propertyId, "fha_parse_start");
-      await updateStep(supabase, propertyId, "researching_property", "verifying FHA");
       const fhaRes = await parseExistingListingFHA(openaiKey, propertyId, existingListingRaw);
-      fhaCompliantParts = fhaRes.compliant_parts;
-      fhaViolations = fhaRes.violations;
-      fhaComplianceScore = fhaRes.compliance_score;
-      fhaCategories = fhaRes.fha_categories;
-      fhaParseLatency = fhaRes.latencyMs;
-      fhaParseUsage = fhaRes.usage;
       log(propertyId, "fha_parse_done", {
-        latencyMs: fhaParseLatency,
-        violationsCount: fhaViolations.length,
-        complianceScore: fhaComplianceScore,
+        latencyMs: fhaRes.latencyMs,
+        violationsCount: fhaRes.violations.length,
+        complianceScore: fhaRes.compliance_score,
       });
-    } else {
-      // If there is no existing description, it is fully compliant by definition (no issues found)
-      fhaComplianceScore = 100;
-      fhaCategories = {
-        protected_classes: { passed: true, reasoning: "No existing description text supplied or found to audit." },
-        steering_coded_language: { passed: true, reasoning: "No existing description text supplied or found to audit." },
-        demographics_character: { passed: true, reasoning: "No existing description text supplied or found to audit." }
+      return {
+        compliantParts: fhaRes.compliant_parts,
+        violations: fhaRes.violations,
+        complianceScore: fhaRes.compliance_score,
+        categories: fhaRes.fha_categories,
+        latencyMs: fhaRes.latencyMs,
+        usage: fhaRes.usage,
       };
+    };
+
+    const runExtraction = async () => {
+      try {
+        const extractStart = Date.now();
+        const {
+          parsed: extracted,
+          raw: extractRaw,
+          usage: extractionUsage,
+        } = await extractWithPerplexity(
+          perplexityKey,
+          propertyId,
+          {
+            address: safeAddress,
+            source_url: safeSourceUrl,
+          },
+          profile.extraction.supplementalInstruction,
+        );
+        const extractionLatency = Date.now() - extractStart;
+        log(propertyId, "extraction_done", {
+          latencyMs: extractionLatency,
+          tokens: extractionUsage.inputTokens + extractionUsage.outputTokens,
+          costUsd: extractionUsage.costUsd,
+        });
+
+        const extractedCity = typeof extracted.city === "string" ? extracted.city : null;
+        const extractedState = typeof extracted.state === "string" ? extracted.state : null;
+        const extractedZip = typeof extracted.zip === "string" ? extracted.zip : null;
+
+        const resolvedAddress = buildAnchoredAddress(
+          extracted.address as string | undefined,
+          safeAddress,
+          extractedCity,
+          extractedState,
+          extractedZip,
+        );
+
+        return {
+          extracted,
+          extractRaw,
+          extractionUsage,
+          extractionLatency,
+          existingListingRaw: extracted.existing_listing_description as string | undefined,
+          resolvedAddress,
+        };
+      } catch (err) {
+        failedStep = "extraction";
+        throw err;
+      }
+    };
+
+    const runEnrichment = async (targetAddress: string) => {
+      try {
+        const cached = await getCachedEnrichment(supabase, targetAddress, propertyId, propertyType);
+        if (cached) {
+          return {
+            enrich: cached.parsed,
+            enrichRaw: cached.raw,
+            enrichmentUsage: cached.usage,
+            enrichmentLatency: 0,
+            cached: true,
+            modelVersion: "cache",
+          };
+        }
+
+        const enrichStart = Date.now();
+        const [result, verifiedAmenities] = await Promise.all([
+          enrichWithPerplexity(perplexityKey, propertyId, targetAddress, propertyType, {
+            skipAmenities: hasGooglePlaces,
+          }),
+          fetchVerifiedAmenities(googleMapsKey, targetAddress),
+        ]);
+
+        const enrich = result.parsed;
+        let enrichRaw = result.raw;
+        let enrichmentUsage = result.usage;
+
+        if (verifiedAmenities.length > 0) {
+          enrich.nearby_amenities = verifiedAmenities;
+          const existingSources = Array.isArray(enrich.key_sources) ? enrich.key_sources : [];
+          const hasGoogleSource = existingSources.some(
+            (s) =>
+              s &&
+              typeof s === "object" &&
+              typeof (s as Record<string, unknown>).name === "string" &&
+              ((s as Record<string, unknown>).name as string).toLowerCase().includes("google"),
+          );
+          if (!hasGoogleSource) {
+            enrich.key_sources = [
+              ...existingSources,
+              {
+                name: "Google Places",
+                url: "https://maps.google.com",
+                facts_provided:
+                  "Verified nearby groceries, parks, dining, and fitness amenities with distances",
+              },
+            ];
+          }
+          log(propertyId, "google_places_amenities_loaded", {
+            count: verifiedAmenities.length,
+          });
+        } else if (hasGooglePlaces && !isValidAmenityList(enrich.nearby_amenities)) {
+          // Rare fallback if Google Places returned zero results for an obscure/remote address
+          const fallback = await enrichWithPerplexity(
+            perplexityKey,
+            propertyId,
+            targetAddress,
+            propertyType,
+            { skipAmenities: false, model: "sonar" },
+          );
+          if (isValidAmenityList(fallback.parsed.nearby_amenities)) {
+            enrich.nearby_amenities = fallback.parsed.nearby_amenities;
+          }
+          enrichRaw = fallback.raw;
+          enrichmentUsage = {
+            inputTokens: enrichmentUsage.inputTokens + fallback.usage.inputTokens,
+            outputTokens: enrichmentUsage.outputTokens + fallback.usage.outputTokens,
+            costUsd: enrichmentUsage.costUsd + fallback.usage.costUsd,
+          };
+        }
+
+        const enrichmentLatency = Date.now() - enrichStart;
+        return {
+          enrich,
+          enrichRaw,
+          enrichmentUsage,
+          enrichmentLatency,
+          cached: false,
+          modelVersion: hasGooglePlaces ? "perplexity-sonar+google-places" : "perplexity-sonar-pro",
+        };
+      } catch (err) {
+        failedStep = "enrichment";
+        throw err;
+      }
+    };
+
+    // 1 & 2) PARALLEL EXTRACTION, FHA PARSE & ENRICHMENT
+    // When the caller gave an anchored street address (not a URL), extraction and enrichment
+    // start simultaneously at t=0, cutting an entire Perplexity round-trip from the critical path.
+    const canParallelizeFromStart = !safeSourceUrl && hasGeographicAnchor(safeAddress);
+    await updateStep(supabase, propertyId, "researching_property", "processing");
+
+    let extractionResult: Awaited<ReturnType<typeof runExtraction>>;
+    let fhaRes: FhaResult;
+    let enrichResult: Awaited<ReturnType<typeof runEnrichment>>;
+
+    if (canParallelizeFromStart) {
+      log(propertyId, "parallel_pipeline_start", { mode: "anchored_address" });
+      const extractAndFhaPromise = runExtraction().then(async (ext) => {
+        const fha = await runFhaAudit(ext.existingListingRaw);
+        return { ext, fha };
+      });
+      const [extractBundle, enrichOut] = await Promise.all([
+        extractAndFhaPromise,
+        runEnrichment(safeAddress),
+      ]);
+      extractionResult = extractBundle.ext;
+      fhaRes = extractBundle.fha;
+      enrichResult = enrichOut;
+    } else {
+      log(propertyId, "parallel_pipeline_start", {
+        mode: safeSourceUrl ? "source_url" : "unanchored_address",
+      });
+      extractionResult = await runExtraction();
+      failedStep = "enrichment";
+      await updateStep(supabase, propertyId, "researching_schools");
+      const [fhaOut, enrichOut] = await Promise.all([
+        runFhaAudit(extractionResult.existingListingRaw),
+        runEnrichment(extractionResult.resolvedAddress || safeAddress),
+      ]);
+      fhaRes = fhaOut;
+      enrichResult = enrichOut;
     }
 
-    const extractedCity = typeof extracted.city === "string" ? extracted.city : null;
-    const extractedState = typeof extracted.state === "string" ? extracted.state : null;
-    const extractedZip = typeof extracted.zip === "string" ? extracted.zip : null;
-
-    const resolvedAddress = buildAnchoredAddress(
-      extracted.address as string | undefined,
-      safeAddress,
-      extractedCity,
-      extractedState,
-      extractedZip,
-    );
+    const {
+      extracted,
+      extractRaw,
+      extractionUsage,
+      extractionLatency,
+      existingListingRaw,
+      resolvedAddress,
+    } = extractionResult;
+    const {
+      compliantParts: fhaCompliantParts,
+      violations: fhaViolations,
+      complianceScore: fhaComplianceScore,
+      categories: fhaCategories,
+      latencyMs: fhaParseLatency,
+      usage: fhaParseUsage,
+    } = fhaRes;
+    const { enrich, enrichRaw, enrichmentUsage, enrichmentLatency, cached, modelVersion } =
+      enrichResult;
 
     await supabase
       .from("properties")
@@ -369,68 +545,23 @@ async function process(propertyId: string, reason?: string) {
       })
       .eq("id", propertyId);
 
-    // 2) ENRICHMENT (with neighborhood cache)
-    failedStep = "enrichment";
-    await updateStep(supabase, propertyId, "researching_schools");
-
-    let enrich: Record<string, unknown>;
-    let enrichRaw: unknown;
-    let enrichmentUsage: TokenUsage;
-    let enrichmentLatency: number;
-
-    const cached = await getCachedEnrichment(supabase, resolvedAddress, propertyId, propertyType);
-    if (cached) {
-      enrich = cached.parsed;
-      enrichRaw = cached.raw;
-      enrichmentUsage = cached.usage;
-      enrichmentLatency = 0;
-    } else {
-      const enrichStart = Date.now();
-      const googleMapsKey = Deno.env.get("GOOGLE_MAPS_API_KEY");
-      const [result, verifiedAmenities] = await Promise.all([
-        enrichWithPerplexity(perplexityKey, propertyId, resolvedAddress, propertyType),
-        fetchVerifiedAmenities(googleMapsKey, resolvedAddress),
-      ]);
-      enrich = result.parsed;
-      enrichRaw = result.raw;
-      enrichmentUsage = result.usage;
-      enrichmentLatency = Date.now() - enrichStart;
-
-      if (verifiedAmenities.length > 0) {
-        enrich.nearby_amenities = verifiedAmenities;
-        const existingSources = Array.isArray(enrich.key_sources) ? enrich.key_sources : [];
-        const hasGoogleSource = existingSources.some(
-          (s) =>
-            s &&
-            typeof s === "object" &&
-            typeof (s as Record<string, unknown>).name === "string" &&
-            ((s as Record<string, unknown>).name as string).toLowerCase().includes("google"),
-        );
-        if (!hasGoogleSource) {
-          enrich.key_sources = [
-            ...existingSources,
-            {
-              name: "Google Places",
-              url: "https://maps.google.com",
-              facts_provided:
-                "Verified nearby groceries, parks, dining, and fitness amenities with distances",
-            },
-          ];
-        }
-        log(propertyId, "google_places_amenities_loaded", {
-          count: verifiedAmenities.length,
-        });
-      }
-
-      // Cache for future requests in this neighborhood (keyed by property type)
-      await setCachedEnrichment(supabase, resolvedAddress, enrich, enrichRaw, propertyType, propertyId);
+    if (!cached) {
+      await setCachedEnrichment(
+        supabase,
+        resolvedAddress || safeAddress,
+        enrich,
+        enrichRaw,
+        propertyType,
+        propertyId,
+      );
     }
 
     log(propertyId, "enrichment_done", {
       latencyMs: enrichmentLatency,
       tokens: enrichmentUsage.inputTokens + enrichmentUsage.outputTokens,
       costUsd: enrichmentUsage.costUsd,
-      cached: !!cached,
+      cached,
+      modelVersion,
     });
     await updateStep(supabase, propertyId, "analyzing_neighborhood");
 
@@ -445,7 +576,7 @@ async function process(propertyId: string, reason?: string) {
       key_sources: enrich.key_sources ?? null,
       perplexity_raw_response: enrichRaw,
       enrichment_latency_ms: enrichmentLatency,
-      enrichment_model_version: cached ? "cache" : "perplexity-sonar-pro",
+      enrichment_model_version: modelVersion,
     });
 
     // 3) COPY GENERATION (3 parallel chat completions)

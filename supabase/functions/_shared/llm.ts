@@ -1,5 +1,5 @@
 import { fetchWithRetry } from "./http.ts";
-import { getProfile } from "./propertyProfiles.ts";
+import { buildFocusedEnrichmentPrompts, getProfile } from "./propertyProfiles.ts";
 
 export const PERPLEXITY_URL = "https://api.perplexity.ai/chat/completions";
 export const OPENAI_CHAT_URL = "https://api.openai.com/v1/chat/completions";
@@ -166,6 +166,19 @@ function isStatePresent(address: string, statePart: string): boolean {
   return false;
 }
 
+export function hasGeographicAnchor(address?: string | null): boolean {
+  if (isNonPhysicalAddress(address)) return false;
+  const trimmed = address!.trim();
+  if (trimmed.includes(",")) return true;
+  if (/\b\d{5}(?:-\d{4})?\b/.test(trimmed)) return true;
+  const words = trimmed.toLowerCase().split(/\s+/);
+  const lastWord = words[words.length - 1]?.replace(/[.,]+$/, "");
+  if (lastWord && (lastWord in US_STATE_MAP || lastWord in US_STATE_NAME_TO_ABBR)) {
+    return true;
+  }
+  return false;
+}
+
 export function buildAnchoredAddress(
   extractedAddress?: string | null,
   fallbackAddress?: string | null,
@@ -204,7 +217,7 @@ export function buildAnchoredAddress(
   return `${cleanBase}, ${missingParts.join(" ")}`;
 }
 
-export function buildEnrichmentSchema(includeSchools: boolean) {
+export function buildEnrichmentSchema(includeSchools: boolean, includeAmenities = true) {
   const schemaProperties: Record<string, unknown> = {
     ...(includeSchools
       ? {
@@ -239,21 +252,32 @@ export function buildEnrichmentSchema(includeSchools: boolean) {
         required: ["name", "type", "distance"],
       },
     },
-    nearby_amenities: {
-      type: "array",
-      items: {
-        type: "object",
-        properties: {
-          name: { type: "string", description: "e.g. 'Whole Foods Market', 'Riverside Park'" },
-          type: { type: "string", description: "e.g. 'Grocery', 'Park', 'Restaurant', 'Gym'" },
-          distance: {
-            type: ["string", "null"],
-            description: "Approximate mileage (e.g. '0.6 mi'), drive time (e.g. '5 min drive'), or null if unknown",
+    ...(includeAmenities
+      ? {
+          nearby_amenities: {
+            type: "array",
+            items: {
+              type: "object",
+              properties: {
+                name: {
+                  type: "string",
+                  description: "e.g. 'Whole Foods Market', 'Riverside Park'",
+                },
+                type: {
+                  type: "string",
+                  description: "e.g. 'Grocery', 'Park', 'Restaurant', 'Gym'",
+                },
+                distance: {
+                  type: ["string", "null"],
+                  description:
+                    "Approximate mileage (e.g. '0.6 mi'), drive time (e.g. '5 min drive'), or null if unknown",
+                },
+              },
+              required: ["name", "type"],
+            },
           },
-        },
-        required: ["name", "type"],
-      },
-    },
+        }
+      : {}),
     walkability_score: { type: ["integer", "null"] },
     market_overview: { type: ["string", "null"] },
     median_home_value: { type: ["number", "null"] },
@@ -343,9 +367,17 @@ export async function enrichWithPerplexity(
   propertyId: string,
   address: string,
   propertyType: string,
+  options: { skipAmenities?: boolean; model?: "sonar" | "sonar-pro" } = {},
 ): Promise<{ parsed: Record<string, unknown>; raw: unknown; usage: TokenUsage }> {
   const profile = getProfile(propertyType);
-  const schema = buildEnrichmentSchema(profile.enrichment.includeSchools);
+  const skipAmenities = Boolean(options.skipAmenities);
+  const model: "sonar" | "sonar-pro" = options.model ?? (skipAmenities ? "sonar" : "sonar-pro");
+  const { systemPrompt, userPrompt } = buildFocusedEnrichmentPrompts(
+    profile,
+    address,
+    skipAmenities,
+  );
+  const schema = buildEnrichmentSchema(profile.enrichment.includeSchools, !skipAmenities);
   const res = await fetchWithRetry(
     PERPLEXITY_URL,
     {
@@ -355,15 +387,15 @@ export async function enrichWithPerplexity(
         "Content-Type": "application/json",
       },
       body: JSON.stringify({
-        model: "sonar-pro",
+        model,
         messages: [
           {
             role: "system",
-            content: profile.enrichment.systemPrompt,
+            content: systemPrompt,
           },
           {
             role: "user",
-            content: profile.enrichment.userPrompt(address),
+            content: userPrompt,
           },
         ],
         response_format: {
@@ -379,7 +411,7 @@ export async function enrichWithPerplexity(
   const data = await res.json();
   const content = data.choices?.[0]?.message?.content ?? "{}";
   const usage = computeCost(
-    "sonar-pro",
+    model,
     data.usage?.prompt_tokens ?? 0,
     data.usage?.completion_tokens ?? 0,
   );

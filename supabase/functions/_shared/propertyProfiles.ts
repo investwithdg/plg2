@@ -400,3 +400,30 @@ export function getProfile(propertyType: string | null | undefined): PropertyTyp
   const key = (propertyType || "sfr").toLowerCase().trim();
   return PROFILES[key] ?? SFR_PROFILE;
 }
+
+const FOCUSED_ENRICHMENT_DIRECTIVE =
+  "\n\nFOCUSED SCOPE: Nearby businesses, parks, dining, and fitness amenities are already verified separately via Google Places — do NOT search for or list nearby_amenities. Focus exclusively on schools (if applicable), transit options, walkability score, local real estate market trends, median home/lease values, and accurate web source citations.";
+
+/**
+ * Returns enrichment prompts for a profile, optionally stripping nearby_amenities directives
+ * when deterministic Google Places lookups handle amenities so Perplexity focuses on its strengths.
+ */
+export function buildFocusedEnrichmentPrompts(
+  profile: PropertyTypeProfile,
+  address: string,
+  skipAmenities: boolean,
+): { systemPrompt: string; userPrompt: string } {
+  const rawSystem = profile.enrichment.systemPrompt;
+  const rawUser = profile.enrichment.userPrompt(address);
+  if (!skipAmenities) {
+    return { systemPrompt: rawSystem, userPrompt: rawUser };
+  }
+
+  const focusedSystem =
+    rawSystem.replace(/\n?- For nearby_amenities:[\s\S]*?(?=\n- For schools:|\n\nSECURITY:)/, "") +
+    FOCUSED_ENRICHMENT_DIRECTIVE;
+
+  const focusedUser = rawUser.replace(/\n?- nearby_amenities:[^\n]*/g, "");
+
+  return { systemPrompt: focusedSystem, userPrompt: focusedUser };
+}

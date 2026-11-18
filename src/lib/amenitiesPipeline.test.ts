@@ -3,8 +3,13 @@ import {
   EXTRACTION_SCHEMA,
   buildEnrichmentSchema,
   buildAnchoredAddress,
+  hasGeographicAnchor,
 } from "../../supabase/functions/_shared/llm.ts";
-import { getProfile, PROFILES } from "../../supabase/functions/_shared/propertyProfiles.ts";
+import {
+  buildFocusedEnrichmentPrompts,
+  getProfile,
+  PROFILES,
+} from "../../supabase/functions/_shared/propertyProfiles.ts";
 import {
   fetchVerifiedAmenities,
   formatDistanceMiles,
@@ -427,6 +432,37 @@ describe("Milestone 3: Rich Amenities Procurement & Perplexity Pipeline", () => 
       expect(radii).toContain(16000);
       expect(res.length).toBe(4);
       expect(res[0].distance.endsWith(" mi")).toBe(true);
+    });
+  });
+
+  describe("Task 7: Focused Perplexity Prompts & Parallel Pipeline Anchoring", () => {
+    it("omits nearby_amenities from enrichment schema when includeAmenities is false", () => {
+      const focusedSchema = buildEnrichmentSchema(true, false);
+      const props = focusedSchema.properties as Record<string, unknown>;
+      expect(props.schools).toBeDefined();
+      expect(props.transit_options).toBeDefined();
+      expect(props.walkability_score).toBeDefined();
+      expect(props.nearby_amenities).toBeUndefined();
+    });
+
+    it("strips nearby_amenities directives from prompts when skipAmenities is true", () => {
+      for (const key of ["sfr", "commercial", "str", "land", "lux"]) {
+        const profile = getProfile(key);
+        const focused = buildFocusedEnrichmentPrompts(profile, "123 Main St, Austin, TX", true);
+        expect(focused.systemPrompt).toContain("FOCUSED SCOPE:");
+        expect(focused.systemPrompt).not.toContain("- For nearby_amenities:");
+        expect(focused.userPrompt).not.toContain("- nearby_amenities:");
+      }
+    });
+
+    it("detects geographic anchors for t=0 parallel extraction + enrichment", () => {
+      expect(hasGeographicAnchor("123 Main St, Austin, TX")).toBe(true);
+      expect(hasGeographicAnchor("123 Main St Austin TX 78701")).toBe(true);
+      expect(hasGeographicAnchor("456 Oak Ave Austin TX")).toBe(true);
+
+      expect(hasGeographicAnchor("123 Main St")).toBe(false);
+      expect(hasGeographicAnchor("unknown")).toBe(false);
+      expect(hasGeographicAnchor("https://www.zillow.com/homedetails/123")).toBe(false);
     });
   });
 });

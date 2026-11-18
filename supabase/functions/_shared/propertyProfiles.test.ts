@@ -1,5 +1,5 @@
 import { assertEquals } from "./testAssert.ts";
-import { getProfile, PROFILES } from "./propertyProfiles.ts";
+import { buildFocusedEnrichmentPrompts, getProfile, PROFILES } from "./propertyProfiles.ts";
 
 // ─── Every registered type has a valid profile ─────────────────────────────
 
@@ -92,5 +92,15 @@ Deno.test("enrichment.userPrompt includes the address for every profile", () => 
     const result = profile.enrichment.userPrompt(testAddr);
     assertEquals(typeof result, "string", `${key}: userPrompt must return string`);
     assertEquals(result.includes(testAddr), true, `${key}: userPrompt must include the address`);
+  }
+});
+
+Deno.test("buildFocusedEnrichmentPrompts strips nearby_amenities when skipAmenities is true", () => {
+  for (const key of ["sfr", "commercial", "str", "land", "lux"]) {
+    const profile = getProfile(key);
+    const focused = buildFocusedEnrichmentPrompts(profile, "123 Main St, Austin, TX", true);
+    assertEquals(focused.systemPrompt.includes("FOCUSED SCOPE:"), true);
+    assertEquals(focused.systemPrompt.includes("- For nearby_amenities:"), false);
+    assertEquals(focused.userPrompt.includes("- nearby_amenities:"), false);
   }
 });
