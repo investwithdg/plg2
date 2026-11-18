@@ -57,10 +57,10 @@ export async function describeFunctionInvokeError(error: unknown): Promise<strin
       const body = (await err.context.json()) as Record<string, unknown>;
       if (typeof body.message === "string" && body.message) return body.message;
       if (typeof body.error === "string" && body.error) {
-        if (body.error === "free_limit_exceeded") {
+        if (body.error === "auth_required" || body.error === "subscription_required") {
           return typeof body.message === "string"
             ? body.message
-            : "Free generation limit reached. Sign in or try again later.";
+            : "Start a 7-day free Pro trial to generate listings.";
         }
         return body.error;
       }

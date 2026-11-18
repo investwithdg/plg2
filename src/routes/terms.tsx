@@ -75,9 +75,11 @@ function TermsPage() {
 
             <Section title="4. Subscription Plans and Billing">
               <p>
-                PLG offers a <strong>Free tier</strong> (10 generations per month, limited property
-                types) and a <strong>Pro subscription</strong> (unlimited generations, all 9
-                property types, listing history). Pro is available as a monthly or annual plan.
+                PLG offers paid subscription plans: <strong>Pro</strong> (including a 7-day free
+                trial with a valid payment method, then unlimited generations across all 11 property
+                types, Research+ intelligence, and listing history) and <strong>Elite</strong>{" "}
+                (adding Vision+ photo analysis, Brand Voice, and static API keys). Plans are
+                available monthly or annually.
               </p>
               <p>
                 Payments are processed by <strong>Stripe</strong>. By subscribing to Pro, you

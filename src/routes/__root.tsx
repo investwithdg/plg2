@@ -159,28 +159,21 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
           offers: [
             {
               "@type": "Offer",
-              name: "Free",
-              price: "0",
-              priceCurrency: "USD",
-              description:
-                "10 free generations with 1 Pro-tier property sample; signed-in free accounts reset monthly",
-            },
-            {
-              "@type": "Offer",
-              name: "Pro Monthly",
+              name: "Pro Monthly (7-Day Free Trial)",
               price: "49",
               priceCurrency: "USD",
               billingDuration: "P1M",
               description:
-                "Unlimited generations, unlimited Pro-tier property types, listing history",
+                "7-day free trial (card required), then $49/mo for unlimited generations, all 11 property types, Research+ intelligence, and listing history",
             },
             {
               "@type": "Offer",
-              name: "Pro Annual",
+              name: "Pro Annual (7-Day Free Trial)",
               price: "468",
               priceCurrency: "USD",
               billingDuration: "P1Y",
-              description: "Unlimited generations, billed annually at $39/mo",
+              description:
+                "7-day free trial (card required), then $39/mo billed annually for unlimited generations",
             },
           ],
         }),

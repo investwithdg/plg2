@@ -46,7 +46,7 @@ const FEATURES = [
     plg: "When you list a property",
     rival: "Ongoing client nurturing",
   },
-  { feature: "Free tier", plg: "10 free generations", rival: "No free tier" },
+  { feature: "Free trial", plg: "7-day free Pro trial (card required)", rival: "No free trial" },
   { feature: "Pro price", plg: "$49/mo ($39/mo annual)", rival: "$50-$300/mo based on contacts" },
 ];
 
@@ -143,7 +143,7 @@ function VsHomebot() {
                   type="button"
                   className="win95-raised px-4 py-1 text-win95-12 font-bold cursor-pointer active:win95-pressed"
                 >
-                  Try PLG Free
+                  Start 7-Day Free Trial
                 </button>
               </Link>
               <Link to="/compare">

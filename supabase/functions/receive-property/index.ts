@@ -1,17 +1,13 @@
-// receive-property: validates input, enforces server-side free-generation caps,
+// receive-property: validates input, enforces active/trialing Pro or Elite subscription,
 // dedupes recent identical requests (idempotency), creates the property row,
 // and dispatches process-property. Captures invoke failures on the property row.
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { z } from "https://deno.land/x/zod@v3.22.4/mod.ts";
 import { getCorsHeaders } from "../_shared/cors.ts";
+import { resolvePlanTier } from "../_shared/planTier.ts";
 
-const FREE_LIMIT = 10;
-const FREE_WINDOW_DAYS = 30;
-const FREE_PRO_TIER_LIMIT = 1;
 const DEDUPE_WINDOW_SECONDS = 60;
-const FREE_PROPERTY_TYPES = ["sfr", "fsbo", "row"];
-const TURNSTILE_VERIFY_URL = "https://challenges.cloudflare.com/turnstile/v0/siteverify";
 
 const propertyInputSchema = z
   .object({
@@ -19,8 +15,6 @@ const propertyInputSchema = z
     address: z.string().trim().min(1).max(500).optional(),
     propertyType: z.string().trim().max(100).optional(),
     source: z.string().trim().max(100).optional(),
-    anonymousId: z.string().trim().min(16).max(128).optional(),
-    turnstileToken: z.string().trim().max(4096).optional(),
     regenerate: z.boolean().optional(),
   })
   .refine((d) => d.url || d.address, {
@@ -31,10 +25,6 @@ function normalizePropertyType(value?: string): string {
   const type = (value || "sfr").toLowerCase().trim();
   if (type === "luxury") return "lux";
   return type;
-}
-
-function isProTierPropertyType(type: string): boolean {
-  return !FREE_PROPERTY_TYPES.includes(type);
 }
 
 async function sha256(input: string): Promise<string> {
@@ -79,186 +69,35 @@ function makeResponders(corsHeaders: Record<string, string>) {
     });
   }
 
-  function usageCheckUnavailableResponse() {
-    return jsonResponse(
-      {
-        success: false,
-        error: "usage_check_unavailable",
-        message: "Usage limit verification is temporarily unavailable. Please try again.",
-      },
-      503,
-    );
-  }
-
-  function gateResponse(errorCode: string, userId: string | null) {
-    if (errorCode === "pro_required") {
-      return jsonResponse(
-        {
-          success: false,
-          error: "pro_required",
-          message: userId
-            ? "Free accounts include 1 Pro-tier property generation per month. Upgrade to Pro for unlimited Pro-tier generations."
-            : "Anonymous users include 1 Pro-tier property generation. Sign in for a monthly Pro-tier sample or upgrade to Pro.",
-        },
-        403,
-      );
-    }
-
-    if (errorCode === "free_limit_exceeded") {
-      return jsonResponse(
-        {
-          success: false,
-          error: "free_limit_exceeded",
-          message: userId
-            ? `Free monthly limit reached (${FREE_LIMIT} per ${FREE_WINDOW_DAYS} days). Upgrade to Pro for unlimited generations.`
-            : `Free anonymous limit reached (${FREE_LIMIT} generations). Sign in for ${FREE_LIMIT} monthly generations or upgrade to Pro.`,
-        },
-        429,
-      );
-    }
-
-    if (errorCode === "anonymous_id_required") {
-      return jsonResponse(
-        {
-          success: false,
-          error: "anonymous_id_required",
-          message: "Anonymous usage identity is required. Refresh and try again.",
-        },
-        400,
-      );
-    }
-
-    return usageCheckUnavailableResponse();
-  }
-
-  async function verifyAnonymousTurnstile(
-    token: string | undefined,
-    ipRaw: string,
-  ): Promise<{ ok: true } | { ok: false; response: Response }> {
-    if (!token) {
-      return {
-        ok: false,
-        response: jsonResponse(
-          {
-            success: false,
-            error: "turnstile_required",
-            message: "Security check required. Please try again.",
-          },
-          400,
-        ),
-      };
-    }
-
-    const secret = Deno.env.get("TURNSTILE_SECRET_KEY");
-    if (!secret) {
-      log("missing_turnstile_secret");
-      return {
-        ok: false,
-        response: jsonResponse(
-          {
-            success: false,
-            error: "security_check_unavailable",
-            message: "Security check unavailable. Please try again.",
-          },
-          503,
-        ),
-      };
-    }
-
-    const body = new URLSearchParams({ secret, response: token });
-    if (ipRaw && ipRaw !== "unknown") body.set("remoteip", ipRaw);
-
-    try {
-      const res = await fetch(TURNSTILE_VERIFY_URL, {
-        method: "POST",
-        headers: { "Content-Type": "application/x-www-form-urlencoded" },
-        body: body.toString(),
-      });
-
-      if (!res.ok) {
-        log("turnstile_http_error", { status: res.status });
-        return {
-          ok: false,
-          response: jsonResponse(
-            {
-              success: false,
-              error: "security_check_unavailable",
-              message: "Security check unavailable. Please try again.",
-            },
-            503,
-          ),
-        };
-      }
-
-      const result = await res.json();
-      if (!result?.success) {
-        log("turnstile_failed", { codes: result?.["error-codes"] });
-        return {
-          ok: false,
-          response: jsonResponse(
-            {
-              success: false,
-              error: "turnstile_failed",
-              message: "Security check failed. Please try again.",
-            },
-            403,
-          ),
-        };
-      }
-
-      return { ok: true };
-    } catch (error) {
-      log("turnstile_verify_error", {
-        error: error instanceof Error ? error.message : "Unknown",
-      });
-      return {
-        ok: false,
-        response: jsonResponse(
-          {
-            success: false,
-            error: "security_check_unavailable",
-            message: "Security check unavailable. Please try again.",
-          },
-          503,
-        ),
-      };
-    }
-  }
-
-  return { jsonResponse, usageCheckUnavailableResponse, gateResponse, verifyAnonymousTurnstile };
+  return { jsonResponse };
 }
 
 serve(async (req) => {
   const corsHeaders = getCorsHeaders(req);
   if (req.method === "OPTIONS") return new Response(null, { headers: corsHeaders });
 
-  const { jsonResponse, usageCheckUnavailableResponse, gateResponse, verifyAnonymousTurnstile } =
-    makeResponders(corsHeaders);
-
-  let anonymousUsageKey: string | null = null;
-  let anonymousUsageReserved = false;
-  let proTierRequest = false;
-  let supabase: ReturnType<typeof createClient> | null = null;
+  const { jsonResponse } = makeResponders(corsHeaders);
 
   try {
     const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
     const supabaseServiceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
     const anonymousUsageSecret = Deno.env.get("ANON_USAGE_SECRET") || supabaseServiceKey;
-    supabase = createClient(supabaseUrl, supabaseServiceKey);
+    const supabase = createClient(supabaseUrl, supabaseServiceKey);
 
-    // Identify caller
+    // 1) Identify caller — authentication is required (no anonymous/free tier).
     let userId: string | null = null;
 
     // Trusted internal caller: the mcp/ edge function has ALREADY authenticated and
-    // plan-gated this request (via API key, OAuth token, or session JWT — see
-    // mcp/deps.ts's verifyCaller) before ever reaching us. None of those first two auth
-    // methods are Supabase session JWTs, so getClaims() below can't verify them itself —
-    // mcp/ instead passes the already-resolved user id over this shared-secret channel
-    // (same pattern as the x-internal-secret handoff to process-property further down).
+    // plan-gated this request before ever reaching us.
     const mcpInternalSecret = req.headers.get("x-mcp-internal-secret");
     const expectedMcpSecret = Deno.env.get("MCP_INTERNAL_SECRET");
     const mcpUserId = req.headers.get("x-mcp-user-id");
-    if (mcpInternalSecret && expectedMcpSecret && mcpInternalSecret === expectedMcpSecret && mcpUserId) {
+    if (
+      mcpInternalSecret &&
+      expectedMcpSecret &&
+      mcpInternalSecret === expectedMcpSecret &&
+      mcpUserId
+    ) {
       userId = mcpUserId;
     } else {
       const authHeader = req.headers.get("Authorization");
@@ -269,14 +108,54 @@ serve(async (req) => {
       }
     }
 
+    if (!userId) {
+      return jsonResponse(
+        {
+          success: false,
+          error: "auth_required",
+          message: "Sign in and start your 7-day free Pro trial to generate listings.",
+        },
+        401,
+      );
+    }
+
+    // 2) Subscription gate: active or trialing Pro / Elite required.
+    const { data: subs, error: subErr } = await supabase
+      .from("subscriptions")
+      .select("plan, status")
+      .eq("user_id", userId)
+      .in("status", ["active", "trialing"]);
+
+    if (subErr) {
+      log("subscription_lookup_error", { userId, error: subErr.message });
+      return jsonResponse(
+        {
+          success: false,
+          error: "usage_check_unavailable",
+          message: "Subscription verification is temporarily unavailable. Please try again.",
+        },
+        503,
+      );
+    }
+
+    const plan = resolvePlanTier(subs);
+    if (plan !== "pro" && plan !== "elite") {
+      log("subscription_required", { userId, plan });
+      return jsonResponse(
+        {
+          success: false,
+          error: "subscription_required",
+          message: "Start your 7-day free Pro trial (card required) to generate listings.",
+        },
+        403,
+      );
+    }
+
     const ipRaw =
       req.headers.get("x-forwarded-for")?.split(",")[0].trim() ||
       req.headers.get("cf-connecting-ip") ||
       "unknown";
-    const userAgentRaw = req.headers.get("user-agent") || "unknown";
     const ipHash = await hmacSha256(`ip:${ipRaw}`, anonymousUsageSecret);
-    const userAgentHash = await hmacSha256(`ua:${userAgentRaw}`, anonymousUsageSecret);
-    const networkKey = await hmacSha256(`network:${ipRaw}|${userAgentRaw}`, anonymousUsageSecret);
 
     const rawBody = await req.json();
     const parsed = propertyInputSchema.safeParse(rawBody);
@@ -292,38 +171,25 @@ serve(async (req) => {
     }
     const validatedInput = parsed.data;
     const requestedType = normalizePropertyType(validatedInput.propertyType);
-    proTierRequest = isProTierPropertyType(requestedType);
 
-    if (!userId && !validatedInput.anonymousId) {
-      return gateResponse("anonymous_id_required", null);
-    }
-
-    if (!userId && validatedInput.anonymousId) {
-      anonymousUsageKey = await hmacSha256(
-        `anon-key:v1:${validatedInput.anonymousId}`,
-        anonymousUsageSecret,
-      );
-    }
-
-    // 1) Idempotency: same (caller, address|url) within window returns existing propertyId
-    //    Bypassed when regenerate === true so Pro users can regenerate freely.
+    // 3) Idempotency: same (caller, address|url) within window returns existing propertyId.
+    //    Bypassed when regenerate === true so subscribers can regenerate freely.
     const isRegenerate = validatedInput.regenerate === true;
     const dedupeKey = await sha256(
       [
-        userId ?? `anon:${anonymousUsageKey ?? ipHash}`,
+        userId,
         (validatedInput.url || validatedInput.address || "").toLowerCase().trim(),
       ].join("|"),
     );
     if (!isRegenerate) {
       const sinceDedupe = new Date(Date.now() - DEDUPE_WINDOW_SECONDS * 1000).toISOString();
-      const dedupeQuery = supabase
+      const { data: dedupeMatch } = await supabase
         .from("properties")
         .select("id, status")
         .eq("dedupe_key", dedupeKey)
         .gte("created_at", sinceDedupe)
         .order("created_at", { ascending: false })
         .limit(1);
-      const { data: dedupeMatch } = await dedupeQuery;
       if (dedupeMatch && dedupeMatch.length > 0) {
         log("dedupe_hit", { propertyId: dedupeMatch[0].id });
         return jsonResponse(
@@ -338,121 +204,6 @@ serve(async (req) => {
       }
     } else {
       log("dedupe_bypass_regenerate");
-    }
-
-    // 2) Subscription check. Active Pro or Elite users are unlimited.
-    let hasProPlan = false;
-    if (userId) {
-      const { data: sub } = await supabase
-        .from("subscriptions")
-        .select("plan, status")
-        .eq("user_id", userId)
-        .eq("status", "active")
-        .in("plan", ["pro", "elite"])
-        .limit(1);
-      hasProPlan = (sub && sub.length > 0) ?? false;
-    }
-
-    const sinceWindow = new Date(Date.now() - FREE_WINDOW_DAYS * 86400_000).toISOString();
-
-    // 3) Server-side free-generation caps.
-    // Anonymous users are reserved by a server-HMACed first-party anon cookie;
-    // IP, user-agent, and network hashes are stored as metadata. Signed-in free
-    // users keep the monthly property-row cap. Pro users skip caps.
-    if (!hasProPlan) {
-      if (!userId) {
-        const turnstileResult = await verifyAnonymousTurnstile(
-          validatedInput.turnstileToken,
-          ipRaw,
-        );
-        if (!turnstileResult.ok) return turnstileResult.response;
-
-        if (!anonymousUsageKey || !validatedInput.anonymousId) {
-          return gateResponse("anonymous_id_required", null);
-        }
-
-        const anonCookieHash = await hmacSha256(
-          `anon-cookie:${validatedInput.anonymousId}`,
-          anonymousUsageSecret,
-        );
-
-        const { data: reservation, error: reservationErr } = await supabase
-          .rpc("reserve_anonymous_generation", {
-            p_anon_key: anonymousUsageKey,
-            p_anon_cookie_hash: anonCookieHash,
-            p_ip_hash: ipHash,
-            p_user_agent_hash: userAgentHash,
-            p_network_key: networkKey,
-            p_is_pro_tier: proTierRequest,
-            p_total_limit: FREE_LIMIT,
-            p_pro_tier_limit: FREE_PRO_TIER_LIMIT,
-          })
-          .single();
-
-        if (reservationErr) {
-          log("anonymous_usage_reservation_error", {
-            error: reservationErr.message,
-          });
-          return usageCheckUnavailableResponse();
-        }
-
-        const allowed = (reservation as { allowed?: boolean } | null)?.allowed;
-        const errorCode = (reservation as { error_code?: string } | null)?.error_code;
-
-        if (!allowed) {
-          log("anonymous_usage_blocked", {
-            errorCode,
-            proTierRequest,
-            anonKeyPrefix: anonymousUsageKey.slice(0, 8),
-          });
-          return gateResponse(errorCode || "usage_check_unavailable", null);
-        }
-
-        anonymousUsageReserved = true;
-      } else {
-        if (proTierRequest) {
-          const proTierQuery = supabase
-            .from("properties")
-            .select("id", { count: "exact", head: true })
-            .not("property_type", "in", `(${FREE_PROPERTY_TYPES.join(",")})`)
-            .eq("user_id", userId)
-            .neq("status", "error")
-            .gte("created_at", sinceWindow);
-
-          const { count: proTierCount, error: proTierCountErr } = await proTierQuery;
-          if (proTierCountErr) {
-            log("pro_tier_count_error", { error: proTierCountErr.message });
-            return usageCheckUnavailableResponse();
-          }
-
-          if ((proTierCount ?? 0) >= FREE_PRO_TIER_LIMIT) {
-            log("free_user_pro_tier_exceeded", {
-              userId,
-              requestedType,
-              proTierCount,
-            });
-            return gateResponse("pro_required", userId);
-          }
-        }
-
-        const countQuery = supabase
-          .from("properties")
-          .select("id", { count: "exact", head: true })
-          .eq("user_id", userId)
-          .neq("status", "error")
-          .gte("created_at", sinceWindow);
-
-        const { count, error: countErr } = await countQuery;
-        if (countErr) {
-          log("cap_count_error", { error: countErr.message });
-          return usageCheckUnavailableResponse();
-        }
-
-        if ((count ?? 0) >= FREE_LIMIT) {
-          log("free_user_cap_exceeded", { userId, count });
-          return gateResponse("free_limit_exceeded", userId);
-        }
-      }
     }
 
     // 4) Create property row
@@ -474,12 +225,6 @@ serve(async (req) => {
 
     if (insertError) {
       log("insert_error", { error: insertError.message });
-      if (anonymousUsageReserved && anonymousUsageKey) {
-        await supabase.rpc("refund_anonymous_generation", {
-          p_anon_key: anonymousUsageKey,
-          p_is_pro_tier: proTierRequest,
-        });
-      }
       return jsonResponse(
         {
           success: false,
@@ -493,7 +238,7 @@ serve(async (req) => {
     log("property_created", {
       propertyId: property.id,
       userId,
-      anonymous: !userId,
+      plan,
     });
 
     // 5) Dispatch processing — capture invoke failures so the row doesn't get stuck
@@ -508,12 +253,6 @@ serve(async (req) => {
             propertyId: property.id,
             error: error.message,
           });
-          if (anonymousUsageReserved && anonymousUsageKey) {
-            await supabase.rpc("refund_anonymous_generation", {
-              p_anon_key: anonymousUsageKey,
-              p_is_pro_tier: proTierRequest,
-            });
-          }
           await supabase
             .from("properties")
             .update({
@@ -539,13 +278,6 @@ serve(async (req) => {
     log("unhandled_error", {
       error: error instanceof Error ? error.message : "Unknown",
     });
-
-    if (anonymousUsageReserved && anonymousUsageKey && supabase) {
-      await supabase.rpc("refund_anonymous_generation", {
-        p_anon_key: anonymousUsageKey,
-        p_is_pro_tier: proTierRequest,
-      });
-    }
 
     return jsonResponse(
       {

@@ -8,6 +8,7 @@ import { handleRequest, type CreateCheckoutDeps } from "./handler.ts";
 function fakeDeps(overrides: Partial<CreateCheckoutDeps> = {}): CreateCheckoutDeps {
   return {
     verifyCaller: async () => ({ ok: true, userId: "user-1", email: "agent@example.com" }),
+    hasPriorSubscription: async () => false,
     createStripeSession: async () => ({ ok: true, session: { id: "cs_test_1", url: "https://checkout.stripe.com/cs_test_1" } }),
     log: () => {},
     ...overrides,
@@ -103,6 +104,41 @@ Deno.test("successful checkout returns the Stripe session url and forwards user 
   assertEquals(capturedParams?.get("client_reference_id"), "user-1");
   assertEquals(capturedParams?.get("customer_email"), "agent@example.com");
   assertEquals(capturedParams?.get("line_items[0][price]"), "price_annual_fake");
+  assertEquals(capturedParams?.get("payment_method_collection"), "always");
+  assertEquals(capturedParams?.get("subscription_data[trial_period_days]"), "7");
+  restoreEnv();
+});
+
+Deno.test("repeat Pro subscriber does not receive another 7-day trial", async () => {
+  setStripeEnv();
+  let capturedParams: URLSearchParams | undefined;
+  const deps = fakeDeps({
+    hasPriorSubscription: async () => true,
+    createStripeSession: async (params) => {
+      capturedParams = params;
+      return { ok: true, session: { id: "cs_test_2", url: "https://checkout.stripe.com/cs_test_2" } };
+    },
+  });
+  const res = await handleRequest(req({ interval: "month", plan: "pro" }, { Authorization: "Bearer good" }), deps);
+  assertEquals(res.status, 200);
+  assertEquals(capturedParams?.get("subscription_data[trial_period_days]"), null);
+  restoreEnv();
+});
+
+Deno.test("Elite checkout does not attach a Pro trial period", async () => {
+  setStripeEnv();
+  Deno.env.set("STRIPE_PRICE_ELITE_MONTHLY", "price_elite_monthly_fake");
+  let capturedParams: URLSearchParams | undefined;
+  const deps = fakeDeps({
+    createStripeSession: async (params) => {
+      capturedParams = params;
+      return { ok: true, session: { id: "cs_test_3", url: "https://checkout.stripe.com/cs_test_3" } };
+    },
+  });
+  const res = await handleRequest(req({ interval: "month", plan: "elite" }, { Authorization: "Bearer good" }), deps);
+  assertEquals(res.status, 200);
+  assertEquals(capturedParams?.get("subscription_data[trial_period_days]"), null);
+  Deno.env.delete("STRIPE_PRICE_ELITE_MONTHLY");
   restoreEnv();
 });
 

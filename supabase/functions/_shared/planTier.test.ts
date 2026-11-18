@@ -7,8 +7,10 @@ Deno.test("resolvePlanTier: no rows -> free", () => {
   assertEquals(resolvePlanTier([]), "free");
 });
 
-Deno.test("resolvePlanTier: only counts a row with status 'active'", () => {
-  assertEquals(resolvePlanTier([{ plan: "pro", status: "trialing" }]), "free");
+Deno.test("resolvePlanTier: counts rows with status 'active' or 'trialing'", () => {
+  assertEquals(resolvePlanTier([{ plan: "pro", status: "trialing" }]), "pro");
+  assertEquals(resolvePlanTier([{ plan: "elite", status: "trialing" }]), "elite");
+  assertEquals(resolvePlanTier([{ plan: "PRO_MONTHLY", status: "active" }]), "pro");
   assertEquals(resolvePlanTier([{ plan: "pro", status: "canceled" }]), "free");
   assertEquals(resolvePlanTier([{ plan: "pro", status: "active" }]), "pro");
 });

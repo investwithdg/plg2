@@ -45,7 +45,7 @@ const FEATURES = [
   },
   {
     feature: "Property types supported",
-    plg: "SFR/FSBO free; Pro-tier sample included",
+    plg: "All 11 types (SFR, MF, STR, Commercial, etc.)",
     rival: "Residential focus (lead gen only)",
   },
   {
@@ -69,9 +69,9 @@ const FEATURES = [
     rival: "No",
   },
   {
-    feature: "Free tier",
-    plg: "10 free generations + 1 Pro-tier sample",
-    rival: "No free tier",
+    feature: "Free trial",
+    plg: "7-day free Pro trial (card required)",
+    rival: "No free trial",
   },
   {
     feature: "Pro price",
@@ -179,7 +179,7 @@ function VsDealMachine() {
                   type="button"
                   className="win95-raised px-4 py-1 text-win95-12 font-bold cursor-pointer active:win95-pressed"
                 >
-                  Try PLG Free
+                  Start 7-Day Free Trial
                 </button>
               </Link>
               <Link to="/compare">

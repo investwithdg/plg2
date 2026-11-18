@@ -1469,17 +1469,18 @@ export const ARTICLES: Article[] = [
                 Instagram/Facebook post, and buyer email copy — all from a single 15-second run.
               </li>
               <li>
-                <strong>Free tier included.</strong> 10 free generations per month for signed-in
-                accounts, including one Pro-tier property type sample.
+                <strong>7-day free Pro trial included.</strong> Try unlimited generations across all
+                11 property types, Research+ neighborhood intelligence, and FHA compliance
+                certificates free for 7 days (card required).
               </li>
             </ul>
             <p>
-              <strong>What it doesn't do:</strong> No image generation, no CRM integration (yet), no
-              brokerage white-labeling on the free plan.
+              <strong>What it doesn't do:</strong> No image generation, no CRM integration (yet),
+              and Vision+ photo analysis / custom Brand Voice require the Elite plan.
             </p>
             <p>
               <strong>Verdict:</strong> The strongest option if FHA compliance and research-backed
-              copy are your priorities. Free to test at{" "}
+              copy are your priorities. Start a 7-day free trial at{" "}
               <a href="/" className="underline">
                 PropertyListingGenerator.com
               </a>

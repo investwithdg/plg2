@@ -141,7 +141,8 @@ async function handleCheckoutCompleted(
   }
 
   const plan = session.metadata?.plan === "elite" ? "elite" : "pro";
-  log("checkout_completed", { userId, customerId, subscriptionId, plan });
+  const initialStatus = session.payment_status === "no_payment_required" ? "trialing" : "active";
+  log("checkout_completed", { userId, customerId, subscriptionId, plan, initialStatus });
 
   const { error } = await supabase.from("subscriptions").upsert(
     {
@@ -149,7 +150,7 @@ async function handleCheckoutCompleted(
       stripe_customer_id: customerId,
       stripe_subscription_id: subscriptionId,
       plan,
-      status: "active",
+      status: initialStatus,
       updated_at: new Date().toISOString(),
     },
     { onConflict: "stripe_subscription_id" },
