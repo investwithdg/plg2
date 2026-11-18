@@ -18,6 +18,7 @@ import {
 import { parseExistingListingFHA } from "../_shared/fha.ts";
 import { sanitizeForLLM } from "../_shared/security.ts";
 import { resolvePlanTier } from "../_shared/planTier.ts";
+import { fetchVerifiedAmenities } from "../_shared/googlePlaces.ts";
 
 // `reason` is an optional caller-supplied tag for this run. The only value with behaviour
 // attached is "photo_enrichment" (sent by analyze-property-photos) — see the re-processing
@@ -385,11 +386,42 @@ async function process(propertyId: string, reason?: string) {
       enrichmentLatency = 0;
     } else {
       const enrichStart = Date.now();
-      const result = await enrichWithPerplexity(perplexityKey, propertyId, resolvedAddress, propertyType);
+      const googleMapsKey = Deno.env.get("GOOGLE_MAPS_API_KEY");
+      const [result, verifiedAmenities] = await Promise.all([
+        enrichWithPerplexity(perplexityKey, propertyId, resolvedAddress, propertyType),
+        fetchVerifiedAmenities(googleMapsKey, resolvedAddress),
+      ]);
       enrich = result.parsed;
       enrichRaw = result.raw;
       enrichmentUsage = result.usage;
       enrichmentLatency = Date.now() - enrichStart;
+
+      if (verifiedAmenities.length > 0) {
+        enrich.nearby_amenities = verifiedAmenities;
+        const existingSources = Array.isArray(enrich.key_sources) ? enrich.key_sources : [];
+        const hasGoogleSource = existingSources.some(
+          (s) =>
+            s &&
+            typeof s === "object" &&
+            typeof (s as Record<string, unknown>).name === "string" &&
+            ((s as Record<string, unknown>).name as string).toLowerCase().includes("google"),
+        );
+        if (!hasGoogleSource) {
+          enrich.key_sources = [
+            ...existingSources,
+            {
+              name: "Google Places",
+              url: "https://maps.google.com",
+              facts_provided:
+                "Verified nearby groceries, parks, dining, and fitness amenities with distances",
+            },
+          ];
+        }
+        log(propertyId, "google_places_amenities_loaded", {
+          count: verifiedAmenities.length,
+        });
+      }
+
       // Cache for future requests in this neighborhood (keyed by property type)
       await setCachedEnrichment(supabase, resolvedAddress, enrich, enrichRaw, propertyType, propertyId);
     }
